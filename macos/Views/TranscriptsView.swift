@@ -2542,22 +2542,63 @@ private struct MergeNotulenSheet: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section("Bronnotulen") {
-                    ForEach(sources.sorted { $0.date == $1.date ? $0.taskId < $1.taskId : $0.date < $1.date }) { source in
+            ScrollView {
+                VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+                    HStack(spacing: TS.Spacing.md) {
+                        Image(systemName: "doc.on.doc.fill")
+                            .font(TS.Font.title2)
+                            .foregroundStyle(Color.brandPrimary)
+                            .padding(TS.Spacing.sm)
+                            .background(Color.brandPrimary.opacity(0.12), in: RoundedRectangle(cornerRadius: TS.Radius.sm))
+                            .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                            Text(source.title)
-                            Text(source.date, style: .date).font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+                            Text("Eén nieuwe notule").font(TS.Font.title3Semibold)
+                            Text("\(sources.count) bronnotulen")
+                                .font(TS.Font.caption)
+                                .foregroundStyle(Color.labelSecondary)
                         }
                     }
-                }
-                Section {
-                    Picker("Notulenprofiel", selection: $profileId) {
-                        ForEach(profiles) { Text($0.name).tag($0.id) }
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: TS.Spacing.sm)], alignment: .leading, spacing: TS.Spacing.sm) {
+                        ForEach(sources.sorted { $0.date == $1.date ? $0.taskId < $1.taskId : $0.date < $1.date }) { source in
+                            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                                HStack {
+                                    Image(systemName: "doc.text")
+                                        .font(TS.Font.title3)
+                                        .foregroundStyle(Color.brandPrimary)
+                                        .accessibilityHidden(true)
+                                    Spacer(minLength: TS.Spacing.sm)
+                                    Text(source.date, style: .date)
+                                        .font(TS.Font.caption)
+                                        .foregroundStyle(Color.labelSecondary)
+                                }
+                                Text(source.title)
+                                    .font(TS.Font.bodyMedium)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .foregroundStyle(Color.labelPrimary)
+                            }
+                            .padding(TS.Spacing.md)
+                            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+                            .background(Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: TS.Radius.md))
+                            .overlay(RoundedRectangle(cornerRadius: TS.Radius.md).strokeBorder(Color.borderPrimary.opacity(0.6)))
+                            .accessibilityElement(children: .combine)
+                        }
                     }
-                    Text("De AI maakt één nieuwe notule. De originelen blijven behouden.")
-                        .font(TS.Font.caption)
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Picker("Notulenprofiel", selection: $profileId) {
+                            ForEach(profiles) { Text($0.name).tag($0.id) }
+                        }
+                        Text("De AI maakt één nieuwe notule. De originelen blijven behouden.")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(TS.Spacing.md)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: TS.Radius.md))
                 }
+                .padding(TS.Spacing.lg)
             }
             .navigationTitle("Notulen samenvoegen")
             .toolbar {
@@ -2570,7 +2611,7 @@ private struct MergeNotulenSheet: View {
             .onAppear { profileId = recordingVM.selectedProfile?.id ?? profiles.first?.id ?? "" }
         }
         #if os(macOS)
-        .frame(width: 520, height: 440)
+        .frame(minWidth: 480, idealWidth: 600, maxWidth: 720, minHeight: 440, idealHeight: 580, maxHeight: 800)
         #endif
     }
 }

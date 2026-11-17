@@ -624,15 +624,28 @@ export function TranscriptsPage() {
       )}
 
       {mergeIDs && <DesktopDialog className="td-overlay" label="Notulen samenvoegen" onClose={() => setMergeIDs(null)}>
-        <div className="td-tags-dialog">
-          <h3 className="td-tags-title">Notulen samenvoegen</h3>
-          <ul>{transcripts.filter(t => mergeIDs.includes(t.id)).sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)).map(t =>
-            <li key={t.id}>{t.title} — {new Date(t.created_at).toLocaleDateString("nl-NL")}</li>)}</ul>
-          <p>De AI maakt één nieuwe notule. De originelen blijven behouden.</p>
-          <label>Notulenprofiel<select className="select" value={mergeProfileId} onChange={e => setMergeProfileId(e.target.value)}>
-            {useProfilesStore.getState().profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select></label>
-          <div className="flex-row gap-8" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+        <section className="merge-notulen-dialog">
+          <header className="merge-notulen-header">
+            <span className="merge-notulen-symbol" aria-hidden="true"><Document24Regular /></span>
+            <div><h3>Notulen samenvoegen</h3><p>{transcripts.filter(t => mergeIDs.includes(t.id)).length} bronnotulen → één nieuwe notule</p></div>
+          </header>
+          <div className="merge-notulen-content">
+            <div className="merge-notulen-sources" role="list" aria-label="Bronnotulen">
+              {transcripts.filter(t => mergeIDs.includes(t.id)).sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)).map(t =>
+                <article className="merge-notulen-source" role="listitem" key={t.id}>
+                  <div><Document24Regular aria-hidden="true" /><time dateTime={t.created_at}>{new Date(t.created_at).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}</time></div>
+                  <h4>{t.title}</h4>
+                </article>)}
+            </div>
+            <div className="merge-notulen-profile">
+              <label htmlFor="merge-notulen-profile">Notulenprofiel</label>
+              <select id="merge-notulen-profile" className="select" value={mergeProfileId} onChange={e => setMergeProfileId(e.target.value)}>
+                {useProfilesStore.getState().profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <p>De AI maakt één nieuwe notule. De originelen blijven behouden.</p>
+            </div>
+          </div>
+          <footer className="merge-notulen-actions">
             <button className="btn" onClick={() => setMergeIDs(null)}>Annuleren</button>
             <button className="btn btn-accent" disabled={merging || !useProfilesStore.getState().getProfile(mergeProfileId)} onClick={async () => {
               if (mergeBusy.current) return;
@@ -647,8 +660,8 @@ export function TranscriptsPage() {
               } catch (error) { toast.show(error instanceof Error ? error.message : "Samenvoegen mislukt", "error"); }
               finally { mergeBusy.current = false; setMerging(false); }
             }}>Samenvoegen</button>
-          </div>
-        </div>
+          </footer>
+        </section>
       </DesktopDialog>}
 
       {regenerateTarget && <DesktopDialog className="td-overlay" label="Notule opnieuw genereren" onClose={() => setRegenerateTarget(null)}>

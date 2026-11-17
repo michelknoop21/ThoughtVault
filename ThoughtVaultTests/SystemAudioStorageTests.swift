@@ -1,6 +1,7 @@
 import XCTest
 import AVFoundation
 import CoreAudio
+import AppKit
 @testable import ThoughtVault
 
 final class SystemAudioStorageTests: XCTestCase {
@@ -271,6 +272,69 @@ final class SystemAudioStorageTests: XCTestCase {
             lags.append(Double(best.lag + (second >= 16 ? skippedSourceFrames : 0)) - latencies[marker])
         }
         XCTAssertLessThanOrEqual((lags.max() ?? 0) - (lags.min() ?? 0), 320, "Speech drift exceeded 20 ms")
+    }
+
+    /// Opt-in wall-clock test; system audio only, so no room microphone audio is saved.
+    @MainActor
+    func testTwoHourPhysicalSpeechCapture() async throws {
+        let root = URL(fileURLWithPath: "/tmp/thoughtvault-system-audio-test").resolvingSymlinksInPath()
+        try XCTSkipUnless(FileManager.default.fileExists(atPath: root.appendingPathComponent("two-hour-enabled").path))
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.directoryURL = root.resolvingSymlinksInPath()
+        panel.message = "Kies de SSD-bewijsmap voor de twee-uursproef."
+        let response = await withCheckedContinuation { continuation in
+            panel.begin { continuation.resume(returning: $0) }
+        }
+        guard response == .OK, let folder = panel.url,
+              folder.resolvingSymlinksInPath().path == root.resolvingSymlinksInPath().path else { throw CocoaError(.userCancelled) }
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+        let directory = AudioRecorder.recordingsDirectoryURL()
+        guard try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty else {
+            XCTFail("The isolated recordings directory must be empty")
+            return
+        }
+        let destination = root.appendingPathComponent("two-hour-capture", isDirectory: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+        try FileManager.default.removeItem(at: directory)
+        try FileManager.default.createSymbolicLink(at: directory, withDestinationURL: destination)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let player = try AVAudioPlayer(contentsOf: root.appendingPathComponent("speech.wav"))
+        player.numberOfLoops = -1
+        let capture = SystemAudioCapture()
+        let url = try await capture.startCapture()
+        let start = Date()
+        func progress(_ finished: Bool) throws {
+            let bytes = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.int64Value ?? 0
+            let data = try JSONSerialization.data(withJSONObject: ["startedAt": start.timeIntervalSince1970, "elapsed": Date().timeIntervalSince(start), "bytes": bytes, "capturePath": destination.resolvingSymlinksInPath().appendingPathComponent(url.lastPathComponent).path, "sourceDuration": player.duration, "finished": finished], options: [.sortedKeys])
+            try data.write(to: root.appendingPathComponent("two-hour-progress.json"), options: .atomic)
+        }
+        do {
+            try progress(false)
+            try await Task.sleep(for: .seconds(1))
+            XCTAssertTrue(player.play())
+            let deadline = ContinuousClock.now.advanced(by: .seconds(7200))
+            repeat {
+                try await Task.sleep(for: .seconds(30))
+                try Task.checkCancellation()
+                XCTAssertTrue(capture.isCapturing)
+                XCTAssertTrue(player.isPlaying)
+                guard capture.isCapturing, player.isPlaying else { throw CocoaError(.fileReadUnknown) }
+                try progress(false)
+            } while ContinuousClock.now < deadline
+            player.stop()
+            _ = await capture.stopCapture()
+            let result = try AVAudioFile(forReading: url)
+            XCTAssertEqual(result.processingFormat.sampleRate, 16_000)
+            XCTAssertGreaterThanOrEqual(Double(result.length) / 16_000, 7200)
+            try progress(true)
+        } catch {
+            player.stop()
+            _ = await capture.stopCapture()
+            throw error
+        }
     }
 
     /// Accelerated two-hour stream, not a substitute for a two-hour hardware recording.

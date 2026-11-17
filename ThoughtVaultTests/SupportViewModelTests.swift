@@ -332,6 +332,26 @@ final class SupportViewModelTests: XCTestCase {
         XCTAssertEqual(vm.activeTasks.first?.rawTranscription, "LOCAL-TRANSCRIPT")
     }
 
+    @MainActor func testUnreadBadgeRemainsUntilTheThreadIsOpened() async throws {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        SupportStub.handler { request, _ in
+            switch request.url?.lastPathComponent {
+            case "tickets":
+                .init(status: 200, text: #"{"data":[{"id":"c1","ref":"TV-1","status":"WAITING_FOR_USER","category":"BUG","description":"Test","unread":true,"createdAt":"2026-11-17T09:00:00Z"}]}"#)
+            case "messages": .init(status: 200, text: #"{"data":[]}"#)
+            case "unread-count": .init(status: 200, text: #"{"data":{"count":0}}"#)
+            default: .init(status: 201, text: "{}")
+            }
+        }
+        vm.unreadCount = 1
+        await vm.loadTickets()
+        XCTAssertEqual(vm.unreadCount, 1)
+        let ticket = try XCTUnwrap(vm.tickets.first)
+        await vm.openThread(ticket)
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
     @MainActor func testTicketReadFailuresPreserveExistingState() async {
         let (vm, _, defaults, session, directory, suite) = fixture()
         defer { cleanup(defaults, session, directory, suite) }

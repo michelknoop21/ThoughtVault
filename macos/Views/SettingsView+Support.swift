@@ -138,7 +138,7 @@ private struct SupportSettingsReportView: View {
     }
 }
 
-private struct SupportSettingsTicketsView: View {
+struct SupportSettingsTicketsView: View {
     @State private var selectedTicket: SupportTicket?
     @State private var replies: [String: String] = [:]
     @State private var replying = false

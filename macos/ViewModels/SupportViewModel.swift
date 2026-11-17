@@ -72,20 +72,20 @@ final class SupportViewModel {
     }
 
     func refreshUnread() async {
-        guard !IOSDebug.supportSeed else { return }
+        guard !IOSDebug.supportSeed && !IOSDebug.supportBadgeSnapshot else { return }
         do { unreadCount = try await relay.unreadCount() }
         catch { logger.warning("Support unread count could not be loaded") }
     }
 
     func loadTickets() async {
-        guard !IOSDebug.supportSeed else { return }
+        guard !IOSDebug.supportSeed && !IOSDebug.supportBadgeSnapshot else { return }
         do { tickets = try await relay.tickets() }
         catch { logger.warning("Support tickets could not be loaded") }
     }
 
     func messages(for ticket: SupportTicket) async -> [SupportMessage]? {
         #if DEBUG
-        if IOSDebug.supportSeed { return DebugScreenshotSeed.supportMessages(for: ticket) }
+        if IOSDebug.supportSeed || IOSDebug.supportBadgeSnapshot { return DebugScreenshotSeed.supportMessages(for: ticket) }
         #endif
         do {
             let messages = try await relay.messages(ticketId: ticket.id)

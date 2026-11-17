@@ -3960,7 +3960,7 @@ select option:checked {
 .northstar-settings{padding:24px}
 .northstar-settings> *{flex-shrink:0}
 .northstar-settings h1{font-size:24px;font-weight:600;margin:0 0 18px}
-.settings-tabs{display:flex;width:max-content;max-width:100%;overflow-x:auto;border:1px solid #30354a;background:#0d1424;border-radius:13px;margin-bottom:28px}
+.settings-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));width:100%;max-width:100%;border:1px solid #30354a;background:#0d1424;border-radius:13px;margin-bottom:28px}
 .settings-tabs button{padding:12px 20px;color:#d8dced;background:transparent;border:0;border-radius:10px;font:inherit;font-size:13px;white-space:nowrap}
 .settings-tabs button.active{background:#50348c;color:#fff}
 .processing-columns{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}

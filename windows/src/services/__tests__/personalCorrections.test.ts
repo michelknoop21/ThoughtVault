@@ -129,14 +129,14 @@ it("contextBlockUsesTheMacHeader", () => {
 
 it("corrects the notule and the transcript of a recording", () => {
   const entry: PersonalCorrection = { id:"m",canonical:"Maikel",variants:["Michael"],scope:null,enabled:true };
-  expect(correctRecording(entry,"<p>Michael belt.</p>","Michael zegt: michael belt.")).toEqual({ notule:"<p>Maikel belt.</p>", transcript:"Maikel zegt: Maikel belt." });
+  expect(correctRecording(entry,"<p>Michael belt.</p>","Michael zegt: michael belt.")).toEqual({ title:"", notule:"<p>Maikel belt.</p>", transcript:"Maikel zegt: Maikel belt." });
   expect(correctRecording(entry,"",undefined).transcript).toBeUndefined();
 });
 it("builds a person correction without spellings that are part of the name", () => {
   const entry = personCorrection("Sanne Bakker",["Sanne"," ","sanne bakker","Sanne Backer","sanne backer","Bakker"],"p1");
   expect(entry?.variants).toEqual(["Sanne Backer"]);
   expect(entry?.scope).toBe("p1");
-  expect(correctRecording(entry!,"<p>Sanne Backer en Sanne</p>","Sanne zei tegen Sanne Backer")).toEqual({ notule:"<p>Sanne Bakker en Sanne</p>", transcript:"Sanne zei tegen Sanne Bakker" });
+  expect(correctRecording(entry!,"<p>Sanne Backer en Sanne</p>","Sanne zei tegen Sanne Backer")).toEqual({ title:"", notule:"<p>Sanne Bakker en Sanne</p>", transcript:"Sanne zei tegen Sanne Bakker" });
   expect(personCorrection("Sanne Bakker",["Sanne","SANNE BAKKER",""],null)).toBeNull();
 });
 it("testLearnedNotReplacedButInContextBlock", () => {

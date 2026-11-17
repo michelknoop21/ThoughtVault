@@ -217,18 +217,21 @@ enum PersonalCorrections {
         return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider),
                             extraTerms: VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [], includeRoles: includeRoles)
     }
+    private static func spellingKey(_ text: String) -> String {
+        text.lowercased().replacingOccurrences(of: #"[‐‑‒–—−]"#, with: "-", options: .regularExpression)
+    }
     static func text(_ text: String, entries: [PersonalCorrection], profileId: String?, html: Bool = false) -> String {
         var replacements: [String: String] = [:]
         for entry in active(entries, profileId: profileId) {
-            for variant in entry.variants { replacements[variant.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines) }
+            for variant in entry.variants { replacements[spellingKey(variant.trimmingCharacters(in: .whitespacesAndNewlines))] = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines) }
         }
         guard !replacements.isEmpty else { return text }
-        let alternatives = replacements.keys.sorted { $0.count > $1.count }.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|")
+        let alternatives = replacements.keys.sorted { $0.count > $1.count }.map { NSRegularExpression.escapedPattern(for: $0).replacingOccurrences(of: "-", with: "[-‐‑‒–—−]") }.joined(separator: "|")
         let pattern = #"&(?:#\d+|#x[\da-f]+|[a-z]+);|(?:https?://|www\.)[^\s<>]+|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}|`[^`]*`|(?<![\p{L}\p{N}_])(?:"# + alternatives + #")(?![\p{L}\p{N}_])"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return text }
         var result = text
         for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
-            guard let range = Range(match.range, in: text), let canonical = replacements[String(text[range]).lowercased()], let outputRange = Range(match.range, in: result) else { continue }
+            guard let range = Range(match.range, in: text), let canonical = replacements[spellingKey(String(text[range]))], let outputRange = Range(match.range, in: result) else { continue }
             let matched = String(text[range])
             if matched.hasPrefix("&") || matched.hasPrefix("`") || matched.contains("@") || matched.lowercased().hasPrefix("http://") || matched.lowercased().hasPrefix("https://") || matched.lowercased().hasPrefix("www.") { continue }
             let replacement = html ? escape(canonical) : canonical
@@ -237,8 +240,8 @@ enum PersonalCorrections {
         return result
     }
     /// Applies one correction to a recording's notule and transcript.
-    static func apply(_ entry: PersonalCorrection, notule: String, transcript: String?) -> (notule: String, transcript: String?) {
-        (html(notule, entries: [entry], profileId: entry.scope), transcript.map { text($0, entries: [entry], profileId: entry.scope) })
+    static func apply(_ entry: PersonalCorrection, notule: String, transcript: String?, title: String = "") -> (notule: String, transcript: String?, title: String) {
+        (html(notule, entries: [entry], profileId: entry.scope), transcript.map { text($0, entries: [entry], profileId: entry.scope) }, text(title, entries: [entry], profileId: entry.scope))
     }
     /// Correction that writes `name` over the heard spellings of a person. Skips empty spellings,
     /// the name itself and spellings that are part of the name ("Sanne" for "Sanne Bakker").

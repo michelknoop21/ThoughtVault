@@ -26,3 +26,22 @@ it("keeps the edited note and reports failure when disk save fails", async () =>
     .rejects.toThrow("disk full");
   expect(useLocalTranscriptsStore.getState().items[0].title).toBe("Oorspronkelijk");
 });
+
+it("reopens the same corrected title, note and transcript", async () => {
+  const { correctRecording } = await import("../../services/personalCorrections");
+  const original = { ...note, title: "A-E-oplossingen", notule_html: "<p>A–E werkt.</p>", raw_transcription: "A-E modellen." };
+  let disk = [original];
+  vi.spyOn(Store, "load").mockImplementation(async () => ({
+    get: vi.fn(async () => structuredClone(disk)),
+    set: vi.fn(async (_key, value) => { disk = structuredClone(value); }), save: vi.fn(),
+  } as unknown as Store));
+  vi.resetModules();
+  const first = (await import("../localTranscriptsStore")).useLocalTranscriptsStore;
+  await first.getState().hydrate();
+  const corrected = correctRecording({ id: "ai", canonical: "AI", variants: ["A-E"], enabled: true, scope: null }, original.notule_html, original.raw_transcription, original.title);
+  await first.getState().update(original.id, { title: corrected.title, notule_html: corrected.notule, raw_transcription: corrected.transcript });
+  vi.resetModules();
+  const reopened = (await import("../localTranscriptsStore")).useLocalTranscriptsStore;
+  await reopened.getState().hydrate();
+  expect(reopened.getState().items[0]).toMatchObject({ title: "AI-oplossingen", notule_html: "<p>AI werkt.</p>", raw_transcription: "AI modellen." });
+});

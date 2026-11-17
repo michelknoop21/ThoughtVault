@@ -75,8 +75,8 @@ final class ContextSuggestionsTests: XCTestCase {
         let dismissed = [ContextSuggestions.dismissKey(for: .term(TermSuggestion(heard: "Dossier", canonical: "dossier-x", note: ""))),
                          "person:anke bakker"]
         let set = ContextSuggestions.parse(raw, transcript: transcript, entries: entries, dismissed: dismissed)
-        XCTAssertEqual(set.terms.map(\.canonical), ["Kascop"], "known canonical, heard == canonical and dismissed are dropped")
-        let note = set.terms.first?.note ?? ""
+        XCTAssertEqual(set.terms.map(\.canonical), ["Dakwerk BV", "Kascop"], "new spellings of known terms remain suggestions")
+        let note = set.terms.last?.note ?? ""
         XCTAssertLessThanOrEqual(note.utf16.count, 200)
         XCTAssertNil(note.rangeOfCharacter(from: CharacterSet(charactersIn: "\r\n<>")))
         XCTAssertEqual(set.people.map(\.name), ["Pieter van Kaskop"])
@@ -157,4 +157,11 @@ final class ContextSuggestionsTests: XCTestCase {
             XCTFail("complete must not apply the context-step size limit")
         } catch {}
     }
+    func testNewShortVariantOfKnownTermRemainsProposalUnlessRejected() {
+        let raw = #"{"terms":[{"heard":"AE","canonical":"AI","note":"Controleer de betekenis"}]}"#
+        let entries = [PersonalCorrection(canonical: "AI", variants: ["A-E"])]
+        XCTAssertEqual(ContextSuggestions.parse(raw, transcript: "AE modellen", entries: entries, dismissed: []).terms.count, 1)
+        XCTAssertTrue(ContextSuggestions.parse(raw, transcript: "AE modellen", entries: entries, dismissed: ["learned:ai:ae"]).terms.isEmpty)
+    }
+
 }

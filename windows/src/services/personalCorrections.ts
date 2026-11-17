@@ -68,15 +68,17 @@ export function activeCorrections(entries: PersonalCorrection[], profileId?: str
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const escapeHTML = (text: string) => text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
+const spellingKey = (text: string) => text.toLowerCase().replace(/[‐‑‒–—−]/g, "-");
+
 export function correctText(text: string, entries: PersonalCorrection[], profileId?: string, html = false): string {
-  const replacements = new Map(activeCorrections(entries, profileId).flatMap(e => e.variants.map(v => [v.trim().toLowerCase(), e.canonical.trim()] as const)));
+  const replacements = new Map(activeCorrections(entries, profileId).flatMap(e => e.variants.map(v => [spellingKey(v.trim()), e.canonical.trim()] as const)));
   if (!replacements.size) return text;
-  const alternatives = [...replacements.keys()].sort((a,b) => b.length-a.length).map(escapeRegex).join("|");
+  const alternatives = [...replacements.keys()].sort((a,b) => b.length-a.length).map(v => escapeRegex(v).replace(/-/g, "[-‐‑‒–—−]")).join("|");
   // Protected tokens win before word alternatives, so replacements never cascade.
   const pattern = new RegExp(`&(?:#\\d+|#x[\\da-f]+|[a-z]+);|(?:https?:\\/\\/|www\\.)[^\\s<>]+|[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}|\\x60[^\\x60]*\\x60|(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`,"giu");
   return text.replace(pattern, match => {
     if (/^(?:https?:\/\/|www\.|&|`)/i.test(match) || match.includes("@")) return match;
-    const canonical = replacements.get(match.toLowerCase());
+    const canonical = replacements.get(spellingKey(match));
     return canonical === undefined ? match : html ? escapeHTML(canonical) : canonical;
   });
 }
@@ -98,9 +100,9 @@ export function correctHTML(html: string, entries: PersonalCorrection[], profile
   }).join("");
 }
 /** Applies one correction to a recording's notule and transcript. */
-export function correctRecording(entry: PersonalCorrection, notule: string, transcript?: string): { notule: string; transcript?: string } {
+export function correctRecording(entry: PersonalCorrection, notule: string, transcript?: string, title = ""): { notule: string; transcript?: string; title: string } {
   const profileId = entry.scope ?? undefined;
-  return { notule: correctHTML(notule, [entry], profileId), transcript: transcript === undefined ? undefined : correctText(transcript, [entry], profileId) };
+  return { notule: correctHTML(notule, [entry], profileId), transcript: transcript === undefined ? undefined : correctText(transcript, [entry], profileId), title: correctText(title, [entry], profileId) };
 }
 /**
  * Correction that writes `name` over the heard spellings of a person. Skips empty spellings,

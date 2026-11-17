@@ -2061,17 +2061,19 @@ struct TranscriptDetailView: View {
         let entries = try PersonalCorrections.load()
         try PersonalCorrections.validate(CorrectionDocument(entries: remember ? PersonalCorrections.upsert(entries, entry: entry) : [entry]))
         let original = isEditingNotule ? restoreNotuleMarkup(original: fullTranscript.notuleHtml ?? "", editedBody: editedHTML) : fullTranscript.notuleHtml ?? ""
-        let (html, transcript) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription)
+        let (html, transcript, title) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription, title: fullTranscript.title)
         if isLocalTranscript(fullTranscript.taskId) {
-            try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html, transcription: transcript)
+            try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html, transcription: transcript, title: title)
         } else {
             try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
+            if title != fullTranscript.title { try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: title) }
             if let transcript, transcript != fullTranscript.rawTranscription {
                 try await APIService.shared.updateTranscription(taskId: fullTranscript.taskId, text: transcript)
             }
         }
         fullTranscript.notuleHtml = html
         fullTranscript.rawTranscription = transcript
+        fullTranscript.title = title
         if isEditingNotule { editedHTML = prepareNotuleContent(html); isEditingNotule = false }
         if remember {
             do { try PersonalCorrections.saveRecording(entry, source: "handmatig") }

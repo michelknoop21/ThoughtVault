@@ -26,6 +26,8 @@ final class GlossaryAutoMatchTests: XCTestCase {
         for c in try fixture().cases {
             let candidates = GlossaryAutoMatch.candidates(in: c.transcript, targets: targets(c), dismissed: c.dismissed)
             XCTAssertEqual(candidates.map { [$0.heard, $0.target.canonical] }, c.candidates, c.name)
+            XCTAssertTrue(candidates.allSatisfy { $0.sentence.contains("⟦" + $0.heard + "⟧") }, c.name)
+            if c.name == "same sentence, different meanings" { XCTAssertEqual(Set(candidates.map(\.sentence)).count, 2) }
             let result = GlossaryAutoMatch.apply(c.transcript, candidates: candidates, yes: GlossaryAutoMatch.parseAnswers(c.answer, count: candidates.count))
             XCTAssertEqual(result.text, c.text, c.name)
             XCTAssertEqual(result.learned.map { [$0.target.canonical, $0.heard] }, c.learned, c.name)
@@ -48,8 +50,39 @@ final class GlossaryAutoMatchTests: XCTestCase {
     func testPromptBudgetAndSentenceLimit() {
         let long = (0..<40).map { "Zin \($0) met Jengo erin en verder heel veel woorden om de zin lang te maken tot ver voorbij de grens van honderdzestig tekens zodat inkorten nodig is." }.joined(separator: " ")
         let candidates = GlossaryAutoMatch.candidates(in: long, targets: GlossaryAutoMatch.targets(entries: [PersonalCorrection(canonical: "Yinga", variants: [])], people: [], profileId: nil), dismissed: [])
-        XCTAssertLessThanOrEqual(candidates.count, 12)
+        XCTAssertEqual(candidates.count, 40)
+        XCTAssertLessThanOrEqual(GlossaryAutoMatch.prompt(candidates).count, 12)
         XCTAssertTrue(candidates.allSatisfy { ($0.sentence as NSString).length <= 160 && $0.sentence.contains($0.heard) })
         XCTAssertLessThanOrEqual(GlossaryAutoMatch.system.utf16.count + GlossaryAutoMatch.prompt(candidates).user.utf16.count, 1500)
     }
+    func testEveryBatchChecksItsOwnOccurrences() async {
+        let transcript = Array(repeating: "AE modellen.", count: 30).joined(separator: " ") + " AE is een andere afkorting."
+        let targets = GlossaryAutoMatch.targets(entries: [PersonalCorrection(canonical: "AI", variants: [])], people: [], profileId: nil)
+        let result = await GlossaryAutoMatch.run(transcript, targets: targets, dismissed: []) { _, user in
+            user.components(separatedBy: "\n").enumerated().map { index, line in
+                "\(index + 1) " + (line.contains("andere afkorting") ? "nee" : "ja")
+            }.joined(separator: "\n")
+        }
+        XCTAssertEqual(result.text, Array(repeating: "AI modellen.", count: 30).joined(separator: " ") + " AE is een andere afkorting.")
+        XCTAssertTrue(result.learned.isEmpty)
+    }
+
+    func testSharedRecordingCorrections() throws {
+        struct Recording: Decodable {
+            var title: String; var notule: String; var transcript: String
+            var expectedTitle: String; var expectedNotule: String; var expectedTranscript: String
+        }
+        struct Recordings: Decodable { var recordings: [Recording] }
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "glossary-automatch", withExtension: "json"))
+        for c in try JSONDecoder().decode(Recordings.self, from: Data(contentsOf: url)).recordings {
+            let entry = PersonalCorrection(canonical: "AI", variants: ["A-E"])
+            let result = PersonalCorrections.apply(entry, notule: c.notule, transcript: c.transcript, title: c.title)
+            XCTAssertEqual(result.title, c.expectedTitle)
+            XCTAssertEqual(result.notule, c.expectedNotule)
+            XCTAssertEqual(result.transcript, c.expectedTranscript)
+            var disabled = entry; disabled.enabled = false
+            XCTAssertEqual(PersonalCorrections.apply(disabled, notule: c.notule, transcript: c.transcript, title: c.title).title, c.title)
+        }
+    }
+
 }

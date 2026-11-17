@@ -296,6 +296,12 @@ function stripCodeFences(html: string): string {
 }
 
 export class LLMService {
+  static async correctTranscription(transcription: string, profileId: string, taskId: string): Promise<string> {
+    const corrections = await loadCorrectionsOrEmpty();
+    const fixed = correctText(transcription, corrections, profileId);
+    return matchGlossary(fixed, corrections, profileId, taskId);
+  }
+
   /** One plain request to the selected provider, for small helper prompts (no audit, no chunking). */
   static async complete(systemPrompt: string, userMessage: string, step?: ModelStep): Promise<string> {
     const config = getConfig();
@@ -371,8 +377,9 @@ export class LLMService {
     meter?: UsageMeter,
   ): Promise<string> {
     const corrections = await loadCorrectionsOrEmpty();
-    
-    const context = minutesContext(corrections, transcription, profile.id);
+
+    // Context-checked spellings must not become global correction instructions to the generator.
+    const context = minutesContext(corrections.map(({ learned: _learned, ...entry }) => entry), transcription, profile.id);
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig(providerOverride);
     const enriched = enrichProfile(profile);

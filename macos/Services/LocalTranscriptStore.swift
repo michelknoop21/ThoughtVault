@@ -306,12 +306,13 @@ final class LocalTranscriptStore {
     }
 
     /// Saves a corrected notule and transcript together.
-    func updateNotule(taskId: String, html: String, transcription: String?) throws {
+    func updateNotule(taskId: String, html: String, transcription: String?, title: String? = nil) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
-        let original = (record.notuleHtml, record.rawTranscription)
+        let original = (record.notuleHtml, record.rawTranscription, record.title)
         record.notuleHtml = html
         if let transcription { record.rawTranscription = transcription }
-        do { try saveTranscriptChanges() } catch { (record.notuleHtml, record.rawTranscription) = original; throw error }
+        if let title { record.title = title }
+        do { try saveTranscriptChanges() } catch { (record.notuleHtml, record.rawTranscription, record.title) = original; throw error }
     }
 
     func updateParticipants(taskId: String, participants: [Participant]) throws {

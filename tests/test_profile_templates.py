@@ -1,13 +1,26 @@
 import json
 from pathlib import Path
 import subprocess
+import importlib.util
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 IDS = ['standaard', 'executive', 'projectoverleg', 'klantgesprek', 'een_op_een', 'brainstorm', 'promptnotitie']
 
 
-def test_one_source_generates_both_desktop_bundles_and_backend():
-    subprocess.run(['python3', 'scripts/generate_profile_templates.py', '--check'], cwd=ROOT, check=True)
+@pytest.fixture
+def backend_path(tmp_path):
+    spec = importlib.util.spec_from_file_location('profile_generator', ROOT / 'scripts/generate_profile_templates.py')
+    generator = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(generator)
+    path = tmp_path / 'profile_templates.py'
+    entries = generator.build_entries(json.loads(generator.SOURCE.read_text()))
+    path.write_text(generator.outputs(entries, path)[path])
+    return path
+
+
+def test_one_source_generates_both_desktop_bundles_and_backend(backend_path):
+    subprocess.run(['python3', 'scripts/generate_profile_templates.py', '--check', '--backend', str(backend_path)], cwd=ROOT, check=True)
     mac = json.loads((ROOT / 'macos/Resources/ProfileTemplates.json').read_text())
     win = json.loads((ROOT / 'windows/src/data/profileTemplates.json').read_text())
     assert mac == win
@@ -26,12 +39,7 @@ def test_no_fixed_heading_order_overrides_template():
         assert 'Kernuitkomst (maximaal drie zinnen), Besluiten' not in (ROOT / path).read_text()
 
 
-def test_fixed_transcript_reaches_each_local_and_cloud_profile_with_distinct_structure():
-    import importlib.util
-    backend_path = ROOT.parent / 'transcript-studio-backend/src/insanely_fast_whisper_api/app/profile_templates.py'
-    if not backend_path.exists():
-        import pytest
-        pytest.skip('Backend checkout is not available beside the native repo')
+def test_fixed_transcript_reaches_each_local_and_cloud_profile_with_distinct_structure(backend_path):
     spec = importlib.util.spec_from_file_location('generated_profiles', backend_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

@@ -35,7 +35,7 @@ def build_entries(source):
     return entries
 
 
-def outputs(entries):
+def outputs(entries, backend_path=BACKEND):
     bundled = json.dumps(entries, ensure_ascii=False, indent=2) + '\n'
     definitions = {
         entry['id']: {**entry, 'outputTemplate': entry['template']} for entry in entries
@@ -51,18 +51,19 @@ def outputs(entries):
         ROOT / 'macos/Resources/ProfileTemplates.json': bundled,
         ROOT / 'windows/src/data/profileTemplates.json': bundled,
     }
-    if BACKEND.parent.is_dir():
-        targets[BACKEND] = backend
+    if backend_path.parent.is_dir():
+        targets[backend_path] = backend
     return targets
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--backend', type=Path, default=BACKEND, help='Backend output file (defaults to the sibling checkout)')
     args = parser.parse_args()
     entries = build_entries(json.loads(SOURCE.read_text()))
     stale = []
-    for path, content in outputs(entries).items():
+    for path, content in outputs(entries, args.backend).items():
         if args.check:
             if not path.exists() or path.read_text() != content:
                 stale.append(str(path))

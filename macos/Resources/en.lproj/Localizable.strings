@@ -722,3 +722,7 @@
 "Kies een notulenprofiel." = "Choose a notes profile.";
 
 "Selecteer %@" = "Select %@";
+
+"%lld bronnotulen" = "%lld source notes";
+
+"Originelen blijven bewaard." = "Original notes are kept.";

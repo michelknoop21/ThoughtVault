@@ -24,7 +24,7 @@ const yinga = {
   name: "Yinga",
   company: "Yinga",
   contact: "Stadhuisplein 345a · 5038 TH Tilburg\n013 580 23 41 · www.yinga.nl",
-  layout: "cover",
+  layout: "compact",
   textColor: "#262626",
   headingColor: "#4F81BD",
   accentColor: "#CC0068",

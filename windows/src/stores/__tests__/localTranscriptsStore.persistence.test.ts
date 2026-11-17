@@ -17,7 +17,7 @@ beforeEach(() => {
 it("keeps the edited note and reports failure when disk save fails", async () => {
   const save = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("disk full"));
   vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn().mockResolvedValue([]), set: vi.fn(), save,
+    get: vi.fn(async (key: string) => key === "library" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save,
   } as unknown as Store);
 
   await useLocalTranscriptsStore.getState().hydrate();

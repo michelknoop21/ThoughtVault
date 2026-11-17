@@ -58,3 +58,6 @@ __pycache__/
 
 windows/src-tauri/resources/faster-whisper-*/
 .router/
+
+shared/document/node_modules/
+shared/document/src/bundled.json

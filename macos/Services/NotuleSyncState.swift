@@ -19,6 +19,7 @@ struct SyncedNotule: Codable, Equatable, Sendable {
     var notuleDraftHtml: String?
     var notuleReviewReason: String?
     var durationSeconds: Double?
+    var documentBrandingJSON: String?
     var notuleUsageJSON: String?
 
     @MainActor init(_ record: TranscriptRecord) {
@@ -37,6 +38,7 @@ struct SyncedNotule: Codable, Equatable, Sendable {
         notuleDraftHtml = record.notuleDraftHtml
         notuleReviewReason = record.notuleReviewReason
         durationSeconds = record.durationSeconds
+        documentBrandingJSON = record.documentBrandingJSON
         notuleUsageJSON = record.notuleUsageJSON
     }
 
@@ -65,6 +67,7 @@ struct SyncedNotule: Codable, Equatable, Sendable {
         record.notuleDraftHtml = notuleDraftHtml
         record.notuleReviewReason = notuleReviewReason
         record.durationSeconds = durationSeconds
+        record.documentBrandingJSON = documentBrandingJSON
         record.notuleUsageJSON = notuleUsageJSON
     }
 

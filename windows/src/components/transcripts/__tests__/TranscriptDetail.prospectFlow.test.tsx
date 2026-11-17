@@ -1,3 +1,4 @@
+import {MemoryRouter} from "react-router-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
@@ -17,10 +18,10 @@ it.each([false, true])("handles saved-offer opening (browser failure: %s)", asyn
   const root = createRoot(container);
   const noop = vi.fn();
   try {
-    await act(async () => { root.render(<TranscriptDetail transcript={{ id: "offer-note", title: "Gesprek", notule_html: "<p>Notule</p>", created_at: "2026-11-10", updated_at: "2026-11-10", duration_seconds: 0, tags: [] }}
+    await act(async () => { root.render(<MemoryRouter><TranscriptDetail transcript={{ id: "offer-note", title: "Gesprek", notule_html: "<p>Notule</p>", created_at: "2026-11-10", updated_at: "2026-11-10", duration_seconds: 0, tags: [] }}
       regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}}
       onSaveNotule={async () => {}} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop}
-      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />); });
+      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>); });
     await act(async () => { container.querySelector<HTMLButtonElement>('[title="Exporteren"]')!.click(); });
     await act(async () => { [...container.querySelectorAll("button")].find(b => b.textContent?.includes("Open offerte 20261110-1"))!.click(); });
     expect(api.openOffer).toHaveBeenCalledWith("/offers/431/build");

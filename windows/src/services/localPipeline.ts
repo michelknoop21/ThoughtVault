@@ -118,8 +118,8 @@ export async function processLocally(
         created_at: now,
         updated_at: now,
       };
-      await useLocalTranscriptsStore.getState().add(record);
-      useTranscriptsStore.getState().addTranscript(record);
+      const savedRecord = await useLocalTranscriptsStore.getState().add(record);
+      useTranscriptsStore.getState().addTranscript(savedRecord);
     }
 
     // 4. Generate the notule via the configured local LLM. Stream progress.

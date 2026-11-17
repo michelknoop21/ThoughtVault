@@ -38,6 +38,8 @@ final class TranscriptRecord {
     var notuleReviewReason: String?
     /// Audio length in seconds, set on record/import. Optional → lightweight-migration safe.
     var durationSeconds: Double?
+    /// Immutable version-1 presentation snapshot; absent on existing notes (lightweight migration).
+    var documentBrandingJSON: String?
     /// JSON-encoded `NotuleUsage` of the run that generated `notuleHtml`. Optional → lightweight-migration safe.
     var notuleUsageJSON: String?
 
@@ -101,7 +103,8 @@ final class TranscriptRecord {
             tags: tags,
             createdAt: formatter.string(from: createdAt),
             duration: durationSeconds,
-            profileName: profileName
+            profileName: profileName,
+            documentBrandingJSON: documentBrandingJSON
         )
     }
 }

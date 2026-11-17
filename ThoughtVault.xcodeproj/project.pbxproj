@@ -419,6 +419,15 @@
 		AA0F0D201 /* RecordingViewModel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D201 /* RecordingViewModel+Support.swift */; };
 		AA0F0D202 /* RecordingViewModel+Support.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D201 /* RecordingViewModel+Support.swift */; };
 		AA0F0D301 /* SupportViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0F0D301 /* SupportViewModelTests.swift */; };
+		6F3EB111287C40F292A6DF40 /* DocumentBranding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF2C5B65CE64E0488CCA454; };
+		129F5AFE73434030AB2602C8 /* DocumentBranding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BF2C5B65CE64E0488CCA454; };
+		7A4B9D2180B04C828BB40B73 /* DocumentExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B2D19C62C7F4FF595285A2F; };
+		32968E00F2494DFEBCE94918 /* DocumentExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B2D19C62C7F4FF595285A2F; };
+		8FB73A5CCB334974A2072CA7 /* DocumentBrandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E167CFB34D148A5BE492B97; };
+		7BD7E02D97A14488A46F80A9 /* DocumentBrandingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E167CFB34D148A5BE492B97; };
+		07AA0A1B65534C60A87120B4 /* Document in Resources */ = {isa = PBXBuildFile; fileRef = CEC68E2E0F5540D8AD80DB38; };
+		A8624E56039B4453BEC0E90C /* Document in Resources */ = {isa = PBXBuildFile; fileRef = CEC68E2E0F5540D8AD80DB38; };
+		5233D10987424B2F95073DD7 /* DocumentBrandingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B86927C2E244A784B3389E; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -672,6 +681,11 @@
 		FA0F0D101 /* SupportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportViewModel.swift"; sourceTree = "<group>"; };
 		FA0F0D201 /* RecordingViewModel+Support.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecordingViewModel+Support.swift"; sourceTree = "<group>"; };
 		FA0F0D301 /* SupportViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SupportViewModelTests.swift"; sourceTree = "<group>"; };
+		4BF2C5B65CE64E0488CCA454 /* DocumentBranding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentBranding.swift; sourceTree = "<group>"; };
+		5B2D19C62C7F4FF595285A2F /* DocumentExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentExporter.swift; sourceTree = "<group>"; };
+		7E167CFB34D148A5BE492B97 /* DocumentBrandingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentBrandingView.swift; sourceTree = "<group>"; };
+		CEC68E2E0F5540D8AD80DB38 /* Document */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Document; sourceTree = "<group>"; };
+		B5B86927C2E244A784B3389E /* DocumentBrandingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentBrandingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -771,6 +785,8 @@
 		GG000040 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				5B2D19C62C7F4FF595285A2F /* DocumentExporter.swift */,
+				4BF2C5B65CE64E0488CCA454 /* DocumentBranding.swift */,
 				FA000006 /* Analytics.swift */,
 				FA000007 /* APIService.swift */,
 				FA000008 /* AudioRecorder.swift */,
@@ -859,6 +875,7 @@
 		GG000060 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				7E167CFB34D148A5BE492B97 /* DocumentBrandingView.swift */,
 				FA000022 /* AccountView.swift */,
 				FA000023 /* AdminView.swift */,
 				FA000024 /* HomeView.swift */,
@@ -955,6 +972,7 @@
 		GG000070 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				CEC68E2E0F5540D8AD80DB38 /* Document */,
 				FA000041 /* Localizable.strings */,
 				FA000042 /* Localizable.strings */,
 				FA000067 /* ProfileTemplates.json */,
@@ -983,6 +1001,7 @@
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FC1C10000000000000000001 /* NotuleSyncTests.swift */,
+				B5B86927C2E244A784B3389E /* DocumentBrandingTests.swift */,
 				FB0F0A03 /* AppLogTests.swift */,
 				FB0F0B03 /* SupportRelayTests.swift */,
 				FB0F0B90 /* RecordingWidgetLayoutTests.swift */,
@@ -1166,6 +1185,7 @@
 				AA000043 /* PrivacyInfo.xcprivacy in Resources */,
 				AA000044 /* Assets.xcassets in Resources */,
 				AA000067 /* ProfileTemplates.json in Resources */,
+				07AA0A1B65534C60A87120B4 /* Document in Resources */,
 				AASIRI01 /* siriwave-MIT.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1179,6 +1199,7 @@
 				A2153F886454AABBC7D1AA12 /* PrivacyInfo.xcprivacy in Resources */,
 				8FD8EDF38F34ECC80B3B84D4 /* Assets.xcassets in Resources */,
 				59D4559821B7539107EB4ED1 /* ProfileTemplates.json in Resources */,
+				A8624E56039B4453BEC0E90C /* Document in Resources */,
 				B574C1F9B396FF3605203217 /* siriwave-MIT.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1249,6 +1270,9 @@
 				AA0000Q1 /* TranscriptSearch.swift in Sources */,
 				AA0000L1 /* LocalTranscriptionQueue.swift in Sources */,
 				AA0000X1 /* ExportFile.swift in Sources */,
+				8FB73A5CCB334974A2072CA7 /* DocumentBrandingView.swift in Sources */,
+				7A4B9D2180B04C828BB40B73 /* DocumentExporter.swift in Sources */,
+				6F3EB111287C40F292A6DF40 /* DocumentBranding.swift in Sources */,
 				AA0000X2 /* PrintCommand.swift in Sources */,
 				AA0000N8 /* NotuleAudit.swift in Sources */,
 				AA00AL01 /* NotuleAuditLong.swift in Sources */,
@@ -1376,6 +1400,7 @@
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AC1C10000000000000000001 /* NotuleSyncTests.swift in Sources */,
+				5233D10987424B2F95073DD7 /* DocumentBrandingTests.swift in Sources */,
 				AB0F0A03 /* AppLogTests.swift in Sources */,
 				AB0F0B03 /* SupportRelayTests.swift in Sources */,
 				AB0F0B90 /* RecordingWidgetLayoutTests.swift in Sources */,
@@ -1497,6 +1522,9 @@
 				66472F7361C4CB7C5BC25DF0 /* TranscriptSearch.swift in Sources */,
 				B74E45FDC7F73618EC0381EE /* LocalTranscriptionQueue.swift in Sources */,
 				E3DA3F9156A85ECFFA28641D /* ExportFile.swift in Sources */,
+				7BD7E02D97A14488A46F80A9 /* DocumentBrandingView.swift in Sources */,
+				32968E00F2494DFEBCE94918 /* DocumentExporter.swift in Sources */,
+				129F5AFE73434030AB2602C8 /* DocumentBranding.swift in Sources */,
 				3C67C8AEB636FBDE7FD839F1 /* PrintCommand.swift in Sources */,
 				963E7F6A40A45BEDA7CD6653 /* NotuleAudit.swift in Sources */,
 				AA00AL02 /* NotuleAuditLong.swift in Sources */,

@@ -615,6 +615,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
     var createdAt: String?
     var duration: Double?
     var profileName: String?
+    var documentBrandingJSON: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -627,6 +628,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         case createdAt = "created_at"
         case duration
         case profileName = "profile_name"
+        case documentBrandingJSON = "document_branding_json"
         // Backend sometimes returns these alternative field names
         case transcription
         case result
@@ -683,6 +685,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         createdAt = rawCreatedAt
         duration = try container.decodeIfPresent(Double.self, forKey: .duration)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
+        documentBrandingJSON = try container.decodeIfPresent(String.self, forKey: .documentBrandingJSON)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -699,6 +702,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(duration, forKey: .duration)
         try container.encodeIfPresent(profileName, forKey: .profileName)
+        try container.encodeIfPresent(documentBrandingJSON, forKey: .documentBrandingJSON)
     }
 
     init(
@@ -711,7 +715,8 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         tags: [String] = [],
         createdAt: String? = nil,
         duration: Double? = nil,
-        profileName: String? = nil
+        profileName: String? = nil,
+        documentBrandingJSON: String? = nil
     ) {
         self.id = id
         self.taskId = taskId.isEmpty ? id : taskId
@@ -723,6 +728,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         self.createdAt = createdAt
         self.duration = duration
         self.profileName = profileName
+        self.documentBrandingJSON = documentBrandingJSON
     }
 }
 

@@ -1,3 +1,4 @@
+import {MemoryRouter} from "react-router-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
@@ -17,10 +18,10 @@ it("keeps an edited notule open when saving fails", async () => {
   };
   const noop = vi.fn();
   await act(async () => {
-    root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
+    root.render(<MemoryRouter><TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
       onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={save}
       onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop}
-      onExportHTML={noop} onExportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />);
+      onExportHTML={noop} onExportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>);
   });
   await act(async () => { container.querySelector<HTMLButtonElement>('[title="Notule bewerken"]')!.click(); });
   const editor = container.querySelector<HTMLDivElement>('[aria-label="Notule bewerken"]')!;
@@ -53,10 +54,10 @@ it("allows regeneration from a saved transcript without a notule", async () => {
     duration_seconds: 10, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   await act(async () => {
-    root.render(<TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop}
+    root.render(<MemoryRouter><TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop}
       onRegenerate={regenerate} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}}
       onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop}
-      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />);
+      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>);
   });
   const button = container.querySelector<HTMLButtonElement>('[title="Notulen opnieuw genereren met AI"]');
   expect(button).not.toBeNull();
@@ -71,7 +72,7 @@ it("retains the selected-word correction after a failed note save and learns onl
   const container = document.createElement("div");document.body.append(container);
   const root = createRoot(container); const noop=vi.fn();
   const note={id:"local-word",title:"Overleg",profile_name:DEFAULT_PROFILES[0].name,raw_transcription:"Jengo",notule_html:"<p>Jengo</p>",duration_seconds:10,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-  await act(async()=>{root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async()=>{}} onSaveNotule={save} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop}/>);});
+  await act(async()=>{root.render(<MemoryRouter><TranscriptDetail transcript={note} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async()=>{}} onSaveNotule={save} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop}/></MemoryRouter>);});
   const node=container.querySelector(".td-doc-body p")!.firstChild!;
   const range=document.createRange();range.selectNodeContents(node);window.getSelection()!.removeAllRanges();window.getSelection()!.addRange(range);
   await act(async()=>{[...container.querySelectorAll("button")].find(b=>b.textContent==="Woord corrigeren")!.click();});
@@ -95,10 +96,10 @@ it("shows a sanitized rejected draft separately without turning it into an accep
   const note = { id: "local-review", title: "Transcriptie", raw_transcription: "Sam controleert vrijdag.", has_notes: false,
     notule_html: "", notule_draft_html: '<p>Ongecontroleerd concept</p><script>alert(1)</script>', notule_review_reason: "Actie niet bevestigd",
     duration_seconds: 10, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-  await act(async () => { root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
+  await act(async () => { root.render(<MemoryRouter><TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
     onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}}
     onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop}
-    onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />); });
+    onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>); });
   expect(container.querySelector('[aria-label="Concept ter beoordeling"]')?.textContent).toContain("Concept — niet gevalideerd");
   expect(container.querySelector('[aria-label="Concept ter beoordeling"] script')).toBeNull();
   expect(container.querySelector(".td-transcription")?.textContent).toBe(note.raw_transcription);

@@ -1,44 +1,47 @@
-# Notulen samenvoegen — implementatie en verificatie
+# Notulen samenvoegen — verificatie 17 november 2026
 
-Branch: `feat/notulen-samenvoegen-20261117`.
-Basis: actuele `origin/main` bij aanvang, `791bf565`.
-Worktree: `/Volumes/SSD/Projects/thoughtvault-samenvoegen`.
-Bewijs: `/Volumes/SSD/Projects/task-evidence/thoughtvault-samenvoegen`.
+## Resultaat en release
 
-## Gedrag
+Samenvoegen maakt vanaf twee bruikbare notulen een nieuwe notule. De actuele opgeslagen, eventueel handmatig bewerkte inhoud is de bron. Chronologische bronmomentopnamen en bronmetadata blijven behouden bij correcties, hergeneratie en Apple-iCloud-sync; originelen blijven bestaan. Ontbrekende serverinhoud wordt eerst opgehaald. Generatie, opslagfouten, dubbele starts, te grote invoer en annuleren zijn afgevangen. Er is geen fictieve audio of opnameduur en geen nieuwe Windows–Apple-synchronisatie.
 
-Op macOS, iPhone/iPad en Windows staat Samenvoegen bij de bestaande meervoudige selectie. Vanaf twee geselecteerde items toont een bevestiging titels, datums en de ingestelde profielkeuze. De actie valideert minstens twee verschillende, bruikbare notulen voordat een AI-aanvraag start. Ontbrekende serverdetails en gekoppelde notulen worden eerst opgehaald; een fout houdt de generatie tegen.
+De volledige documenthuisstijlfunctie is geïntegreerd. Yinga begint direct met de notule, zonder voorblad; HTML, Word en PDF gebruiken de gedeelde documentrenderer. De Windowswizard hergebruikt de bestaande modellendropdown met dezelfde aanbevolen modellen en prijsgrenzen als Instellingen. Dit is geen volledige dynamische OpenRouter-catalogus.
 
-De actuele opgeslagen notulenteksten worden via de bestaande HTML-conversie leesbare brontekst. De bronmomentopname is chronologisch gesorteerd, met bron-ID als vaste tweede sorteersleutel, en bevat duidelijke bronbegrenzingen, titels en datums. Meer dan 1.000.000 tekens geeft een fout; er wordt niets afgeknipt. De bestaande provider, fallback, profieltemplates, lange-tekstverwerking, kostenregistratie en inhoudscontrole blijven in gebruik. Instructies vragen om thematische bundeling, behoud van unieke informatie, acties en besluiten, expliciete brondatums bij tegenspraken en geen verzonnen gezamenlijke vergaderdatum of aanwezigheid.
+- Windows **1.0.334** is op Dalf38 geïnstalleerd, tweemaal gestart met ongewijzigde notulen en gepubliceerd op het productie-updatekanaal. Live download en feedsignatuur zijn gelijk aan de lokaal cryptografisch gecontroleerde MSI. SHA-256: `842827a8cdb9c0c6c6372110bea125515148fb510479dbd3e2aa08da32621418`.
+- Apple **1.0.335** is voor iOS en macOS ingediend en door Apple VALID verklaard. Mac335 is via TestFlight geïnstalleerd en fysiek gecontroleerd. iPhone334 is fysiek gecontroleerd; de laatste correctie in335 betreft het normaliseren van een geannuleerde netwerkfout.
+- Apple-artifacts zijn gebouwd vanaf `652d139e`; Windows334 vanaf `7b415da8`. Nieuwere presentatiewijzigingen uit `ee8861ca` zijn daarna zonder conflicten geïntegreerd en opnieuw regressiegetest. Die extra presentatie zit niet in deze eerdere artifacts. Release-tags wijzen daarom naar de werkelijk gebouwde commits.
 
-Een succesvolle generatie maakt één nieuw lokaal record en opent dat pas na geslaagde opslag. Originelen blijven behouden. Op Apple zijn audio en duur afwezig; Windows gebruikt de bestaande waarde 0 voor ontbrekende duur, die de interface niet als opnameduur toont. Er is geen audiobestand of audiopad. Dubbele starts zijn geblokkeerd. Annuleren vóór opslag verwerpt de uitvoer.
+## Bewijs
 
-Het nieuwe record toont Bronnotulen en bewaart de vaste momentopname voor opnieuw genereren. Woordcorrecties wijzigen de notule, maar houden deze bronmomentopname intact. Optionele bronmetadata loopt mee in de bestaande Apple-opslag, Codable-weergave en iCloud-payload en in de Windows-opslag. Er is geen nieuw backend-endpoint of synchronisatie tussen Windows en Apple.
+Alle onderstaande paden staan onder `/Volumes/SSD/Projects/task-evidence/`.
 
-## Geautomatiseerd bevestigd
+| Controle | Uitkomst | Bewijs |
+|---|---|---|
+| Apple volledige regressie na integratie | 616 geslaagd, 0 mislukt, 10 overgeslagen | `thoughtvault-release-1.0.335-20261117/apple-test-summary.json` |
+| Windows volledige regressie na integratie | 867 geslaagd, 2 overgeslagen | `thoughtvault-release-1.0.335-20261117/windows-integration-tests.log` |
+| Windows native HTTP/annulering | 13 geslaagd, inclusief sluiten echte verbinding | `thoughtvault-release-1.0.334-20261117/windows-build-final.log` |
+| Gedeelde documentrenderer | 9 tests geslaagd | `thoughtvault-samenvoegen-release-20261117/documents-combined-tests.log` |
+| Native Mac live model | Twee/drie bronnen, ander profiel en hergeneratie; vaste bron behouden | `thoughtvault-samenvoegen-release-20261117/native-live-evaluation.json` |
+| Native Windows live model | Twee fictieve Waddespoor-notulen samengevoegd; 83 originelen exact ongewijzigd | `thoughtvault-release-1.0.333-20261117/windows-merged-proof.log` |
+| Productie-iCloud op echte iPhone | Beide echte samengevoegde records aanwezig; pending=false; digest én serverDigest exact gelijk aan Mac | `thoughtvault-release-1.0.334-20261117/physical-real-sync-proof.json` |
+| Fysieke CloudKit roundtrip | Mac schrijft, fysieke iPhone wijzigt, Mac verifieert bronmetadata, broninhoud en huisstijlsnapshot | `thoughtvault-samenvoegen-release-20261117/cloud-*-summary.json` |
+| Native Mac annuleren335 | Status geannuleerd, geen technische foutmelding, 3 records vóór en na | `thoughtvault-release-1.0.335-20261117/native-cancel-proof.json` |
+| Yinga native PDF-export | 2 pagina's; eerste pagina bevat notule, geen voorblad | `thoughtvault-release-1.0.333-20261117/pdf-verification.log` en `Yinga-samengevoegde-proefnotule.pdf` |
+| Windows publicatie | Live MSI en feedsignatuur komen exact overeen | `thoughtvault-release-1.0.334-20261117/publication-verified.json` |
 
-- Apple: 62 gerichte tests geslaagd, 0 mislukt. Bronvolgorde, twee/meerdere bronnen, dubbele selectie, bewerkte notulen, HTML-conversie, lege/te grote invoer, merge-instructies, inhoudscontrole, bronbehoud bij correcties, lokale opslag en hercodering. Ook een echte schijfmigratie vanaf het bevroren model zonder samenvoegmetadata en een roundtrip van de overdraagbare iCloud-payload. Bestaande generatie-, synchronisatie-, migratie- en lange-teksttests draaien mee.
-- Windows: 835 tests geslaagd, 2 bestaande tests overgeslagen; 94 testbestanden geslaagd en 1 overgeslagen. Inclusief ophalen van ontbrekende gekoppelde notulen, ophaalfouten vóór generatie, generatie- en opslagfouten, annuleren, dubbele starts, hergeneratie met dezelfde bronmomentopname en bronbehoud bij woordcorrecties.
-- Builds: signed macOS Debug, iOS/iPadOS Simulator en Windows TypeScript/Vite. De Windows-build betreft de frontend, geen Windows-MSI of native Rust-build.
-- `git diff --check` zonder fouten.
+Native Windows334 toont het samengevoegde document zonder de eerdere `NetworkError` bij ingesloten lettertypen. De echte welkomstwizard toont de OpenRouter-modelkeuze. De profielkeuze bij Samenvoegen valt terug op een bestaand profiel als een oude opgeslagen ID niet meer bestaat; regressietest eerst rood en daarna groen. Het originele Mac-opnameprofiel Klantgesprek is na de proeven hersteld.
 
-Apple-testdetails: `apple-test-summary.json`, `apple-final-tests.log` en de xcresult-bundels op de SSD. Windows: `windows-regression.log`, `windows-final-build.log`. De laatste toegankelijkheidslabels zijn daarnaast met de platformbuilds en gerichte lijstregressietests gecontroleerd.
+## Live inhoudsbeoordeling en grenzen
 
-## Browserbewijs
+Met uitsluitend fictieve notulen zijn op de Mac het ingestelde OpenRouter-model `anthropic/claude-sonnet-5.5` en op Windows `mistralai/mistral-large-4-0` gebruikt. Gecontroleerd zijn overlap, unieke acties, expliciete vervanging van de opleverdatum, het onopgeloste verschil tussen budgetten, uitsluitingen en een voorwaarde vóór bestellen. De handmatig gewijzigde broninhoud is gebruikt. ASR-brontitels hadden nog de fictieve alias C4; de bewerkte inhoud gebruikte Zephyr. Er is geen algemene perfectheidsgarantie.
 
-Aside controleert de echte Windows-componenten in een tijdelijke browserproef met voorbeelddata en een gesimuleerde AI-aanbieder. Bevestigd: één selectie schakelt de actie uit, twee/drie bronnen, titels en datums in de bevestiging, standaardprofiel en gewijzigde profielkeuze, focus binnen de dialoog, Enter-bediening, voortgang, resultaat automatisch openen en Bronnotulen. Selectie krijgt een toegankelijke ingedrukte status; Apple-selectieknoppen krijgen een titel en geselecteerd-status.
+De inhoudscontrole leverde soms geen geldig bewijs. De app meldt dat als niet automatisch gecontroleerd / even nalopen. Eén geldige controle signaleerde daadwerkelijk een ontbrekende handmatige aanvulling. Volledigheid blijft modelafhankelijk.
 
-Bewijs: `browser-flow.log`, `browser-keyboard.log`, `confirmation.jpg`, `result.jpg`, `sources.jpg`. De browserproef bewijst de bediening en het doorgeven van de invoer, niet de kwaliteit van echte modeluitvoer. De fictieve voorbeelden bevatten overlap, unieke acties, een expliciet gewijzigd opleverbesluit en tegenstrijdige budgetten. Providerintegratietests controleren de instructies en auditketen met gesimuleerde antwoorden; er is geen live modelkwaliteitsmeting uitgevoerd.
+Windows annuleert nu ook de echte netwerkverbinding via de gedeelde Tauri HTTP-keten, inclusief retries en audits. Reeds verwerkte tokens kunnen door de aanbieder nog worden berekend. iPad is op uitdrukkelijk verzoek buiten deze acceptatie gehouden. Geen publieke notarized Mac-DMG gemaakt: op deze machine ontbreekt een Developer ID-certificaat; Mac-distributie loopt via TestFlight.
 
-## Nog open voor acceptatie
+De laatste iPhoneproef controleerde de daadwerkelijk gesynchroniseerde payload exact; de samengevoegde notule is niet opnieuw visueel op de iPhone geopend. Windows-RDP-bediening werd na het bekijken van de wizard onbetrouwbaar; de heropende wizard is niet opnieuw voltooid en er is geen nieuwe sleutel ingevoerd.
 
-- Handmatige bediening en toegankelijkheid in de native macOS-, iPhone/iPad- en Windows-apps; de Apple-code is gebouwd en getest, de Windows-bediening is in de browser gecontroleerd.
-- iCloud-upload en -download tussen fysieke apparaten met dit samengestelde record. Payload-roundtrip en opslagtests zijn geen bewijs van fysieke synchronisatie.
-- Een live beoordeling van de volledigheid bij het werkelijk gekozen AI-model. Die blijft mede modelafhankelijk.
-- Windows-providerverzoeken hebben in de bestaande transportketen geen abort-signaal. Annuleren voorkomt het opslaan van het resultaat, maar de lopende aanvraag kan nog doorlopen en kosten maken.
+## Dalf38 en opslag
 
-Geen release gepubliceerd, niet gepusht of gemerged. Extra schrijfopdrachten en automatische vervanging van originelen zijn niet toegevoegd.
+De 100% schijfbelasting kwam door twee oude loglezers die samen circa23GB geheugen gebruikten, waardoor Windows ging wisselen naar schijf. Alleen de geverifieerde loglezers en hun ouders zijn gestopt; bouwtaken bleven intact. De gedeelde logroute leest nu begrensd via FileStream, met maximaal32KiB, 100 regels, 2048 tekens per regel, 8 bestanden en een leestime-out. Zeven regressieproeven slagen, ook met UTF-16 en een64MB-regel. Beide voorheen vastlopende commando's eindigen nu binnen een seconde. Nameting: circa41GB vrij geheugen, geen paging en 0% schijfbelasting. Dit voorkomt deze oorzaak; gewone builds of antivirus kunnen uiteraard schijf-I/O veroorzaken. Zie `thoughtvault-samenvoegen-release-20261117/DALF38-LOGGUARD-20261117.md`.
 
-## Opslag en opruimen
-
-Builds, package-checkouts, tijdelijke ontwikkelbestanden en bewijs staan op de externe SSD. De lokale browserserver is gestopt. De tijdelijke browserproef is naar de bewijsmap gekopieerd, met SHA-256 gecontroleerd en uit de worktree verwijderd. De tijdelijke browser-screenshotomgeving bestaat niet meer; de afbeeldingen zijn op de SSD bewaard. Kleine interne testhostmappen zijn wegens niet eenduidig vast te stellen eigenaarschap behouden; paden en omvang staan in `storage-audit.json`. Er zijn daarom geen interne bestanden op basis van alleen een tijdstempel verwijderd; gemeten vrijgemaakte interne ruimte: 0 bytes.
+Ontwikkelwerk, archives, installateurs en bewijs staan op de externe SSD. Eigen acceptatie-scheduled-tasks worden verwijderd; rollbackbestanden en unieke bewijzen blijven behouden. Interne testhostmappen met onduidelijk eigenaarschap blijven staan. De fictieve acceptatienotulen zijn behouden; er zijn geen gebruikersnotulen verwijderd.

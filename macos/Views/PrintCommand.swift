@@ -33,6 +33,7 @@ enum NotulePrinter {
     /// Renders the HTML offscreen and opens the print panel (A4). Shared by PDF export and ⌘P.
     @MainActor
     static func print(html: String, keepAlive: @escaping (WKWebView?) -> Void) {
+        guard let window = NSApp.keyWindow else { return }
         let printInfo = NSPrintInfo.shared
         printInfo.paperSize = NSSize(width: 595, height: 842)
         printInfo.topMargin = 36
@@ -50,8 +51,8 @@ enum NotulePrinter {
             let op = webView.printOperation(with: printInfo)
             op.showsPrintPanel = true
             op.showsProgressPanel = true
-            op.run()
-            keepAlive(nil)
+            // WebKit renders asynchronously; keep the main run loop available for PDF output.
+            op.runModal(for: window, delegate: nil, didRun: nil, contextInfo: nil)
         }
     }
 }

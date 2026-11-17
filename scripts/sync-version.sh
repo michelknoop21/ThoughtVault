@@ -62,6 +62,17 @@ else
     echo "  Skipped: Cargo.toml (not found)"
 fi
 
+# Keep Cargo's root package in sync so Windows builds can use --locked.
+CARGO_LOCK="$ROOT_DIR/windows/src-tauri/Cargo.lock"
+if [ -f "$CARGO_LOCK" ]; then
+    awk -v ver="$VERSION" '
+        /^name = "thoughtvault"$/ { app = 1 }
+        app && /^version = "/ { print "version = \"" ver "\""; app = 0; next }
+        { print }
+    ' "$CARGO_LOCK" > "$CARGO_LOCK.tmp" && mv "$CARGO_LOCK.tmp" "$CARGO_LOCK"
+    echo "  Updated: Cargo.lock (thoughtvault=$VERSION)"
+fi
+
 # 4. Android build.gradle.kts — reads from ../VERSION at build time, no file edit needed
 ANDROID_BUILD="$ROOT_DIR/transcript-studio-android/app/build.gradle.kts"
 if [ -f "$ANDROID_BUILD" ]; then

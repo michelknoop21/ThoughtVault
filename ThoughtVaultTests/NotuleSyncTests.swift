@@ -180,6 +180,12 @@ final class NotuleSyncTests: XCTestCase {
         let target = try store()
         var count = 0
         target.onTranscriptChange = { count += 1 }
+        let changed = expectation(description: "Every saved local mutation refreshes the lists")
+        changed.expectedFulfillmentCount = 9
+        let observer = NotificationCenter.default.addObserver(forName: LocalTranscriptStore.didChange, object: nil, queue: nil) { notification in
+            if (notification.object as? LocalTranscriptStore) === target { changed.fulfill() }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
         let note = TranscriptRecord(id: "a", title: "Een")
         try target.save(note)
         try target.updateTitle(taskId: "a", title: "Twee")
@@ -194,6 +200,7 @@ final class NotuleSyncTests: XCTestCase {
         XCTAssertEqual(count, 8)
         try target.delete(taskId: "a")
         XCTAssertEqual(count, 9)
+        wait(for: [changed], timeout: 1)
     }
     func testCorrectedRecordingSurvivesReopening() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

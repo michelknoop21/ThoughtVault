@@ -189,6 +189,11 @@ struct TranscriptsView: View {
         }
         .task { await loadTranscripts() }
         .task {
+            for await _ in NotificationCenter.default.notifications(named: LocalTranscriptStore.didChange) {
+                await loadTranscripts()
+            }
+        }
+        .task {
             for await _ in NotificationCenter.default.notifications(named: NotuleSyncService.didImport) {
                 await loadTranscripts()
             }

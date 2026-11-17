@@ -63,6 +63,11 @@ struct HomeView: View {
 #endif
         }
         .task { await loadRecentTranscripts() }
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: LocalTranscriptStore.didChange) {
+                await loadRecentTranscripts()
+            }
+        }
         #if os(macOS)
         .task {
             if checkForUpdates { await updateCheck.checkForUpdate() }

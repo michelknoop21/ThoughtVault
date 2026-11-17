@@ -67,9 +67,10 @@ Evidence: `/Volumes/SSD/Projects/task-evidence/thoughtvault-woordenboek-koppen-p
 
 ## Acceptance still open
 
-No new interactive PDF session, physical Windows/iPhone acceptance, native MSI
-build, per-profile live-model evaluation or TestFlight upload/acceptance was
-performed. Profile checks prove prompt/template construction, not compliance by
+At the initial implementation checkpoint no new interactive PDF session,
+physical Windows/iPhone acceptance, native MSI build, per-profile live-model
+evaluation or TestFlight upload/acceptance had been performed. The follow-up
+below supersedes the Mac PDF and native Windows status. Profile checks prove prompt/template construction, not compliance by
 all models. The only local Ollama model is an embedding model; no new model was
 downloaded or paid-provider evaluation started. Uncertain short spellings remain
 context-sensitive and may need the user's confirmation through suggestions.
@@ -79,3 +80,63 @@ error log was removed: 2,055 bytes, 4,096 allocated bytes reclaimed. Shared npm 
 SwiftPM caches were preserved for concurrent sessions (see `internal-storage-audit.json`
 and `cleanup.json`). No other exclusively task-owned internal leftovers were found.
 No push, merge, release/version bump or production data change was performed.
+
+
+## Native Windows/macOS follow-up (17 November)
+
+Requested after the implementation: actual desktop acceptance, beyond the earlier
+Mac-hosted frontend checks. Evidence is in the `praktijk/` subdirectory.
+
+- Dalf38 was checked over the existing SSH/central-management route. The candidate
+  has its own identifier `nl.prezent.thoughtvault.woordenboek20261117`, QA window
+  title and version. No production installation, publication or public source push.
+- Full tests executed on Windows: **829 frontend tests passed**, two skipped;
+  **69 native Rust tests passed**, three ignored. Native Tauri release build
+  succeeded (central build job `243761622e5c4dd1ae29fc7bf937f942`, exit 0).
+- The native build exposed an existing root lock-entry version of 1.0.310 against
+  Cargo.toml/VERSION 1.0.329. Corrected that entry and extended the existing sync
+  script to keep it current. A regression test verifies that dependency versions
+  remain unchanged.
+- A signed, sandboxed Mac QA app used a separate `.screens` bundle/container and
+  fictitious fixture records. The QA-only seed/startup/plist/entitlement changes
+  are recorded separately; product logic matches the implementation worktree.
+- Real Mac clicks confirmed title, every paragraph, table cells and transcript;
+  the unrelated `AE` meaning remained unchanged. A normal app quit/restart showed
+  the corrected title and transcript again.
+- Real GUI testing exposed a stale Recent title. Local saves now notify the
+  sidebar, Home and Notulen list after successful persistence. The unit test
+  verifies notifications for all nine save mutations. **137 Mac tests passed**
+  after this fix, and the sidebar correction was repeated successfully in the UI.
+- New PDFs saved by the Mac app: `mac-short.pdf` (one A4 page) and `mac-long.pdf`
+  (thirteen A4 pages). Text is present on every page; all 130 table rows and the
+  final marker/warning are present. The short PDF contains corrected AI text.
+  The final table page was rendered and visually checked. Cancelling PDF save
+  and then cancelling the print panel produced no file or error.
+- The QA Mac app was closed. Its six durable fixture-store files were copied to
+  the SSD and SHA-256 verified. The exclusively task-owned sandbox container was
+  removed: 2,570,652 file bytes / 2,867,200 allocated bytes reclaimed. Shared caches
+  and other sessions' temporary test directories were preserved.
+
+Windows GUI acceptance also passed on Dalf38 in Michel's standard interactive
+session: final central job `713961fd14924287919a07ec8bff5790`, exit 0, empty stderr.
+The real WebView2/Tauri UI corrected title, all paragraphs, table and transcript,
+updated the list and sidebar, and retained everything after terminating and
+relaunching the QA process. Native file snapshots were compared after both
+phases; `AE is een andere afkorting` stayed unchanged. No browser reload or
+navigation-guard relaxation was used. The test's fixture settings were loaded by
+an actual app process restart. The native identifier was asserted before test
+settings were written. Earlier harness setup/readiness errors remain in the
+central job history and are not counted as product passes.
+
+All eighteen final Windows UI artifacts were SHA-256/length verified after
+transfer to the external SSD; the reopened screen was visually inspected. The
+native EXE SHA-256 is
+`8ae859d314a15557fb37ca8f6426306110e96c65bde7c6be62dbf5b97ce58317`.
+The QA process and debug port were closed. Only its isolated appdata folders were
+removed, after comparing the persisted transcript/glossary against the retained
+artifacts; see `windows-cleanup.json`. The installed Windows app/data and Mac app
+were not replaced. Build/job history and shared build caches were retained.
+
+Live provider/profile evaluation, TestFlight, MSI/update installation and new
+audio/hardware acceptance remain separate checks. Five Windows tests were
+intentionally skipped/ignored by the existing suites (two frontend, three Rust).

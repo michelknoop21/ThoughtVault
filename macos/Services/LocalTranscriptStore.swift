@@ -15,6 +15,7 @@ final class LocalTranscriptStore {
 
     static let shared = LocalTranscriptStore()
 
+    static let didChange = Notification.Name("LocalTranscriptStore.didChange")
     static let recoveryKey = "localStoreRecoveryRequiresReview"
     var onTranscriptChange: (() -> Void)?
 
@@ -214,6 +215,7 @@ final class LocalTranscriptStore {
     private func saveTranscriptChanges() throws {
         try context.save()
         onTranscriptChange?()
+        NotificationCenter.default.post(name: Self.didChange, object: self)
     }
 
     func applySyncedNotule(_ note: SyncedNotule, preservingLocalConflict: Bool) throws {

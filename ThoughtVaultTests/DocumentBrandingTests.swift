@@ -214,7 +214,8 @@ extension DocumentBrandingTests {
             let refreshed = try await view.callAsyncJavaScript(script, arguments: ["options": options],
                 in: nil, contentWorld: .page)
             XCTAssertEqual(refreshed as? Int, count)
-            XCTAssertGreaterThanOrEqual(count, name == "short" ? 2 : 3)
+            if name == "short" { XCTAssertEqual(count, 1, "Yinga notes must not add a cover page") }
+            else { XCTAssertGreaterThanOrEqual(count, 2) }
             let word = try await view.callAsyncJavaScript("return (await TVDocument.wordDocument(options)).length",
                 arguments: ["options": options],
                 in: nil, contentWorld: .page) as? Int

@@ -1,3 +1,5 @@
+import {standardBranding} from "../../../shared/document/dist/document.mjs";
+import {useBrandingStore} from "./brandingStore";
 import { create } from "zustand";
 import { Store } from "@tauri-apps/plugin-store";
 import type { Transcript } from "../types";
@@ -17,7 +19,7 @@ export function newLocalId(): string {
 interface LocalTranscriptsState {
   items: Transcript[];
   hydrate: () => Promise<void>;
-  add: (t: Transcript) => Promise<void>;
+  add: (t: Transcript) => Promise<Transcript>;
   update: (id: string, patch: Partial<Transcript>) => Promise<void>;
   remove: (id: string) => Promise<void>;
 }
@@ -78,7 +80,17 @@ export const useLocalTranscriptsStore = create<LocalTranscriptsState>()((set, ge
   return {
     items: [],
     hydrate,
-    add: (t) => persist((items) => [t, ...items.filter((item) => item.id !== t.id)]),
+    add: async (t) => {
+      await useBrandingStore.getState().hydrate();
+      const {library}=useBrandingStore.getState();
+      const style=library.styles.find(b=>b.id===library.defaultId);
+      await persist((items) => {
+        const existing=items.find(item=>item.id===t.id);
+        const snapshot=existing ? existing.document_branding_json : JSON.stringify(style ?? standardBranding());
+        return [{...t,document_branding_json:t.document_branding_json===undefined?snapshot:t.document_branding_json},...items.filter(item=>item.id!==t.id)];
+      });
+      return get().items.find(item => item.id === t.id)!;
+    },
     update: (id, patch) => persist((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item)),
     remove: (id) => persist((items) => items.filter((item) => item.id !== id)),
   };

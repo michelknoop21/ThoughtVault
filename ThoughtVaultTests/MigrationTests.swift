@@ -207,6 +207,8 @@ final class MigrationTests: XCTestCase {
         XCTAssertEqual(record.notuleHtml, "<p>Sam belt vrijdag.</p>")
         XCTAssertNil(record.notuleUsageJSON)
         XCTAssertNil(record.notuleUsage)
+        XCTAssertNil(record.documentBrandingJSON)
+        record.documentBrandingJSON = try DocumentBranding.standardJSON()
 
         record.notuleUsageJSON = #"{"provider":"openRouter"}"#
         try container.mainContext.save()

@@ -139,12 +139,9 @@ final class LocalTranscriptStore {
             guard !oldRecords.isEmpty else { return }
 
             for r in oldRecords {
-                context.insert(TranscriptRecord(
-                    id: r.id, taskId: r.taskId, title: r.title, filename: r.filename,
-                    rawTranscription: r.rawTranscription, notuleHtml: r.notuleHtml,
-                    profileId: r.profileId, profileName: r.profileName, tags: r.tags,
-                    createdAt: r.createdAt, localAudioPath: r.localAudioPath, source: r.source
-                ))
+                let migrated = TranscriptRecord(id: r.id, title: r.title, localAudioPath: r.localAudioPath)
+                SyncedNotule(r).apply(to: migrated)
+                context.insert(migrated)
             }
             try context.save()
             logger.info("Migrated \(oldRecords.count) record(s) from the previous local store.")
@@ -219,6 +216,7 @@ final class LocalTranscriptStore {
     }
 
     func applySyncedNotule(_ note: SyncedNotule, preservingLocalConflict: Bool) throws {
+        if let snapshot = note.documentBrandingJSON { _ = try DocumentBranding.parse(snapshot) }
         let existing = try recordsForSync().first { $0.id == note.id }
         do {
             if preservingLocalConflict, let existing, SyncedNotule(existing) != note {
@@ -257,8 +255,19 @@ final class LocalTranscriptStore {
     // MARK: - CRUD
 
     func save(_ record: TranscriptRecord) throws {
+        if self.record(forTaskId: record.taskId) == nil, record.documentBrandingJSON == nil {
+            record.documentBrandingJSON = try DocumentBrandingStore.shared.defaultSnapshot()
+        }
         context.insert(record)
         do { try saveTranscriptChanges() } catch { context.delete(record); throw error }
+    }
+
+    func applyBranding(taskId: String, snapshot: String?) throws {
+        if let snapshot { _ = try DocumentBranding.parse(snapshot) }
+        guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
+        let old = record.documentBrandingJSON
+        record.documentBrandingJSON = snapshot
+        do { try saveTranscriptChanges() } catch { record.documentBrandingJSON = old; throw error }
     }
 
     /// All locally stored records, newest first.

@@ -12,7 +12,7 @@
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case algemeen, verwerking, woordenlijst, notulen, agenda, obsidian, account, geavanceerd
+    case algemeen, verwerking, woordenlijst, notulen, huisstijlen, agenda, obsidian, account, geavanceerd
 
     var id: String { rawValue }
 
@@ -22,6 +22,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .verwerking:  return "Verwerking"
         case .woordenlijst: return "Woordenlijst"
         case .notulen:     return "Notulen"
+        case .huisstijlen: return "Huisstijlen"
         case .agenda:      return "Agenda"
         case .obsidian:    return "Obsidian"
         case .account:     return "Account"
@@ -35,6 +36,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .verwerking:  return "waveform"
         case .woordenlijst: return "character.book.closed"
         case .notulen:     return "doc.text"
+        case .huisstijlen: return "paintpalette"
         case .agenda:      return "calendar"
         case .obsidian:    return "tray.and.arrow.down"
         case .account:     return "person"
@@ -97,6 +99,7 @@ extension SettingsView {
                 .padding(.vertical, 24)
         case .algemeen:    algemeenCards(layout)
         case .notulen:     notulenCards(layout)
+        case .huisstijlen: DocumentBrandingView()
         case .agenda:      agendaCards(layout)
         case .obsidian:    obsidianCards(layout)
         case .account:     accountCards(layout)

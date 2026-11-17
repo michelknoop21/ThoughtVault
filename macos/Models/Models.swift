@@ -616,6 +616,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
     var duration: Double?
     var profileName: String?
     var mergeSourcesJSON: String?
+    var documentBrandingJSON: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -629,6 +630,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         case duration
         case profileName = "profile_name"
         case mergeSourcesJSON = "merge_sources_json"
+        case documentBrandingJSON = "document_branding_json"
         // Backend sometimes returns these alternative field names
         case transcription
         case result
@@ -686,6 +688,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         duration = try container.decodeIfPresent(Double.self, forKey: .duration)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
         mergeSourcesJSON = try container.decodeIfPresent(String.self, forKey: .mergeSourcesJSON)
+        documentBrandingJSON = try container.decodeIfPresent(String.self, forKey: .documentBrandingJSON)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -703,6 +706,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         try container.encodeIfPresent(duration, forKey: .duration)
         try container.encodeIfPresent(profileName, forKey: .profileName)
         try container.encodeIfPresent(mergeSourcesJSON, forKey: .mergeSourcesJSON)
+        try container.encodeIfPresent(documentBrandingJSON, forKey: .documentBrandingJSON)
     }
 
     init(
@@ -716,7 +720,8 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         createdAt: String? = nil,
         duration: Double? = nil,
         profileName: String? = nil,
-        mergeSourcesJSON: String? = nil
+        mergeSourcesJSON: String? = nil,
+        documentBrandingJSON: String? = nil
     ) {
         self.id = id
         self.taskId = taskId.isEmpty ? id : taskId
@@ -729,6 +734,7 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         self.duration = duration
         self.profileName = profileName
         self.mergeSourcesJSON = mergeSourcesJSON
+        self.documentBrandingJSON = documentBrandingJSON
     }
 }
 

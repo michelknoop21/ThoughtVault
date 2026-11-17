@@ -51,10 +51,10 @@ export async function mergeNotulen(sourceIDs: string[], profileId: string): Prom
       merge_sources: snapshot.sources, notule_html: html, notule_usage: meter.usageFor(snapshot.text, html),
       profile_id: profile.id, profile_name: profile.name, tags: [], has_notes: true, has_transcription: true,
       duration_seconds: 0, created_at: now, updated_at: now };
-    await useLocalTranscriptsStore.getState().add(result);
-    useTranscriptsStore.getState().addTranscript(result);
+    const saved = await useLocalTranscriptsStore.getState().add(result);
+    useTranscriptsStore.getState().addTranscript(saved);
     tasks.updateBackgroundTask(id, { status: "completed", progress: 100, message: undefined });
-    return result;
+    return saved;
   } catch (error) {
     tasks.updateBackgroundTask(id, { status: "failed", error_message: error instanceof Error ? error.message : "Samenvoegen mislukt" });
     throw error;

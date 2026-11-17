@@ -19,7 +19,7 @@ const a = note("local-a"), b = note("local-b", "02");
 let add = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
-  add = vi.fn().mockResolvedValue(undefined);
+  add = vi.fn().mockImplementation(async note => note);
   useLocalTranscriptsStore.setState({ items: [a, b], hydrate: vi.fn().mockResolvedValue(undefined), add });
   useTranscriptsStore.setState({ transcripts: [a, b] });
   useRecordingStore.setState({ backgroundTasks: [] });

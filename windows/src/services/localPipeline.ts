@@ -145,8 +145,8 @@ export async function processLocally(
         updated_at: now,
       };
       checkCancelled();
-      await useLocalTranscriptsStore.getState().add(record);
-      useTranscriptsStore.getState().addTranscript(record);
+      const savedRecord = await useLocalTranscriptsStore.getState().add(record);
+      useTranscriptsStore.getState().addTranscript(savedRecord);
     }
 
     const corrected = await LLMService.correctTranscription(transcription, profile.id, taskId);

@@ -186,6 +186,8 @@ extension TranscriptDetailView {
                 Toggle("Eigen notities meenemen", isOn: $includeOwnNotes)
                 Divider()
                 Button("PDF", systemImage: "doc.richtext") { exportAsPDF() }
+                Button("Word (.docx)", systemImage: "doc.text") { exportDocument("docx") }
+                Button("HTML", systemImage: "chevron.left.forwardslash.chevron.right") { exportDocument("html") }
                 Button("Markdown", systemImage: "doc.plaintext") { exportAsMarkdown() }
                 if obsidianEnabled {
                     Button("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down") { exportToObsidian() }

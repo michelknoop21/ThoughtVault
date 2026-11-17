@@ -1068,9 +1068,6 @@ struct TranscriptDetailView: View {
     // MARK: State - errors
 
     @State var errorMessage: String? = nil
-    #if os(macOS)
-    @State private var printWebView: WKWebView?
-    #endif
 
     // MARK: Init
 
@@ -1135,7 +1132,7 @@ struct TranscriptDetailView: View {
 #endif
         }
         #if os(macOS)
-        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportAsPDF() })
+        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportDocument("print") })
         #endif
         .alert("Titel bewerken", isPresented: $showTitleEditAlert) {
             TextField("Titel", text: $pendingTitle)
@@ -1535,6 +1532,8 @@ struct TranscriptDetailView: View {
                 Button { exportAsPDF() } label: {
                     Label("PDF", systemImage: "doc.richtext")
                 }
+                Button { exportDocument("docx") } label: { Label("Word (.docx)", systemImage: "doc.text") }
+                Button { exportDocument("html") } label: { Label("HTML", systemImage: "chevron.left.forwardslash.chevron.right") }
                 Button { exportAsMarkdown() } label: {
                     Label("Markdown", systemImage: "doc.plaintext")
                 }
@@ -1794,23 +1793,34 @@ struct TranscriptDetailView: View {
                     .padding(.vertical, TS.Spacing.xs)
             }
 
-            EditableHTMLWebView(
-                htmlContent: html,
-                editedHTML: $editedHTML,
-                isEditing: isEditingNotule,
-                isDarkMode: colorScheme == .dark,
-                onWebViewReady: { ref in
-                    Task { @MainActor in editableWebViewRef = ref }
-                }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-                if isEditingNotule {
-                    RoundedRectangle(cornerRadius: 0)
-                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
+            DocumentBrandingPicker(taskId: fullTranscript.taskId) { json in
+                fullTranscript.documentBrandingJSON = json
+            }
+            if let snapshot = fullTranscript.documentBrandingJSON {
+                DocumentWebView(html: isEditingNotule ? prepareNotuleContent(html) : html,
+                                title: isEditingNotule ? "" : fullTranscript.title,
+                                snapshot: snapshot, editable: isEditingNotule,
+                                onContent: { editedHTML = $0 },
+                                onWebViewReady: { ref in Task { @MainActor in editableWebViewRef = ref } })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                EditableHTMLWebView(
+                    htmlContent: html,
+                    editedHTML: $editedHTML,
+                    isEditing: isEditingNotule,
+                    isDarkMode: colorScheme == .dark,
+                    onWebViewReady: { ref in
+                        Task { @MainActor in editableWebViewRef = ref }
+                    }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    if isEditingNotule {
+                        RoundedRectangle(cornerRadius: 0)
+                            .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
+                    }
                 }
             }
-
             if !isEditingNotule {
                 NotuleUsageFooter(taskId: fullTranscript.taskId, html: html)
                     .padding(.horizontal, TS.Spacing.md)
@@ -2276,46 +2286,16 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    func exportAsPDF() {
+    func exportAsPDF() { exportDocument("pdf") }
+
+    func exportDocument(_ ext: String) {
         guard let html = exportNotuleHTML
-                ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
-
-        let styledHTML = """
-        <!DOCTYPE html>
-        <html><head><meta charset="utf-8">
-        <style>
-        body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 11.5pt; line-height: 1.65; color: #2c2c30; margin: 0; padding: 28pt 36pt; }
-        h1 { font-size: 18pt; font-weight: 700; color: #7830D8; margin-bottom: 14pt; padding-bottom: 8pt; border-bottom: 1.5pt solid rgba(120,48,216,0.15); }
-        h2 { font-size: 14pt; font-weight: 650; margin-top: 20pt; margin-bottom: 8pt; }
-        h3 { font-size: 12pt; font-weight: 600; color: #555; margin-top: 16pt; margin-bottom: 6pt; }
-        p { margin: 7pt 0; }
-        ul, ol { margin: 7pt 0; padding-left: 22pt; }
-        li { margin: 4pt 0; }
-        strong { font-weight: 600; }
-        table { border-collapse: collapse; width: 100%; margin: 14pt 0; }
-        th, td { border: 1px solid #e0e0e0; padding: 7pt 10pt; text-align: left; font-size: 10.5pt; }
-        th { background: #f8f8fa; font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.4pt; color: #666; }
-        blockquote { border-left: 2.5pt solid #7830D8; margin: 12pt 0; padding: 8pt 16pt; background: #f8f5fe; }
-        </style>
-        </head><body>\(html)</body></html>
-        """
-
-        #if os(macOS)
-        NotulePrinter.print(html: styledHTML) { printWebView = $0 }
-        #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "html"))
-        do {
-            try styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
-        } catch {
-            errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
-            return
+            ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
+        Task { @MainActor in
+            do { try await DocumentExporter.export(html: html, title: fullTranscript.title,
+                                                   snapshot: fullTranscript.documentBrandingJSON, ext: ext) }
+            catch { errorMessage = "Exporteren mislukt: \(error.localizedDescription)" }
         }
-        let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.present(activityVC, animated: true)
-        }
-        #endif
     }
 
     func exportAsTXT() {

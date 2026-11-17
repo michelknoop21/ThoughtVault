@@ -49,6 +49,10 @@ extension SettingsView {
                 }
 
                 group("Notulen generatie") {
+                    link(icon: "paintpalette", title: "Huisstijlen", subtitle: "Logo, opmaak en documentexports.") {
+                        DocumentBrandingView()
+                    }
+                    IOSDivider()
                     link(icon: "sparkles", title: "Verwerking",
                          subtitle: isLocalProcessing ? "Lokaal op dit apparaat" : "Cloud (server)") {
                         verwerkingIOSPage

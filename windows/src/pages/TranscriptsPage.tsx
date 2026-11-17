@@ -566,7 +566,8 @@ export function TranscriptsPage() {
         onBulkDelete={handleBulkDelete}
         merging={merging}
         onMerge={ids => {
-          setMergeProfileId(useSettingsStore.getState().default_profile_id || useProfilesStore.getState().profiles[0]?.id || "");
+          const profiles = useProfilesStore.getState();
+          setMergeProfileId(profiles.getProfile(useSettingsStore.getState().default_profile_id)?.id ?? profiles.profiles[0]?.id ?? "");
           setMergeIDs(ids);
         }}
       />

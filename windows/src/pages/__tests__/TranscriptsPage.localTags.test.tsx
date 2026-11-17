@@ -182,3 +182,31 @@ it.each([false, true])("keeps accepted notes intact when review is required (dra
   else { expect(task.error_message).toContain("apart bewaard"); expect(container.textContent).toContain("Concept — niet gevalideerd"); }
   await act(async () => { root.unmount(); });
 });
+
+it("uses an existing merge profile when the saved default no longer exists", async () => {
+  const previous = useSettingsStore.getState().default_profile_id;
+  useSettingsStore.getState().updateSettings({ processing_mode: "local", default_profile_id: "removed-profile" });
+  useProfilesStore.setState({ profiles: [{ id: "standard", name: "Standaard" }] });
+  const now = new Date().toISOString();
+  const notes: Transcript[] = ["a", "b"].map(id => ({ id: `local-merge-${id}`, title: `Bron ${id}`,
+    raw_transcription: "Oude transcriptie", notule_html: "<p>Bewaard besluit</p>", duration_seconds: 0,
+    tags: [], created_at: now, updated_at: now }));
+  useLocalTranscriptsStore.setState({ items: notes });
+  useTranscriptsStore.setState({ transcripts: notes, selectedId: null, searchQuery: "", selectedTags: [] });
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>));
+    await act(async () => container.querySelector<HTMLButtonElement>('[title="Selectiemodus"]')!.click());
+    await act(async () => container.querySelectorAll<HTMLElement>('.tl-item').forEach(row => row.click()));
+    await act(async () => [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === "Samenvoegen")!.click());
+    expect(container.querySelector<HTMLSelectElement>('dialog select')!.value).toBe("standard");
+    expect([...container.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === "Samenvoegen")!.disabled).toBe(false);
+    expect(useSettingsStore.getState().default_profile_id).toBe("removed-profile");
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    useSettingsStore.getState().updateSettings({ default_profile_id: previous });
+  }
+});

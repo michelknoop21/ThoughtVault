@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { startSupportOwner } from "./services/supportOwner";
+import { UpdateContext } from "./contexts/UpdateContext";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { TitleBar } from "./components/layout/TitleBar";
@@ -43,7 +44,7 @@ import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 
 initCrashReporter(); installConsoleForwarding(); installClickPath();
 
-const UpdateContext = createContext<ReturnType<typeof useUpdateCheck> | null>(null);
+
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate, downloaded, installNow} = useContext(UpdateContext)!;
@@ -55,7 +56,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <a href="#main-content" className="skip-link">Ga naar hoofdinhoud</a>
         <TitleBar />
         <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-          <Sidebar />
+          <Sidebar updateAvailable={isUpdateAvailable} />
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />

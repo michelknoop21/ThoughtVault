@@ -20,9 +20,10 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => { root.unmount(); }); host.remove(); });
 async function render(props: Partial<Parameters<typeof UpdateBanner>[0]> = {}) {
   await act(async () => { root.render(<UpdateBanner version="1.0.400" downloadUrl={null} onDismiss={() => {}} {...props} />); });
+  await act(async () => { [...host.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent === "Bekijk update")!.click(); });
 }
 function updateButton() {
-  return [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Nu bijwerken")!;
+  return [...host.querySelectorAll<HTMLButtonElement>("button")].find(button => (button.textContent === "Nu bijwerken" || button.textContent === "Download voor Windows"))!;
 }
 it("calls onInstall from Nu bijwerken", async () => {
   const onInstall = vi.fn(async () => {});
@@ -32,7 +33,7 @@ it("calls onInstall from Nu bijwerken", async () => {
 });
 it("tells the user a downloaded update installs on close", async () => {
   await render({ nativeUpdate, downloaded: true });
-  expect(host.textContent).toContain("Versie 1.0.400 is gedownload en wordt geïnstalleerd als je ThoughtVault afsluit");
+  expect(host.textContent).toContain("De update is gedownload en wordt geïnstalleerd als je ThoughtVault afsluit.");
 });
 it("keeps Nu bijwerken disabled while recording", async () => {
   const onInstall = vi.fn(async () => {});
@@ -44,7 +45,7 @@ it("keeps Nu bijwerken disabled while recording", async () => {
 });
 it("keeps Nu bijwerken disabled while processing", async () => {
   useRecordingStore.setState({ backgroundTasks: [{ task_id: "t1", status: "transcribing", progress: 40, mode: "combined", created_at: "2026-11-10T10:00:00Z" }] });
-  await render({ nativeUpdate });
+  await render({ nativeUpdate, onInstall: vi.fn(async () => {}) });
   expect(updateButton().disabled).toBe(true);
 });
 it("opens the download page when there is no native update", async () => {
@@ -59,7 +60,7 @@ it("shows the existing error and permits retry when installation fails", async (
   const onInstall = vi.fn(async () => {}).mockRejectedValueOnce(new Error("offline"));
   await render({ nativeUpdate, onInstall });
   await act(async () => { updateButton().click(); });
-  expect(host.querySelector('[role="alert"]')?.textContent).toBe("Bijwerken mislukt. Probeer opnieuw.");
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe("Bijwerken mislukt. Controleer je verbinding en probeer opnieuw.");
   await act(async () => { updateButton().click(); });
   expect(onInstall).toHaveBeenCalledTimes(2);
   expect(host.querySelector('[role="alert"]')).toBeNull();
@@ -69,7 +70,7 @@ it("disables Nu bijwerken while installation is pending", async () => {
   const onInstall = vi.fn(() => new Promise<void>(resolve => { finish = resolve; }));
   await render({ nativeUpdate, onInstall });
   await act(async () => { updateButton().click(); });
-  expect([...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Bezig...")?.disabled).toBe(true);
+  expect([...host.querySelectorAll<HTMLButtonElement>("button")].find(button => button.textContent === "Bezig…")?.disabled).toBe(true);
   await act(async () => { finish(); });
   expect(updateButton().disabled).toBe(false);
 });

@@ -37,6 +37,7 @@ struct SettingsView: View {
     @AppStorage(ObsidianService.vaultPathKey) private var obsidianVaultPath: String = "Notulen"
     @AppStorage(VaultFolderStore.contextNoteKey) private var obsidianContextNote: String = VaultFolderStore.defaultContextNote
 
+    @Environment(UpdateCheckService.self) var updateCheck
     @AppStorage("checkForUpdates") var checkForUpdates = true
     @AppStorage(SupportIdentity.autoReportKey) var supportAutoReport = true
     @AppStorage(SupportIdentity.nameKey) var supportName = ""

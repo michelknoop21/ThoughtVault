@@ -127,83 +127,83 @@ struct HomeView: View {
         .environment(UpdateCheckService())
 }
 
+#if os(macOS)
 struct AppUpdateBanner: View {
     let version: String
+    var dismissible = true
     @Environment(RecordingViewModel.self) private var recordingVM
     @Environment(UpdateCheckService.self) private var updateCheck
     @AppStorage("dismissedUpdateVersion") private var dismissedUpdateVersion = ""
-
-
-    private var updateBannerButtonLabel: String {
-        if updateCheck.isDownloading {
-            let pct = Int((updateCheck.downloadProgress * 100).rounded())
-            return pct > 0 ? "\(pct)%" : "Downloaden…"
-        }
-        return "Nu bijwerken"
-    }
+    @State private var showDetails = false
 
     var body: some View {
-        HStack(spacing: TS.Spacing.sm) {
-            Image(systemName: "arrow.down.circle.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.white)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Versie \(version) is beschikbaar")
+        HStack(spacing: TS.Spacing.md) {
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: 25, weight: .light))
+                .foregroundStyle(Color.brandLink)
+                .frame(width: 44, height: 44)
+                .background(Color.brandPrimary.opacity(0.12), in: RoundedRectangle(cornerRadius: TS.Radius.sm))
+            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                Text(recordingVM.updateIsBusy ? "Update klaar. Je opname gaat voor." : "ThoughtVault \(version) is beschikbaar")
                     .font(TS.Font.footnoteSemibold)
-                    .foregroundStyle(.white)
-                if recordingVM.updateIsBusy { Text("Bijwerken kan zodra opnemen en verwerken klaar zijn.").font(TS.Font.caption) }
-                if let error = updateCheck.errorMessage { Text(error).font(TS.Font.caption) }
+                Text(recordingVM.updateIsBusy ? "Bijwerken kan zodra opnemen en verwerken klaar zijn." : "Werk bij wanneer het jou uitkomt.")
+                    .font(TS.Font.caption)
+                    .foregroundStyle(Color.labelSecondary)
             }
-
-            Spacer()
-
-            if let url = updateCheck.downloadURL {
-                Button {
-                    #if os(macOS)
-                    Task { await updateCheck.downloadAndOpen() }
-                    #else
-                    UIApplication.shared.open(url)
-                    #endif
-                } label: {
-                    Text(updateBannerButtonLabel)
-                        .font(TS.Font.captionSemibold)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, TS.Spacing.sm)
-                        .padding(.vertical, TS.Spacing.xs)
-                        .background {
-                            Capsule(style: .continuous)
-                                .fill(Color.white.opacity(0.22))
-                        }
+            Spacer(minLength: TS.Spacing.sm)
+            Button("Bekijk update") { showDetails = true }
+                .buttonStyle(PrimaryButtonStyle())
+            if dismissible {
+                Button { withAnimation(TS.Animation.quick) { dismissedUpdateVersion = version } } label: {
+                    Image(systemName: "xmark").frame(width: 32, height: 32)
                 }
                 .buttonStyle(.plain)
-                .disabled(updateCheck.isDownloading || recordingVM.updateIsBusy)
+                .accessibilityLabel("Updatemelding verbergen")
             }
-
-            Button {
-                withAnimation(TS.Animation.quick) {
-                    dismissedUpdateVersion = version
+        }
+        .padding(TS.Spacing.md)
+        .background(Color.cardDark, in: RoundedRectangle(cornerRadius: TS.Radius.md))
+        .overlay(RoundedRectangle(cornerRadius: TS.Radius.md).strokeBorder(Color.brandLink.opacity(0.3)))
+        .sheet(isPresented: $showDetails) {
+            VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+                HStack {
+                    Image(systemName: "arrow.down.circle").font(.system(size: 40, weight: .light)).foregroundStyle(Color.brandLink)
+                    Spacer()
+                    Button { showDetails = false } label: { Image(systemName: "xmark").frame(width: 32, height: 32) }
+                        .buttonStyle(.plain).accessibilityLabel("Sluiten")
                 }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.7))
+                Text("Een nieuwe ThoughtVault staat klaar.").font(TS.Font.title2)
+                Text("Versie \(version)").font(TS.Font.caption).foregroundStyle(Color.brandLink)
+                if updateCheck.usesInstallerDownload {
+                    Text("Download het installatiebestand voor jouw Mac. Daarna rond je de installatie zelf af.")
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Text("1. Download het DMG-bestand.")
+                        Text("2. Sluit ThoughtVault af.")
+                        Text("3. Open de DMG en sleep ThoughtVault naar Programma’s. Kies ‘Vervang’.")
+                    }.font(TS.Font.footnote).foregroundStyle(Color.labelSecondary)
+                } else {
+                    Text("De updater begeleidt je bij het downloaden en installeren. ThoughtVault sluit daarvoor kort af.")
+                }
+                if recordingVM.updateIsBusy {
+                    Text("Rond eerst je opname en verwerking af. Je kunt daarna bijwerken.")
+                        .font(TS.Font.footnote).foregroundStyle(Color.labelSecondary)
+                }
+                if let error = updateCheck.errorMessage {
+                    Text(error).font(TS.Font.footnote).foregroundStyle(Color.statusErrorText).accessibilityAddTraits(.updatesFrequently)
+                }
+                HStack {
+                    Button("Later") { showDetails = false }.buttonStyle(SecondaryButtonStyle())
+                    Spacer()
+                    Button(updateCheck.isDownloading ? "Download controleren…" : updateCheck.usesInstallerDownload ? "Download voor macOS" : "Nu bijwerken") {
+                        Task { await updateCheck.downloadAndOpen() }
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(recordingVM.updateIsBusy || updateCheck.isDownloading)
+                }
             }
-            .buttonStyle(.plain)
+            .padding(TS.Spacing.xl)
+            .frame(width: 480)
         }
-        .padding(.horizontal, TS.Spacing.md)
-        .padding(.vertical, TS.Spacing.sm)
-        .background {
-            RoundedRectangle(cornerRadius: TS.Radius.sm, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.brandPrimary, Color.brandPrimaryDark],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-        }
-        .transition(.move(edge: .top).combined(with: .opacity))
     }
-
 }
+#endif

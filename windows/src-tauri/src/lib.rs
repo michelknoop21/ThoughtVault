@@ -10,6 +10,9 @@ use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Listener, Manager};
 
+#[tauri::command]
+fn app_architecture() -> &'static str { std::env::consts::ARCH }
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let recording_state: SharedRecordingState = Arc::new(Mutex::new(Default::default()));
@@ -91,6 +94,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            app_architecture,
             applog::log_write,
             applog::log_tail,
             applog::log_reveal,

@@ -16,7 +16,7 @@ import { useTranscriptsStore } from "../../stores/transcriptsStore";
 import { useSupportStore } from "../../stores/supportStore";
 import appLogo from "../../assets/app-logo.png";
 
-export function Sidebar() {
+export function Sidebar({ updateAvailable = false }: { updateAvailable?: boolean }) {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     const toggle = (event: KeyboardEvent) => {
@@ -71,7 +71,7 @@ export function Sidebar() {
       <hr className="sidebar-divider" />
 
       {/* Bottom items */}
-      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" shortcut="Ctrl+6" badge={unread} />
+      <SidebarItem to="/settings" icon={<Settings24Regular />} label="Instellingen" updateAvailable={updateAvailable} shortcut="Ctrl+6" badge={unread} />
       {!collapsed && <BrandFooter compact />}
     </nav>
   );
@@ -83,17 +83,19 @@ function SidebarItem({
   label,
   shortcut,
   badge,
+  updateAvailable = false,
 }: {
   to: string;
   icon: React.ReactNode;
   label: string;
   shortcut?: string;
   badge?: number;
+  updateAvailable?: boolean;
 }) {
   return (
     <NavLink
       to={to}
-      aria-label={badge && badge > 0 ? `${label}, ${badge} ongelezen` : label}
+      aria-label={`${label}${badge && badge > 0 ? `, ${badge} ongelezen` : ""}${updateAvailable ? ", update beschikbaar" : ""}`}
       end={to === "/"}
       className={({ isActive }) =>
         `sidebar-item${isActive ? " active" : ""}`
@@ -106,6 +108,7 @@ function SidebarItem({
             background: "var(--status-error)", color: "white", fontSize: 11, fontWeight: 700, lineHeight: "18px", textAlign: "center" }}>{badge}</span>}
       </span>
       <span className="sidebar-item-label">{label}</span>
+      {updateAvailable && <span className="update-settings-dot" aria-hidden="true" />}
       {shortcut && (
         <span className="sidebar-item-shortcut">{shortcut}</span>
       )}

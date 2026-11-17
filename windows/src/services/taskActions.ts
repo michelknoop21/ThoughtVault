@@ -41,7 +41,7 @@ export function renameTask(entry: TaskHistoryEntry, title: string): void {
  * approved notule retries under its own id, which reuses a saved transcription. A completed task
  * gets a new notule next to the existing one, so the existing notule is never emptied first.
  */
-export function reprocessTask(entry: TaskHistoryEntry, title: string, profileId: string, model?: string): void {
+export function reprocessTask(entry: TaskHistoryEntry, title: string, profileId: string, model?: string, retranscribe = false, optimizeAudio = false): void {
   if (!canReprocess(entry) || !entry.audio_path) return;
   const settings = useSettingsStore.getState();
   const provider = modelProvider(settings);
@@ -50,13 +50,13 @@ export function reprocessTask(entry: TaskHistoryEntry, title: string, profileId:
   const recording = useRecordingStore.getState();
   recording.removeBackgroundTask(entry.id);
   const mode = entry.mode ?? "microphone";
-  if (entry.status !== "completed") {
+  if (!retranscribe && entry.status !== "completed") {
     void processLocally(entry.audio_path, profileId, mode, [], entry.recording_seconds ?? 0, entry.id);
     return;
   }
   const edited = useTaskHistory.getState().entries.find(e => e.id === entry.id);
   if (edited?.title_edited) useTaskHistory.getState().carryTitle(edited.title, entry.audio_path);
-  void processLocally(entry.audio_path, profileId, mode, [], entry.recording_seconds ?? 0);
+  void processLocally(entry.audio_path, profileId, mode, [], entry.recording_seconds ?? 0, undefined, optimizeAudio, retranscribe ? undefined : entry.transcript_id);
 }
 
 /** Deletes the audio file; the notule and transcription stay. Entries that share the file (a reprocess) are marked too. */

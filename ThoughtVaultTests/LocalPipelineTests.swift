@@ -6,6 +6,17 @@ import AVFoundation
 // reaches the task, and a missing speech model fails clearly instead of downloading.
 
 final class LocalPipelineTests: XCTestCase {
+    @MainActor
+    func testSyncedRecordWithServerIDUsesLocalStorage() throws {
+        let id = "synced-" + UUID().uuidString
+        let record = TranscriptRecord(taskId: id, title: "Lokale gesynchroniseerde notule", rawTranscription: "Besluit", notuleHtml: "<p>Besluit</p>")
+        try LocalTranscriptStore.shared.save(record)
+        defer { try? LocalTranscriptStore.shared.delete(taskId: id) }
+        XCTAssertTrue(isLocalTranscript(id))
+        XCTAssertTrue(isLocalTranscript("local-test"))
+        XCTAssertFalse(isLocalTranscript("unknown-" + UUID().uuidString))
+    }
+
 
     func testMissingModelThrowsWithoutDownload() async {
         let transcriber = WhisperKitTranscriber(model: "openai_whisper-test", isInstalled: { _ in false })

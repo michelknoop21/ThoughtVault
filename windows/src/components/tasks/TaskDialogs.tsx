@@ -65,11 +65,15 @@ export function ReprocessDialog({ entry, onClose }: { entry: TaskHistoryEntry; o
   const current = settings[modelSettingKey(provider)];
   const choices = modelChoices(provider, current);
   const [title, setTitle] = useState(entry.title);
+  const [retranscribe, setRetranscribe] = useState(false);
+  const [optimizeAudio, setOptimizeAudio] = useState(false);
   const [profileId, setProfileId] = useState(profiles.find(p => p.id === entry.profile_id)?.id ?? profiles[0]?.id ?? "");
   const [model, setModel] = useState(choices.includes(current) ? current : choices[0] ?? "");
   return <DesktopDialog label="Opnieuw verwerken" onClose={onClose}>
     <section className="card" style={panel} onClick={e => e.stopPropagation()}>
       <h3 className="td-confirm-title" style={{ margin: 0, fontSize: 16 }}>Opnieuw verwerken</h3>
+      <label><input type="checkbox" checked={retranscribe} onChange={e => setRetranscribe(e.target.checked)} /> Opnieuw transcriberen</label>
+      {retranscribe && <><label><input type="checkbox" checked={optimizeAudio} onChange={e => setOptimizeAudio(e.target.checked)} /> Audio optimaliseren</label><p className="settings-desc">Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd.</p></>}
       <label className="flex-col gap-4"><span className="settings-desc">Titel</span>
         <input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
       <label className="flex-col gap-4"><span className="settings-desc">Profiel</span>
@@ -84,14 +88,12 @@ export function ReprocessDialog({ entry, onClose }: { entry: TaskHistoryEntry; o
           ? "Je ziet alleen aanbevolen modellen tot $3 per miljoen invoertokens en $15 per miljoen uitvoertokens. "
           : ""}Je keuze wordt ook je standaardmodel bij Instellingen.</span>
       </label> : <p className="settings-desc" style={{ margin: 0 }}>Model: {current || "standaard"}</p>}
-      <p className="settings-desc" style={{ margin: 0 }}>{entry.status === "completed"
-        ? "De opname wordt opnieuw verwerkt tot een nieuwe notule. De bestaande notule blijft staan."
-        : "De opname wordt opnieuw verwerkt. Een al opgeslagen transcriptie wordt hergebruikt."}</p>
+      <p className="settings-desc" style={{ margin: 0 }}>{retranscribe ? "De opname wordt opnieuw getranscribeerd. Er komt een nieuw resultaat; je bestaande notule blijft bewaard." : "De opgeslagen transcriptie wordt hergebruikt als die beschikbaar is. Je bestaande notule blijft bewaard."}</p>
       <div className="flex-row gap-8" style={{ justifyContent: "flex-end", flexWrap: "wrap" }}>
         <button className="btn" onClick={onClose}>Annuleren</button>
         <button className="btn" disabled={!title.trim()} onClick={() => { renameTask(entry, title); onClose(); }}>Titel opslaan</button>
         <button className="btn btn-accent" disabled={!profileId || !canReprocess(entry)}
-          onClick={() => { reprocessTask(entry, title, profileId, choices.length > 1 ? model : undefined); onClose(); }}>Opnieuw verwerken</button>
+          onClick={() => { reprocessTask(entry, title, profileId, choices.length > 1 ? model : undefined, retranscribe, retranscribe && optimizeAudio); onClose(); }}>Opnieuw verwerken</button>
       </div>
     </section>
   </DesktopDialog>;

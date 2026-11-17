@@ -683,3 +683,26 @@
 "support.badge.explanation" = "The number only counts new replies from support. Sending an error report does not count.";
 "support.readAll" = "Mark all as read";
 "support.readAll.error" = "Could not mark as read. Please try again.";
+
+/* Recording notebook and reprocessing */
+"Actiepunt" = "Action item";
+"Actiepunt verwijderen" = "Delete action item";
+"Actiepunten" = "Action items";
+"Agenda: " = "Calendar: ";
+"Audio optimaliseren" = "Optimize audio";
+"Automatisch na verwerking" = "Automatically after processing";
+"Blijft bij deze opname bewaard" = "Saved with this recording";
+"Deelnemers kiezen" = "Choose participants";
+"Eigen notities" = "Own notes";
+"Eigen notities meenemen" = "Include own notes";
+"Eigen titel" = "Custom title";
+"Gekoppeld aan deze agenda-afspraak" = "Linked to this calendar event";
+"Kladblok" = "Notebook";
+"Kladblokonderdeel" = "Notebook section";
+"Nieuw actiepunt…" = "New action item…";
+"Notities" = "Notes";
+"Opnieuw transcriberen" = "Transcribe again";
+"Titel van agendameeting" = "Calendar meeting title";
+"Titel van deze opname" = "Recording title";
+"Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard." = "Adjusts the volume on a temporary copy. Recovery of damaged speech is not guaranteed. The original is preserved.";
+"Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd." = "Adjusts the volume on a temporary copy. The original is preserved; recovery of damaged speech is not guaranteed.";

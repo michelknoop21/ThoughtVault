@@ -42,12 +42,47 @@ struct RecordingView: View {
             iosBody
 #endif
         }
+#if DEBUG
+        .onAppear {
+            if DebugScreenshotSeed.isEnabled, IOSDebug.open == "notebook", RecordingFeatures.enabled {
+                recordingVM.recordingTitleMode = "manual"
+                recordingVM.recordingTitle = "Wekelijkse projectafstemming"
+                recordingVM.recordingState = .paused
+                recordingVM.quickNote = "De pilot start met twee teams.\n- [ ] Testomgeving klaarzetten — Alex\n- [ ] Planning voor de pilot rondsturen — Michel\n- [x] Toegang controleren"
+                showNoteField = true
+            }
+        }
+#endif
+    }
+
+    var recordingIdentityFields: some View {
+        @Bindable var vm = recordingVM
+        return VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            Picker("Titel", selection: $vm.recordingTitleMode) {
+                Text("Automatisch na verwerking").tag("automatic")
+                Text("Eigen titel").tag("manual")
+                if vm.currentCalendarMeeting != nil { Text("Titel van agendameeting").tag("meeting") }
+            }
+            .onChange(of: vm.recordingTitleMode) { _, mode in
+                if mode == "meeting", let meeting = vm.currentCalendarMeeting { vm.activeMeeting = meeting }
+            }
+            if vm.recordingTitleMode == "manual" {
+                TextField("Titel van deze opname", text: $vm.recordingTitle)
+                    .textFieldStyle(.roundedBorder)
+            } else if vm.recordingTitleMode == "meeting", let meeting = vm.currentCalendarMeeting {
+                Label(meeting.title, systemImage: "calendar")
+                Text("Gekoppeld aan deze agenda-afspraak")
+                    .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+            }
+        }
     }
 
     func reprocessSheet(for recording: SavedRecording) -> some View {
         ReprocessSheet(recording: recording)
             .environment(recordingVM)
-            .frame(minWidth: 420, idealWidth: 460, minHeight: 340, idealHeight: 380)
+#if os(macOS)
+            .frame(minWidth: 360, idealWidth: 460, minHeight: 340, idealHeight: 440)
+#endif
     }
 
     // MARK: YouTube inline section
@@ -579,7 +614,10 @@ struct RecordingView: View {
         }
     }
 
-    var noteFieldCard: some View {
+    @ViewBuilder var noteFieldCard: some View {
+        if RecordingFeatures.enabled {
+            RecordingNotebook(text: Bindable(recordingVM).quickNote)
+        } else {
         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
             Text("Snelle notitie")
                 .font(TS.Font.footnoteSemibold)
@@ -612,6 +650,7 @@ struct RecordingView: View {
             RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
                 .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
         }
+        }
     }
 }
 
@@ -626,6 +665,7 @@ private struct ReprocessSheet: View {
 
     @State private var selectedProfile: Profile? = nil
     @State private var isProcessing = false
+    @State private var optimizeAudio = false
 
     var body: some View {
         NavigationStack {
@@ -646,6 +686,12 @@ private struct ReprocessSheet: View {
                     }
                 }
 
+                if RecordingFeatures.enabled { Section {
+                    Toggle("Audio optimaliseren", isOn: $optimizeAudio)
+                    Text("Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd.")
+                        .font(TS.Font.caption)
+                }
+                }
                 Section("Profiel") {
                     ForEach(recordingVM.availableProfiles) { profile in
                         Button {
@@ -707,7 +753,7 @@ private struct ReprocessSheet: View {
         guard let profile = selectedProfile else { return }
         isProcessing = true
         Task {
-            await recordingVM.reprocessRecording(recording, profileId: profile.id, useOnDevice: true)
+            await recordingVM.reprocessRecording(recording, profileId: profile.id, useOnDevice: true, optimizeAudio: optimizeAudio)
             await MainActor.run {
                 isProcessing = false
                 dismiss()
@@ -721,4 +767,89 @@ private struct ReprocessSheet: View {
 #Preview("Idle") {
     RecordingView()
         .environment(RecordingViewModel())
+}
+
+/// The same persisted text format is used by recording, retries and exports.
+struct RecordingNotebook: View {
+    @Binding var text: String
+    @State private var tab = "actions"
+    @State private var expanded = true
+    @State private var newAction = ""
+    private var document: QuickNoteDocument { QuickNoteDocument(text) }
+
+    private func edit(_ change: (inout QuickNoteDocument) -> Void) {
+        var draft = document
+        change(&draft)
+        text = draft.text
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.md) {
+            HStack {
+                Label("Kladblok", systemImage: "square.and.pencil").font(TS.Font.bodyBold)
+                Spacer()
+                Button { expanded.toggle() } label: {
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(expanded ? "Kladblok inklappen" : "Kladblok uitklappen")
+            }
+            if expanded {
+                Picker("Kladblokonderdeel", selection: $tab) {
+                    Text("Notities").tag("notes")
+                    Text("Actiepunten").tag("actions")
+                }
+                .pickerStyle(.segmented)
+                if tab == "notes" {
+                    TextEditor(text: Binding(get: { document.notes }, set: { value in edit { $0.notes = value } }))
+                        .font(TS.Font.body).frame(minHeight: 120, maxHeight: 180)
+                        .accessibilityLabel("Eigen notities")
+                } else {
+                    ForEach(document.items.indices, id: \.self) { index in
+                        HStack(alignment: .top, spacing: TS.Spacing.sm) {
+                            Button { edit { $0.items[index].done.toggle() } } label: {
+                                Image(systemName: document.items[index].done ? "checkmark.square.fill" : "square")
+                                    .font(.system(size: 21))
+                            }
+                            .buttonStyle(.plain)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                            .accessibilityLabel(document.items[index].done ? "Actiepunt weer openen" : "Actiepunt afronden")
+                            .accessibilityValue(document.items[index].done ? "Afgerond" : "Open")
+                            TextField("Actiepunt", text: Binding(get: { document.items.indices.contains(index) ? document.items[index].text : "" },
+                                set: { value in edit { if $0.items.indices.contains(index) { $0.items[index].text = value } } }), axis: .vertical)
+                                .textFieldStyle(.plain).lineLimit(1...6)
+                                .strikethrough(document.items[index].done)
+                                .foregroundStyle(document.items[index].done ? Color.labelSecondary : Color.labelPrimary)
+                            Button { edit { $0.items.remove(at: index) } } label: { Image(systemName: "xmark") }
+                                .buttonStyle(.plain).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                                .accessibilityLabel("Actiepunt verwijderen")
+                        }
+                    }
+                    HStack(alignment: .top) {
+                        TextField("Nieuw actiepunt…", text: $newAction, axis: .vertical)
+                            .textFieldStyle(.plain).onSubmit(addAction)
+                        Button("Toevoegen", action: addAction)
+                            .disabled(newAction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                }
+                Divider()
+                ViewThatFits(in: .horizontal) {
+                    HStack { footer; Spacer(); count }
+                    VStack(alignment: .leading, spacing: 4) { footer; count }
+                }
+                .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+            }
+        }
+        .padding(TS.Spacing.md)
+        .background(Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: TS.Radius.md))
+        .overlay(RoundedRectangle(cornerRadius: TS.Radius.md).stroke(Color.borderPrimary))
+    }
+    private var footer: some View { Text("Blijft bij deze opname bewaard") }
+    private var count: some View { Text("\(document.items.filter(\.done).count) van \(document.items.count) afgerond") }
+    private func addAction() {
+        let value = newAction.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return }
+        edit { $0.items.append(.init(text: value, done: false)) }
+        newAction = ""
+    }
 }

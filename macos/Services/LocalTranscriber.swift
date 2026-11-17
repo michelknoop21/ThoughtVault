@@ -80,6 +80,69 @@ enum PersonalVocabulary {
 /// handles most reliably. Imported files (m4a, mp3, 44.1kHz stereo) can otherwise
 /// cause WhisperKit to silently hang during inference.
 enum AudioPreConverter {
+    @TaskLocal static var usesOptimizedAudio = false
+
+    /// Prepare an owned copy; ordinary transcription keeps its existing level handling.
+    static func transcriptionInput(_ source: URL, optimize: Bool, progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
+        guard optimize else { return source }
+        try Task.checkCancellation()
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("optimized-\(UUID().uuidString).wav")
+        let job = Task.detached(priority: .userInitiated) {
+            do {
+                let input = try AVAudioFile(forReading: source, commonFormat: .pcmFormatFloat32, interleaved: false)
+                let format = input.processingFormat
+                guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_384),
+                      let channels = buffer.floatChannelData else { throw CocoaError(.fileReadCorruptFile) }
+                var peak: Float = 0
+                while input.framePosition < input.length {
+                    try Task.checkCancellation()
+                    try input.read(into: buffer)
+                    guard buffer.frameLength > 0 else { throw CocoaError(.fileReadCorruptFile) }
+                    for c in 0..<Int(format.channelCount) {
+                        for i in 0..<Int(buffer.frameLength) {
+                            guard channels[c][i].isFinite else { throw CocoaError(.fileReadCorruptFile) }
+                            peak = max(peak, abs(channels[c][i]))
+                        }
+                    }
+                    progress(Double(input.framePosition) / Double(input.length) / 2)
+                }
+                let gain: Float = peak > 0 ? min(pow(10, 12 / 20), pow(10, -1 / 20) / peak) : 1
+                input.framePosition = 0
+                var settings = format.settings
+                settings[AVLinearPCMIsNonInterleaved] = false
+                do {
+                    let file = try AVAudioFile(forWriting: output, settings: settings)
+                    while input.framePosition < input.length {
+                        try Task.checkCancellation()
+                        try input.read(into: buffer)
+                        guard buffer.frameLength > 0 else { throw CocoaError(.fileReadCorruptFile) }
+                        for c in 0..<Int(format.channelCount) {
+                            for i in 0..<Int(buffer.frameLength) { channels[c][i] *= gain }
+                        }
+                        try file.write(from: buffer)
+                        progress(0.5 + Double(input.framePosition) / Double(input.length) / 2)
+                    }
+                }
+                try Task.checkCancellation()
+                logger.info("Audio optimization complete gain=\(gain)")
+                return output
+            } catch {
+                try? FileManager.default.removeItem(at: output)
+                if error is CancellationError { throw error }
+                logger.warning("Audio optimization fallback code=\((error as NSError).code)")
+                return source
+            }
+        }
+        return try await withTaskCancellationHandler {
+            let result = try await job.value
+            if Task.isCancelled {
+                if result != source { try? FileManager.default.removeItem(at: result) }
+                throw CancellationError()
+            }
+            return result
+        } onCancel: { job.cancel() }
+    }
+
 
     /// Whole-file mean RMS that quiet recordings are boosted toward. Typical recordings
     /// sit around -26..-17 dBFS; a -41 dBFS meeting gave 3333 instead of 3260 words
@@ -89,7 +152,7 @@ enum AudioPreConverter {
     private static let maxGainDB: Float = 24
 
     static func convertToWav16k(_ url: URL) async throws -> URL {
-        let gain = try normalizationGain(for: url)
+        let gain = usesOptimizedAudio ? 1 : try normalizationGain(for: url)
         // ponytail: if already 16kHz mono WAV and loud enough, skip conversion
         if gain == 1, isAlreadyWav16kMono(url) { return url }
 

@@ -63,7 +63,7 @@ extension RecordingViewModel {
         log.info("Notule start provider=\(provider.rawValue) \(DiagnosticLog.notuleTarget(provider)) transcript_chars=\(transcription.count)")
         return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: ""),
                                          noteConcurrency: provider.auditNoteConcurrency, provider: provider).generate(
-            transcription: transcription, profile: profile, participants: participants, quickNote: quickNote,
+            transcription: transcription, profile: profile, participants: participants, quickNote: RecordingFeatures.enabled ? nil : quickNote,
             createdAt: createdAt, corrections: corrections,
             context: PersonalCorrections.contextBlock(entries: fixedContext, transcript: transcription, profileId: profile.id, provider: provider),
             onStep: onStep, onUsage: onUsage)
@@ -110,13 +110,16 @@ extension RecordingViewModel {
             try Task.checkCancellation()
             let provider = Self.localNotuleProvider()
             let transcription = try await Self.correctTranscription(transcription, profile: profile, taskId: localId, provider: provider)
-            let (html, usage) = try await Self.generateNotule(
+            let (generatedHTML, usage) = try await Self.generateNotule(
                 provider: provider, transcription: transcription, profile: profile, participants: participants,
                 quickNote: QuickNoteStore.note(audioFilename: url.lastPathComponent), createdAt: createdAt,
                 onStep: showStep(taskId: localId))
             try Task.checkCancellation()
 
-            let title = NotuleTitleExtractor.extract(from: html) ?? fallbackTitle
+            let html = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(generatedHTML, note: QuickNoteStore.note(audioFilename: url.lastPathComponent), includeNotes: true) : generatedHTML
+            let entry = TaskHistoryStore.shared.entry(localId)
+            let chosenTitle = entry?.titleEdited == true ? entry?.title : RecordingIdentity.load(audioFilename: url.lastPathComponent)?.title
+            let title = chosenTitle ?? NotuleTitleExtractor.extract(from: html) ?? fallbackTitle
             try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: html, title: title, usage: usage)
             ContextSuggestions.runInBackground(taskId: localId, transcript: transcription, participants: participants, profileId: profile.id, profileName: profile.name, provider: provider)
 
@@ -191,11 +194,12 @@ extension RecordingViewModel {
         do {
             let provider = Self.localNotuleProvider()
             let transcription = try await Self.correctTranscription(record.rawTranscription, profile: profile, taskId: taskId, provider: provider)
-            let (html, usage) = try await Self.generateNotule(
+            let (generatedHTML, usage) = try await Self.generateNotule(
                 provider: provider, transcription: transcription, profile: profile, participants: record.participants,
                 quickNote: QuickNoteStore.note(forTranscriptId: taskId), createdAt: record.createdAt,
                 onStep: showStep(taskId: regenerationId))
-            let title = NotuleTitleExtractor.extract(from: html) ?? record.title
+            let html = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(generatedHTML, note: QuickNoteStore.note(forTranscriptId: taskId), includeNotes: true) : generatedHTML
+            let title = RecordingIdentity.forTask(taskId)?.title != nil ? record.title : NotuleTitleExtractor.extract(from: html) ?? record.title
             try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: html, title: title, profileId: profile.id,
                                                            profileName: profile.name, usage: usage)
             ContextSuggestions.runInBackground(taskId: taskId, transcript: record.rawTranscription, participants: record.participants, profileId: profile.id, profileName: profile.name, provider: provider)

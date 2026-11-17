@@ -198,3 +198,32 @@ it("saves corrected transcription before generation, even when the model fails",
   expect(useRecordingStore.getState().backgroundTasks[0].error_message).toContain("Model offline");
   usePersonalCorrectionsStore.setState({ entries: [] });
 });
+
+it("creates a new optimized transcription and leaves an existing partial intact", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "whisper_model_status") return { exists: true } as never;
+    if (command === "transcribe_local") return "Alex controleert maandag de opname en de planning." as never;
+    throw new Error(`Unexpected command: ${command}`);
+  });
+  vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
+  const add = vi.fn(), update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [partial], add, update });
+  vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Alex controleert de planning.</p>");
+  await processLocally("C:/recording.wav", "standaard", "microphone", [], 12, partial.id, true);
+  expect(invoke).toHaveBeenCalledWith("transcribe_local", expect.objectContaining({ optimizeAudio: true, requestId: expect.not.stringMatching(/^local-partial$/) }));
+  expect(add).toHaveBeenCalledWith(expect.objectContaining({ id: expect.not.stringMatching(/^local-partial$/) }));
+  expect(update).not.toHaveBeenCalledWith(partial.id, expect.anything());
+  expect(partial.notule_html).toBe("");
+});
+
+it("regenerates a completed document from its transcript in a separate record", async () => {
+  const completed = { ...partial, notule_html: "<p>Oorspronkelijke notule</p>", has_notes: true };
+  const add = vi.fn(), update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [completed], add, update });
+  vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>De planning begint maandag.</p>");
+  await processLocally("C:/recording.wav", "standaard", "microphone", [], 12, undefined, false, completed.id);
+  expect(invoke).not.toHaveBeenCalled();
+  expect(add).toHaveBeenCalledWith(expect.objectContaining({ id: expect.not.stringMatching(/^local-partial$/), raw_transcription: completed.raw_transcription }));
+  expect(update).not.toHaveBeenCalledWith(completed.id, expect.anything());
+  expect(completed.notule_html).toBe("<p>Oorspronkelijke notule</p>");
+});

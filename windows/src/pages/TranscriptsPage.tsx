@@ -1,3 +1,6 @@
+import { exportWithOwnNotes, getTranscriptQuickNote, getTranscriptIdentity } from "../services/quickNotes";
+import { useTaskHistory } from "../services/taskHistory";
+import { reprocessTask, canReprocess } from "../services/taskActions";
 import { useConfirmation } from "../components/ui/useConfirmation";
 import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -53,6 +56,8 @@ export function TranscriptsPage() {
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<Transcript | null>(null);
   const [regenerateProfileId, setRegenerateProfileId] = useState("");
+  const [retranscribe, setRetranscribe] = useState(false);
+  const [optimizeAudio, setOptimizeAudio] = useState(false);
   const [tagsDialogId, setTagsDialogId] = useState<string | null>(null);
   const [newTagInput, setNewTagInput] = useState("");
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -220,6 +225,8 @@ export function TranscriptsPage() {
     const profiles = useProfilesStore.getState().profiles;
     const current = profiles.find((p) => p.name === transcript.profile_name || p.id === transcript.profile_name);
     setRegenerateProfileId(current?.id ?? profiles[0]?.id ?? "");
+    setRetranscribe(false);
+    setOptimizeAudio(false);
     setRegenerateTarget(transcript);
   }
 
@@ -227,6 +234,13 @@ export function TranscriptsPage() {
     if (regeneratingId === transcript.id) return;
     const profile = useProfilesStore.getState().profiles.find((p) => p.id === profileId);
     if (!profile) { toast.show("Kies een notulentemplate", "error"); return; }
+    if (retranscribe) {
+      const entry = useTaskHistory.getState().entries.find(e => e.transcript_id === transcript.id);
+      if (!entry || !canReprocess(entry)) { toast.show("Geen lokale opname beschikbaar voor hertranscriptie", "error"); return; }
+      reprocessTask(entry, transcript.title, profileId, undefined, true, optimizeAudio);
+      setRegenerateTarget(null);
+      return;
+    }
     setRegenerateTarget(null);
     const tasks = useRecordingStore.getState();
     const taskId = `regen-${transcript.id}`;
@@ -250,11 +264,12 @@ export function TranscriptsPage() {
           updateTranscript(transcript.id, { raw_transcription: transcription });
         }
         const meter = new UsageMeter();
-        const html = await LLMService.generateNotulen(transcription, profile,
-          () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], transcript.quick_note,
+        const generatedHTML = await LLMService.generateNotulen(transcription, profile,
+          () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], "",
           step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter);
-        if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd");
-        const title = extractTitle(html) || transcript.title;
+        if (!hasUsableNotule(generatedHTML)) throw new Error("Geen bruikbare notule gegenereerd");
+        const html = exportWithOwnNotes(generatedHTML, transcript.quick_note || getTranscriptQuickNote(transcript.id), true);
+        const title = getTranscriptIdentity(transcript.id)?.title ? transcript.title : (extractTitle(html) || transcript.title);
         const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
           notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
         await useLocalTranscriptsStore.getState().update(transcript.id, finished);
@@ -600,6 +615,9 @@ export function TranscriptsPage() {
         <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
           <h3 className="td-tags-title">Notulen regenereren</h3>
           <p className="text-caption">Kies het template voor de nieuwe notulen.</p>
+          <label><input type="checkbox" checked={retranscribe} onChange={e => setRetranscribe(e.target.checked)} /> Opnieuw transcriberen</label>
+          {retranscribe && <label><input type="checkbox" checked={optimizeAudio} onChange={e => setOptimizeAudio(e.target.checked)} /> Audio optimaliseren (tijdelijke kopie, origineel blijft bewaard)</label>}
+          {getTranscriptIdentity(regenerateTarget.id)?.calendar && <p className="text-caption">Agenda-afspraak: {getTranscriptIdentity(regenerateTarget.id)?.calendar?.title}</p>}
           <select className="select" value={regenerateProfileId}
             onChange={(e) => setRegenerateProfileId(e.target.value)}>
             {useProfilesStore.getState().profiles.map((profile) =>

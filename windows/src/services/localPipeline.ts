@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useRecordingStore } from "../stores/recordingStore";
+import { useRecordingStore, registerAbortController, unregisterAbortController } from "../stores/recordingStore";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, newLocalId } from "../stores/localTranscriptsStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -11,8 +11,9 @@ import { stepLabel } from "./modelRequestLog";
 import { NotuleReviewError } from "./notuleAudit";
 import { exportToObsidian, ObsidianBrokenError } from "./obsidian";
 import { extractTitle } from "./titleExtractor";
-import { getQuickNote } from "./quickNotes";
+import { getQuickNote, exportWithOwnNotes, getRecordingIdentity, linkRecordingIdentity } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
+import { useTaskHistory } from "./taskHistory";
 import { mask } from "./appLog";
 import { runInBackground } from "./contextSuggestions";
 import type { Participant } from "./participants";
@@ -36,6 +37,8 @@ export async function processLocally(
   participants: Participant[] = [],
   durationSeconds: number = 0,
   retryTaskId?: string,
+  optimizeAudio: boolean = false,
+  reuseTranscriptId?: string,
 ): Promise<void> {
   const rec = useRecordingStore.getState();
   const { addBackgroundTask, updateBackgroundTask, removeBackgroundTask } = rec;
@@ -44,10 +47,11 @@ export async function processLocally(
     useProfilesStore.getState().getProfile(profileId) ??
     useProfilesStore.getState().profiles[0];
 
-  const taskId = retryTaskId ?? newLocalId();
-  const existingPartial = retryTaskId
+  const taskId = optimizeAudio ? newLocalId() : retryTaskId ?? newLocalId();
+  const reused = !optimizeAudio && reuseTranscriptId ? useLocalTranscriptsStore.getState().items.find(item => item.id === reuseTranscriptId && hasUsableTranscription(item.raw_transcription ?? "")) : undefined;
+  const existingPartial = reused ?? (!optimizeAudio && retryTaskId
     ? useLocalTranscriptsStore.getState().items.find((item) => item.id === retryTaskId && !item.has_notes && hasUsableTranscription(item.raw_transcription ?? ""))
-    : undefined;
+    : undefined);
   const task: TranscriptTask = {
     task_id: taskId,
     status: "transcribing",
@@ -58,9 +62,24 @@ export async function processLocally(
     local_audio_path: filePath,
     filename: filePath.split(/[\\/]/).pop(),
   };
+  const identity = getRecordingIdentity(filePath);
+  if (identity?.title && !useTaskHistory.getState().pendingTitles[filePath]) useTaskHistory.getState().carryTitle(identity.title, filePath);
+  linkRecordingIdentity(taskId, filePath);
   addBackgroundTask(task);
+  const controller = new AbortController();
+  registerAbortController(taskId, controller);
+  controller.signal.addEventListener("abort", () => {
+    if (optimizeAudio) void invoke("cancel_audio_optimization", { requestId: taskId }).catch(() => {});
+  }, { once: true });
+  const checkCancelled = () => { if (controller.signal.aborted) throw new DOMException("Geannuleerd", "AbortError"); };
 
   try {
+    if (reused) {
+      const now = new Date().toISOString();
+      const copy = { ...reused, id: taskId, task_id: taskId, notule_html: "", has_notes: false, notule_draft_html: "", notule_review_reason: "", created_at: now, updated_at: now };
+      await useLocalTranscriptsStore.getState().add(copy);
+      useTranscriptsStore.getState().addTranscript(copy);
+    }
     let transcription = existingPartial?.raw_transcription;
     if (!transcription) {
       if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
@@ -80,20 +99,27 @@ export async function processLocally(
       // 2. Transcribe on-device. Map whisper progress (0-100) → 10..50.
       updateBackgroundTask(taskId, { status: "transcribing", progress: 10 });
       const unlistenTr = await listen<{ request_id: string; progress: number }>("transcribe-progress", (e) => {
-        if (e.payload.request_id !== taskId) return;
+        if (e.payload.request_id !== taskId || controller.signal.aborted) return;
         const frac = Math.max(0, Math.min(100, e.payload.progress)) / 100;
-        updateBackgroundTask(taskId, { progress: Math.round(10 + frac * 40) });
+        updateBackgroundTask(taskId, { progress: Math.round(10 + frac * 40), message: "Transcriberen" });
       });
+      const unlistenOptimization = optimizeAudio ? await listen<{ request_id: string; progress: number }>("audio-optimization-progress", e => {
+        if (e.payload.request_id === taskId && !controller.signal.aborted) updateBackgroundTask(taskId, { progress: Math.round(e.payload.progress * 10), message: "Audio optimaliseren" });
+      }) : () => {};
       try {
+        checkCancelled();
         // No glossary as Whisper prompt: it silently drops speech. Names are
         // corrected afterwards in LLMService (correctText/correctHTML).
         transcription = await invoke<string>("transcribe_local", {
           filePath,
           modelId: model,
           requestId: taskId,
+          ...(optimizeAudio ? { optimizeAudio: true } : {}),
         });
+        checkCancelled();
       } finally {
         unlistenTr();
+        unlistenOptimization();
       }
 
       if (!hasUsableTranscription(transcription)) {
@@ -105,7 +131,7 @@ export async function processLocally(
       const now = new Date().toISOString();
       const record: Transcript = {
         id: taskId,
-        title: "Transcriptie",
+        title: identity?.title ?? "Transcriptie",
         raw_transcription: transcription,
         quick_note: getQuickNote(filePath),
         notule_html: "",
@@ -118,6 +144,7 @@ export async function processLocally(
         created_at: now,
         updated_at: now,
       };
+      checkCancelled();
       await useLocalTranscriptsStore.getState().add(record);
       useTranscriptsStore.getState().addTranscript(record);
     }
@@ -130,11 +157,11 @@ export async function processLocally(
     }
 
     // 4. Generate the notule via the configured local LLM. Stream progress.
-    updateBackgroundTask(taskId, { status: "generating", progress: 55 });
+    updateBackgroundTask(taskId, { status: "generating", progress: 55, message: "Notulen genereren" });
     const names = participants.map((p) => p.name).filter(Boolean);
     let streamed = 0;
     const meter = new UsageMeter();
-    const html = await LLMService.generateNotulen(
+    const generatedHTML = await LLMService.generateNotulen(
       transcription,
       profile,
       () => {
@@ -144,16 +171,20 @@ export async function processLocally(
         updateBackgroundTask(taskId, { progress: pct });
       },
       names,
-      getQuickNote(filePath),
+      "",
       step => updateBackgroundTask(taskId, { message: stepLabel(step) }),
       meter,
     );
 
-    if (!hasUsableNotule(html)) {
+    const html = exportWithOwnNotes(generatedHTML, getQuickNote(filePath), true);
+    checkCancelled();
+    if (!hasUsableNotule(generatedHTML)) {
       throw new Error("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.");
     }
 
-    const title = extractTitle(html) || profile?.name || "Notule";
+    const historyEntry = useTaskHistory.getState().entries.find(entry => entry.id === taskId);
+    const chosenTitle = historyEntry?.title_edited ? historyEntry.title : identity?.title;
+    const title = chosenTitle ?? (extractTitle(html) || profile?.name || "Notule");
     const finished: Partial<Transcript> = {
       notule_draft_html: "",
       notule_review_reason: "",
@@ -163,6 +194,7 @@ export async function processLocally(
       has_notes: true,
       updated_at: new Date().toISOString(),
     };
+    checkCancelled();
     await useLocalTranscriptsStore.getState().update(taskId, finished);
 
     useTranscriptsStore.getState().updateTranscript(taskId, finished);
@@ -176,9 +208,11 @@ export async function processLocally(
       });
     }
 
+    checkCancelled();
     updateBackgroundTask(taskId, { status: "completed", progress: 100, message: undefined });
     setTimeout(() => removeBackgroundTask(taskId), 1500);
   } catch (err) {
+    if (controller.signal.aborted) return;
     let msg = err instanceof Error ? err.message : typeof err === "string" && err.trim() ? err : "Lokale verwerking mislukt";
     if (err instanceof NotuleReviewError) {
       try {
@@ -192,5 +226,7 @@ export async function processLocally(
     }
     console.error("[LocalPipeline] Failed:", mask(msg));
     updateBackgroundTask(taskId, { status: "failed", error_message: msg });
+  } finally {
+    unregisterAbortController(taskId);
   }
 }

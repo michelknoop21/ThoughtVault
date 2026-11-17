@@ -86,8 +86,8 @@ extension RecordingViewModel {
 
     /// Runs the task again with the chosen title, profile and model. With a stored
     /// transcription only the notule is regenerated; otherwise the recording is processed again.
-    func reprocessHistoryTask(_ entry: TaskHistoryEntry, title: String, profileId: String, model: String?) {
-        guard canReprocess(entry) else { return }
+    func reprocessHistoryTask(_ entry: TaskHistoryEntry, title: String, profileId: String, model: String?, retranscribe: Bool = false, optimizeAudio: Bool = false) {
+        guard canReprocess(entry), !retranscribe || historyAudioURL(for: entry) != nil else { return }
         let provider = SuggestedModels.currentProvider
         if let model, !model.isEmpty, let key = SuggestedModels.modelKey(for: provider),
            SuggestedModels.isAllowed(model, provider: provider) {
@@ -98,15 +98,15 @@ extension RecordingViewModel {
         let chosenTitle = TaskHistoryStore.shared.entry(entry.id).flatMap { $0.titleEdited ? $0.title : nil }
         if activeTasks.contains(where: { $0.taskId == entry.id }) { removeTask(entry.id) }
 
-        if isLocalMode, historyRecord(for: entry) != nil {
+        if !retranscribe, isLocalMode, historyRecord(for: entry) != nil {
             if let chosenTitle { TaskHistoryStore.shared.carryTitle(chosenTitle, to: entry.transcriptId) }
             let recordId = entry.transcriptId
             Task { _ = try? await regenerateNotuleLocally(taskId: recordId, profileId: profileId) }
         } else if let url = historyAudioURL(for: entry) {
             if let chosenTitle { TaskHistoryStore.shared.carryTitle(chosenTitle, to: url.path) }
             Task {
-                if isLocalMode { await processLocally(url: url, profileId: profileId) }
-                else { await uploadFile(url, profileId: profileId) }
+                if isLocalMode { await processLocally(url: url, profileId: profileId, optimizeAudio: optimizeAudio) }
+                else { await uploadFile(url, profileId: profileId, optimizeAudio: optimizeAudio) }
             }
         }
     }

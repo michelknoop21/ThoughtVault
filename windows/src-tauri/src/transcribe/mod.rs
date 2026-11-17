@@ -9,6 +9,20 @@ use std::sync::Mutex;
 use tokio::sync::watch;
 mod nvidia;
 mod faster;
+mod normalize;
+static TRANSCRIPTION_CANCELLED: std::sync::LazyLock<Mutex<std::collections::HashMap<String, std::sync::Arc<std::sync::atomic::AtomicBool>>>> = std::sync::LazyLock::new(|| Mutex::new(std::collections::HashMap::new()));
+
+struct TranscriptionCancellation(String);
+impl Drop for TranscriptionCancellation {
+    fn drop(&mut self) { if let Ok(mut active) = TRANSCRIPTION_CANCELLED.lock() { active.remove(&self.0); } }
+}
+
+#[tauri::command]
+pub fn cancel_audio_optimization(request_id: String) {
+    if let Ok(active) = TRANSCRIPTION_CANCELLED.lock() {
+        if let Some(cancel) = active.get(&request_id) { cancel.store(true, std::sync::atomic::Ordering::Relaxed); }
+    }
+}
 
 // Keep simultaneous imports from loading multiple CPU-heavy Whisper contexts.
 static TRANSCRIPTION_LOCK: Mutex<()> = Mutex::new(());
@@ -193,22 +207,45 @@ pub async fn transcribe_local(
     file_path: String,
     model_id: String,
     request_id: String,
+    optimize_audio: Option<bool>,
 ) -> Result<String, String> {
     let model = model_path(&app, &model_id)?;
     if !(if model_id == faster::MODEL_ID { faster::status(&model).0 } else { model.is_file() }) {
         return Err("Model nog niet gedownload".to_string());
     }
 
+    let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    TRANSCRIPTION_CANCELLED.lock().map_err(|e| e.to_string())?.insert(request_id.clone(), cancelled.clone());
     // whisper inference is blocking + CPU-heavy: keep it off the async runtime.
     tokio::task::spawn_blocking(move || {
+        let _cancellation = TranscriptionCancellation(request_id.clone());
+        let check_cancelled = || if cancelled.load(std::sync::atomic::Ordering::Relaxed) { Err("cancelled".to_string()) } else { Ok(()) };
         let _guard = TRANSCRIPTION_LOCK.lock().map_err(|e| format!("Transcriptiewachtrij mislukt: {e}"))?;
+        check_cancelled()?;
+        let optimized = if optimize_audio.unwrap_or(false) {
+            let directory = app.path().app_cache_dir().map_err(|e| e.to_string())?;
+            match normalize::prepare(std::path::Path::new(&file_path), &directory, |progress| {
+                check_cancelled()?;
+                let _ = app.emit("audio-optimization-progress", serde_json::json!({"request_id": request_id, "progress": progress}));
+                Ok(())
+            }) {
+                Ok(file) => Some(file),
+                Err(error) if error == "cancelled" => {
+                    return Err("cancelled".into());
+                }
+                Err(_) => { elog!("[AudioOptimization] fallback=original"); None }
+            }
+        } else { None };
+        check_cancelled()?;
+        let input_path = optimized.as_ref().map(|f| f.path().to_string_lossy().into_owned()).unwrap_or_else(|| file_path.clone());
         let result = if model_id == faster::MODEL_ID {
-            faster::run(app, &model, &file_path, &request_id)
+            faster::run(app, &model, &input_path, &request_id)
         } else if let Some(info) = nvidia::model(&model_id) {
-            nvidia::verify_model(&model, &info).and_then(|_| nvidia::run(app, &model, &file_path, &request_id))
+            nvidia::verify_model(&model, &info).and_then(|_| nvidia::run(app, &model, &input_path, &request_id))
         } else {
-            run_whisper(app, &model, &file_path, &request_id)
+            run_whisper(app, &model, &input_path, &request_id, optimized.is_some())
         };
+        check_cancelled()?;
         // Runtime stderr can include recognized speech; keep only a correlation token.
         if let Err(error) = &result { elog!("[transcribe_local] error={}", crate::applog::mask_token(error)); }
         result
@@ -251,7 +288,9 @@ fn speech_ranges(detector: &mut whisper_rs::WhisperVadContext, samples: &[f32]) 
     Ok(ranges)
 }
 
-fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, request_id: &str) -> Result<String, String> {
+fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, request_id: &str,
+    already_optimized: bool,
+) -> Result<String, String> {
     use whisper_rs::{
         convert_integer_to_float_audio, FullParams, SamplingStrategy, WhisperContext,
         WhisperContextParameters,
@@ -272,7 +311,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, request_id: &str
 
     // Boost quiet recordings to the same level as macOS/iOS before whisper.
     // Separate cheap pass because the main loop streams in windows.
-    let gain = {
+    let gain = if already_optimized { 1.0 } else {
         let mut sum_squares = 0f64;
         let mut count = 0f64;
         for s in hound::WavReader::open(wav_path)

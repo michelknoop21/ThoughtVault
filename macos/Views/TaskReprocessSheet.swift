@@ -15,6 +15,8 @@ struct TaskReprocessSheet: View {
     @State private var title = ""
     @State private var profileId = ""
     @State private var model = ""
+    @State private var retranscribe = false
+    @State private var optimizeAudio = false
 
     private let provider = SuggestedModels.currentProvider
 
@@ -48,39 +50,33 @@ struct TaskReprocessSheet: View {
                 .labelsHidden()
             }
             modelField
+            if RecordingFeatures.enabled {
+            Toggle("Opnieuw transcriberen", isOn: $retranscribe)
+                .disabled(recordingVM.historyAudioURL(for: entry) == nil)
+            if retranscribe {
+                Toggle("Audio optimaliseren", isOn: $optimizeAudio)
+                Text("Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard.")
+                    .font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+            }
 
-            Text(hasTranscription
+            }
+            Text(hasTranscription && !retranscribe
                  ? "De opgeslagen transcriptie wordt opnieuw tot notule verwerkt. De bestaande notule wordt pas vervangen als de nieuwe versie is goedgekeurd."
                  : "De opname wordt opnieuw getranscribeerd en daarna tot notule verwerkt.")
                 .font(TS.Font.caption)
                 .foregroundStyle(Color.labelSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: TS.Spacing.sm) {
-                Button("Annuleer") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("Titel opslaan") {
-                    recordingVM.renameHistoryTask(entry, title: title)
-                    dismiss()
-                }
-                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
-                Button("Opnieuw verwerken") {
-                    recordingVM.reprocessHistoryTask(entry, title: title, profileId: profileId,
-                                                     model: modelChoices.isEmpty ? nil : model)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .tint(Color.brandPrimary)
-                .disabled(profileId.isEmpty || !recordingVM.canReprocess(entry))
+            ViewThatFits(in: .horizontal) {
+            HStack(spacing: TS.Spacing.sm) { actionButtons }
+            VStack(alignment: .trailing, spacing: TS.Spacing.sm) { actionButtons }
             }
         }
         .padding(TS.Spacing.lg)
 #if os(macOS)
-        .frame(width: 460)
+        .frame(idealWidth: 460, maxWidth: 520)
 #else
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
 #endif
         .onAppear {
             title = entry.title
@@ -88,6 +84,25 @@ struct TaskReprocessSheet: View {
             let current = SuggestedModels.currentModel(for: provider)
             model = modelChoices.contains(current) ? current : modelChoices.first ?? ""
         }
+    }
+
+    @ViewBuilder private var actionButtons: some View {
+                Button("Annuleer") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Titel opslaan") {
+                    recordingVM.renameHistoryTask(entry, title: title)
+                    dismiss()
+                }
+                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button("Opnieuw verwerken") {
+                    recordingVM.reprocessHistoryTask(entry, title: title, profileId: profileId,
+                                                     model: modelChoices.isEmpty ? nil : model, retranscribe: retranscribe, optimizeAudio: retranscribe && optimizeAudio)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .tint(Color.brandPrimary)
+                .disabled(profileId.isEmpty || !recordingVM.canReprocess(entry))
     }
 
     @ViewBuilder

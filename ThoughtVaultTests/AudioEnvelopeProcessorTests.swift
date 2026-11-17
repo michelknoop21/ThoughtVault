@@ -271,7 +271,7 @@ final class AudioEnvelopeProcessorTests: XCTestCase {
             player.stop()
             try? FileManager.default.removeItem(at: url)
         }
-        let captureStart = Date()
+        let captureStart = try XCTUnwrap(capture.startedAt)
         try await Task.sleep(for: .seconds(2))
         XCTAssertTrue(player.play())
         var samples: [(time: Double, level: Float)] = []

@@ -1,17 +1,14 @@
-versie: 1.0.329
-Wat te testen
+versie: 1.0.330
+Wat te testen — macOS-audio
 
-iCloud tussen Mac en iPhone
-Zet op de Mac bij Instellingen → Algemeen → iCloud en op iPhone bij Instellingen → Integraties → iCloud de synchronisatie aan. Gebruik hetzelfde Apple-account. Bestaande en nieuwe notulen, transcripties, titels en tags moeten op beide apparaten verschijnen. Audio blijft op het oorspronkelijke apparaat.
+Nieuwe opnames
+Maak een microfoon-, systeemaudio- en gecombineerde opname. Controleer beide sprekers, zachte woorden en het begin en einde van zinnen. Stop de opname en controleer direct de juiste duur en afspeelbaarheid.
 
-Bewerken en offline werken
-Wijzig een titel, tag en notule op elk apparaat en controleer het resultaat op het andere. Bewerk ook zonder internet, herstart de app en herstel de verbinding. Synchroniseer nu moet een nieuwe poging starten en de status tonen.
+Bluetooth-headset
+Open en sluit de headsetmicrofoon tijdens een systeemaudio-opname. Controleer of spraak verstaanbaar blijft bij de omschakeling tussen luister- en belstand. Pauzeer en hervat de opname. Let vooral op weggevallen of herhaalde woorden precies tijdens deze overgangen; volledige acceptatie daarvan staat nog open.
 
-Verwijderen en conflicten
-Verwijder een gesynchroniseerde testnotule en controleer beide apparaten. Bewerk dezelfde testnotule offline op beide apparaten: beide teksten moeten bewaard blijven, met een extra conflictkopie. Controleer ook bewerken terwijl het andere apparaat verwijdert.
+Lange opnames
+Controleer de synchronisatie van microfoon en systeemaudio bij begin, midden en einde. De automatische twee-uursproef is synthetisch; een fysieke twee-uursproef moet nog worden uitgevoerd.
 
-Account en uitschakelen
-Uitschakelen mag geen notulen verwijderen. Zonder iCloud-login moet de lokale geschiedenis bruikbaar blijven. Een ander Apple-account mag geen notulen van het oorspronkelijke account ontvangen.
-
-Bestaande opnamen
-Controleer dat bestaande notulen en lokale audio na de update nog beschikbaar zijn. De bestaande lokale database wordt niet naar een nieuwe opslagvorm omgezet.
+Bestaande opnames en notulen
+Controleer dat eerdere opnames en notulen beschikbaar blijven. Audio wordt niet automatisch genormaliseerd: daarvoor is nog geen kwaliteitswinst bewezen.

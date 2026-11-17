@@ -5,7 +5,8 @@ import { api } from "./api";
 import { createSSEClient } from "./sse";
 import { exportToObsidian, ObsidianBrokenError } from "./obsidian";
 import { enqueue } from "./offlineQueue";
-import { linkQuickNote, getTranscriptQuickNote, ensureNotesSection } from "./quickNotes";
+import { exportWithOwnNotes, getTranscriptIdentity, getRecordingIdentity, linkRecordingIdentity, linkQuickNote, getTranscriptQuickNote } from "./quickNotes";
+import { useTaskHistory } from "./taskHistory";
 import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { correctHTML } from "./personalCorrections";
 import type { Participant } from "./participants";
@@ -16,8 +17,14 @@ import type { RecordingMode, TranscriptTask } from "../types";
  * on the client and is written back. Correction write failures must reach the caller.
  */
 export async function persistNotesSection(taskId: string, html: string, profileId?: string): Promise<string> {
+  const title = getTranscriptIdentity(taskId)?.title;
+  const titleKey = `recording-identity-applied:${taskId}`;
+  if (title && !localStorage.getItem(titleKey)) {
+    await api.updateTranscript(taskId, { title });
+    localStorage.setItem(titleKey, "true");
+  }
   await usePersonalCorrectionsStore.getState().hydrate();
-  const withNotes = ensureNotesSection(html, getTranscriptQuickNote(taskId));
+  const withNotes = exportWithOwnNotes(html, getTranscriptQuickNote(taskId), true);
   const fixed = correctHTML(withNotes, usePersonalCorrectionsStore.getState().entries, profileId);
   if (fixed !== html) await api.updateNotuleHTML(taskId, fixed).catch((e) => {
     if (fixed !== withNotes) throw e;
@@ -67,6 +74,9 @@ export async function uploadAndTrack(
     );
 
     unregisterAbortController(tempId);
+    const identity = getRecordingIdentity(filePath);
+    if (identity?.title) useTaskHistory.getState().carryTitle(identity.title, task_id);
+    linkRecordingIdentity(task_id, filePath);
     linkQuickNote(task_id, filePath);
     updateBackgroundTask(tempId, { task_id, status: "uploading", progress: 10 });
 

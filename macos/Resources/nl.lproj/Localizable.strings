@@ -683,3 +683,26 @@
 "support.badge.explanation" = "Het cijfer telt alleen nieuwe supportantwoorden. Een verstuurd foutrapport telt niet mee.";
 "support.readAll" = "Alles als gelezen markeren";
 "support.readAll.error" = "Als gelezen markeren lukt nu niet. Probeer het opnieuw.";
+
+/* Recording notebook and reprocessing */
+"Actiepunt" = "Actiepunt";
+"Actiepunt verwijderen" = "Actiepunt verwijderen";
+"Actiepunten" = "Actiepunten";
+"Agenda: " = "Agenda: ";
+"Audio optimaliseren" = "Audio optimaliseren";
+"Automatisch na verwerking" = "Automatisch na verwerking";
+"Blijft bij deze opname bewaard" = "Blijft bij deze opname bewaard";
+"Deelnemers kiezen" = "Deelnemers kiezen";
+"Eigen notities" = "Eigen notities";
+"Eigen notities meenemen" = "Eigen notities meenemen";
+"Eigen titel" = "Eigen titel";
+"Gekoppeld aan deze agenda-afspraak" = "Gekoppeld aan deze agenda-afspraak";
+"Kladblok" = "Kladblok";
+"Kladblokonderdeel" = "Kladblokonderdeel";
+"Nieuw actiepunt…" = "Nieuw actiepunt…";
+"Notities" = "Notities";
+"Opnieuw transcriberen" = "Opnieuw transcriberen";
+"Titel van agendameeting" = "Titel van agendameeting";
+"Titel van deze opname" = "Titel van deze opname";
+"Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard." = "Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard.";
+"Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd." = "Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd.";

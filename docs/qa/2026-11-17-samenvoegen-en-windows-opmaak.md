@@ -1,6 +1,6 @@
 # Samenvoegen en Windows-opmaak, 17 november 2026
 
-Werkboom: `thoughtvault-samenvoegen-presentatie`, branch `fix/samenvoegen-presentatie-20261117`, gebaseerd op `8031b2c4`. Geen push, merge, installatie over productie of uitrol uitgevoerd.
+Werkboom: `thoughtvault-samenvoegen-presentatie`, branch `fix/samenvoegen-presentatie-20261117`, gebaseerd op `8031b2c4`. Dit verslag beschrijft de verificatie vóór de afzonderlijk gevraagde push en merge. Er is geen installatie over productie of uitrol uitgevoerd.
 
 ## Wijzigingen
 
@@ -32,3 +32,7 @@ De eerdere melding dat Windows geen venster kon openen is achterhaald: de geïso
 Tijdens de eindcontrole begon de schermbediening op alle apps te time-outen. Ook een expliciete reset en opnieuw selecteren van Royal TSX en de Mac-QA-app herstelden de bediening niet. SSH en builds bleven functioneren. Daarom ontbreken de uiteindelijke fysieke Windows-resize-, font-, import/export- en WebView2-afdrukcontrole en de visuele simulatorcontrole. De eigen iPhone-simulator is geïnstalleerd en gestart, maar dit geldt niet als visuele goedkeuring.
 
 Volledige gesproken VoiceOver-acceptatie blijft open; de toegankelijkheidsboom alleen is daarvoor onvoldoende. Fysieke iPad op uitdrukkelijk verzoek overgeslagen. Het eerdere fysieke Mac/iPhone- en iCloud-bewijs voor huisstijlen blijft afzonderlijk beschreven in `docs/huisstijlen/IMPLEMENTATIE.md`.
+
+## Integratie op actuele main
+
+Voor de push/merge is een schone werkboom `thoughtvault-huisstijlen-presentatie-integratie` gemaakt vanaf `origin/main` (`10d00e25`). Alleen de zes wijzigingen van deze presentatie-/Windows-ronde zijn overgenomen. TypeScript/Vite en de volledige Windows- en gedeelde tests zijn opnieuw uitgevoerd; de logs staan als `integration-*.log` in de bewijsmap. De Apple-bron is exact vergeleken met de geslaagde eindbuild; alleen de appversie uit main verschilt. Open handmatige acceptatie blijft ongewijzigd.

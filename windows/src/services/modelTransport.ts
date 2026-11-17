@@ -30,26 +30,48 @@ export function rateLimitWaitMs(retryAfter: string | undefined, now = Date.now()
 
 type ProxyResponse = { status: number; body: string; headers?: Record<string, string> };
 
-async function proxy(request: { url: string; headers: Record<string, string>; body: string }, timeoutSeconds: number, idleSeconds?: number): Promise<ProxyResponse> {
+export function checkModelCancellation(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException("Geannuleerd", "AbortError");
+}
+
+async function proxy(request: { url: string; headers: Record<string, string>; body: string }, timeoutSeconds: number, idleSeconds?: number, signal?: AbortSignal): Promise<ProxyResponse> {
+  checkModelCancellation(signal);
+  const requestId = signal ? await invoke<string>("register_proxy_request") : undefined;
+  const cancel = () => { void invoke("cancel_proxy_request", { requestId }).catch(() => {}); };
+  if (signal) signal.addEventListener("abort", cancel, { once: true });
   try {
-    return await invoke("proxy_request", { request: { ...request, method: "POST", timeout_seconds: timeoutSeconds,
+    checkModelCancellation(signal);
+    const response = await invoke<ProxyResponse>("proxy_request", { ...(requestId ? { requestId } : {}), request: { ...request, method: "POST", timeout_seconds: timeoutSeconds,
       ...(idleSeconds ? { idle_timeout_seconds: idleSeconds } : {}) } });
+    checkModelCancellation(signal);
+    return response;
   } catch (error) {
-    // Tauri rejects with a string, but an Error with the same text is a timeout too.
+    checkModelCancellation(signal);
     const message = error instanceof Error ? error.message : String(error);
     throw message.startsWith(PROXY_TIMEOUT) ? new Error(TIME_LIMIT_MESSAGE) : error;
+  } finally {
+    signal?.removeEventListener("abort", cancel);
+    if (requestId) await invoke("cancel_proxy_request", { requestId });
   }
+}
+
+function retryWait(ms: number, signal?: AbortSignal): Promise<void> {
+  checkModelCancellation(signal);
+  return new Promise((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); signal?.removeEventListener("abort", abort); reject(new DOMException("Geannuleerd", "AbortError")); };
+    const timer = setTimeout(() => { signal?.removeEventListener("abort", abort); resolve(); }, ms);
+    signal?.addEventListener("abort", abort, { once: true });
+  });
 }
 
 /** Every model request goes through here: one total time limit, a timeout named as such, and one retry on HTTP 429
  * after the provider's Retry-After plus up to one second of jitter, so requests that were rate limited together do
  * not collide again. The wait and the retry count against the same time limit. A wait that is too long, and a
- * second 429, return the 429 to the caller, which reports it. Windows requests take no abort signal, so there is
- * no cancellation during the wait. */
+ * second 429, return the 429 to the caller, which reports it. Cancellation also stops the rate-limit wait and native HTTP connection. */
 export async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }, trace: RequestTrace,
   limits: TimeLimits = { total: LLM_TIME_LIMIT_SECONDS }): Promise<ProxyResponse> {
   const started = Date.now();
-  const first = await proxy(request, limits.total, limits.idle);
+  const first = await proxy(request, limits.total, limits.idle, trace.signal);
   trace.status = first.status;
   const header = Object.entries(first.headers ?? {}).find(([name]) => name.toLowerCase() === "retry-after")?.[1];
   const wait = first.status === 429 ? rateLimitWaitMs(header) : null;
@@ -58,8 +80,8 @@ export async function modelRequest(request: { url: string; headers: Record<strin
   const remainingSeconds = Math.floor((limits.total * 1000 - (Date.now() - started) - jittered) / 1000);
   if (remainingSeconds < 1) return first;
   logRetry(trace, jittered);
-  await new Promise(resolve => setTimeout(resolve, jittered));
-  const second = await proxy(request, remainingSeconds, limits.idle);
+  await retryWait(jittered, trace.signal);
+  const second = await proxy(request, remainingSeconds, limits.idle, trace.signal);
   trace.status = second.status;
   return second;
 }

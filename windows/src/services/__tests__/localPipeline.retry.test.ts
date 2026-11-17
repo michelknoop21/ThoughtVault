@@ -28,7 +28,7 @@ beforeEach(() => {
 });
 
 it("finishes the existing partial document on retry without retranscribing", async () => {
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   const update = vi.fn().mockResolvedValue(undefined);
   useLocalTranscriptsStore.setState({ items: [partial], add, update });
   vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Volgende week begint de planning.</p>");
@@ -57,7 +57,7 @@ it("keeps simultaneous transcription progress attached to its own task", async (
     throw new Error(`Unexpected command: ${command}`);
   });
   vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
-  useLocalTranscriptsStore.setState({ items: [], add: vi.fn(), update: vi.fn() });
+  useLocalTranscriptsStore.setState({ items: [], add: vi.fn(async (record: Transcript) => record), update: vi.fn() });
   vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>De planning begint maandag.</p>");
 
   const first = processLocally("C:\\first.wav", "standaard", "microphone", [], 12, "local-first");
@@ -76,7 +76,7 @@ it("shows native transcription errors without discarding the original message", 
     throw "Segment lezen mislukt: invalid UTF-8";
   });
   vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   await processLocally("C:\\recording.wav", "standaard", "combined", [], 12, "local-failed");
   expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({
@@ -93,7 +93,7 @@ it("persists imported audio duration and keeps it on the task", async () => {
     throw new Error(`Unexpected command: ${command}`);
   });
   vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Alex controleert maandag de opname.</p>");
   await processLocally("C:\\import.wav", "standaard", "microphone", [], 0, "local-import");
@@ -105,7 +105,7 @@ it("persists imported audio duration and keeps it on the task", async () => {
 
 it("keeps a duration read failure visible without saving an incomplete import", async () => {
   vi.mocked(invoke).mockRejectedValue("Kan de audioduur niet lezen");
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   await processLocally("C:\\missing.wav", "standaard", "microphone", [], 0, "local-missing");
   expect(invoke).toHaveBeenCalledWith("audio_duration", { filePath: "C:\\missing.wav" });
@@ -168,7 +168,7 @@ it("keeps the recording retryable instead of downloading a missing model without
     return undefined as never;
   });
   const generate = vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<p>Noor controleert vrijdag de offertes.</p>");
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   await processLocally("C:/eigen opnamen/één overleg.wav", "standaard", "microphone", [], 12, "local-needs-model");
   expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({

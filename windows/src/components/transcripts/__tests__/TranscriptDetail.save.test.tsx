@@ -1,3 +1,4 @@
+import {MemoryRouter} from "react-router-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
@@ -17,10 +18,10 @@ it("keeps an edited notule open when saving fails", async () => {
   };
   const noop = vi.fn();
   await act(async () => {
-    root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
+    root.render(<MemoryRouter><TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
       onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={save}
       onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop}
-      onExportHTML={noop} onExportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />);
+      onExportHTML={noop} onExportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>);
   });
   await act(async () => { container.querySelector<HTMLButtonElement>('[title="Notule bewerken"]')!.click(); });
   const editor = container.querySelector<HTMLDivElement>('[aria-label="Notule bewerken"]')!;
@@ -53,10 +54,10 @@ it("allows regeneration from a saved transcript without a notule", async () => {
     duration_seconds: 10, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   await act(async () => {
-    root.render(<TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop}
+    root.render(<MemoryRouter><TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop}
       onRegenerate={regenerate} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}}
       onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop}
-      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />);
+      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>);
   });
   const button = container.querySelector<HTMLButtonElement>('[title="Notulen opnieuw genereren met AI"]');
   expect(button).not.toBeNull();
@@ -65,13 +66,13 @@ it("allows regeneration from a saved transcript without a notule", async () => {
   await act(async () => { root.unmount(); });
 });
 
-it("retains the selected-word correction after a failed note save and learns only after success", async()=>{
+it.each([false,true])("retains corrections after failed save without changing merge snapshots (merged=%s)", async merged=>{
   const save = vi.fn().mockRejectedValueOnce(new Error("Schijf vol")).mockResolvedValue(undefined);
   dictionary.save.mockClear();
   const container = document.createElement("div");document.body.append(container);
   const root = createRoot(container); const noop=vi.fn();
-  const note={id:"local-word",title:"Jengo-oplossingen",profile_name:DEFAULT_PROFILES[0].name,raw_transcription:"Jengo",notule_html:"<p>Jengo</p>",duration_seconds:10,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-  await act(async()=>{root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async()=>{}} onSaveNotule={save} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop}/>);});
+  const note={merge_sources:merged?[{id:"a",title:"Bron A",date:"2026-11-10T10:00:00Z"},{id:"b",title:"Bron B",date:"2026-11-12T10:00:00Z"}]:undefined,id:"local-word",title:"Jengo-oplossingen",profile_name:DEFAULT_PROFILES[0].name,raw_transcription:"Jengo",notule_html:"<p>Jengo</p>",duration_seconds:10,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+  await act(async()=>{root.render(<MemoryRouter><TranscriptDetail transcript={note} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async()=>{}} onSaveNotule={save} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop}/></MemoryRouter>);});
   const node=container.querySelector(".td-doc-body p")!.firstChild!;
   const range=document.createRange();range.selectNodeContents(node);window.getSelection()!.removeAllRanges();window.getSelection()!.addRange(range);
   await act(async()=>{[...container.querySelectorAll("button")].find(b=>b.textContent==="Woord corrigeren")!.click();});
@@ -83,7 +84,7 @@ it("retains the selected-word correction after a failed note save and learns onl
     inputs[0].dispatchEvent(new Event("input",{bubbles:true}));
   });
   await act(async()=>{container.querySelector<HTMLButtonElement>(".correction-dialog .btn-accent")!.click();});
-  expect(save).toHaveBeenCalledWith("local-word","<p>Yinga</p>","Yinga","Yinga-oplossingen");
+  expect(save).toHaveBeenCalledWith("local-word","<p>Yinga</p>",merged?undefined:"Yinga","Yinga-oplossingen");
   expect(container.textContent).toContain("Schijf vol");expect(inputs[0].value).toBe("Yinga");expect(dictionary.save).not.toHaveBeenCalled();
   await act(async()=>{container.querySelector<HTMLButtonElement>(".correction-dialog .btn-accent")!.click();});
   expect(dictionary.save).toHaveBeenCalledOnce();expect(container.querySelector("dialog")).toBeNull();expect(note.raw_transcription).toBe("Jengo");
@@ -95,10 +96,10 @@ it("shows a sanitized rejected draft separately without turning it into an accep
   const note = { id: "local-review", title: "Transcriptie", raw_transcription: "Sam controleert vrijdag.", has_notes: false,
     notule_html: "", notule_draft_html: '<p>Ongecontroleerd concept</p><script>alert(1)</script>', notule_review_reason: "Actie niet bevestigd",
     duration_seconds: 10, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
-  await act(async () => { root.render(<TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
+  await act(async () => { root.render(<MemoryRouter><TranscriptDetail transcript={note} regeneratingId={null} onBack={noop}
     onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}}
     onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop} onExportHTML={noop}
-    onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />); });
+    onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>); });
   expect(container.querySelector('[aria-label="Concept ter beoordeling"]')?.textContent).toContain("Concept — niet gevalideerd");
   expect(container.querySelector('[aria-label="Concept ter beoordeling"] script')).toBeNull();
   expect(container.querySelector(".td-transcription")?.textContent).toBe(note.raw_transcription);
@@ -115,7 +116,7 @@ it("exports with and without own notes without changing the saved document", asy
   const output = vi.fn(), noop = vi.fn();
   const container = document.createElement("div"); document.body.append(container);
   const root = createRoot(container);
-  await act(async () => { root.render(<TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}} onCopy={noop} onExportPDF={output} onExportTXT={output} onExportMarkdown={output} onExportHTML={output} onExportObsidian={output} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />); });
+  await act(async () => { root.render(<MemoryRouter><TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}} onCopy={noop} onExportPDF={output} onExportTXT={output} onExportMarkdown={output} onExportHTML={output} onExportObsidian={output} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>); });
   const open = async () => { await act(async () => { container.querySelector<HTMLButtonElement>('[title="Exporteren"]')!.click(); }); };
   await open();
   await act(async () => { [...container.querySelectorAll<HTMLButtonElement>(".td-export-item")].find(b => b.textContent?.trim() === "HTML")!.click(); });

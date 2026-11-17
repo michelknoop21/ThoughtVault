@@ -1,3 +1,6 @@
+import {BrandingPicker} from "./BrandingPicker";
+import {BrandedDocument} from "./BrandedDocument";
+import {saveWordExport} from "../../services/documentExport";
 import { openNoteLink } from "../../services/externalLinks";
 import { correctRecording, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
 import { useProfilesStore } from "../../stores/profilesStore";
@@ -98,6 +101,8 @@ export function TranscriptDetail({
   const [pfRef, setPfRef] = useState<OfferRef | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const brandedFrame = useRef<HTMLIFrameElement | null>(null);
+  const currentEditorHTML = () => brandedFrame.current?.contentDocument?.querySelector("[contenteditable]")?.innerHTML ?? editorRef.current?.innerHTML ?? editedHTML;
   const exportRef = useRef<HTMLDivElement>(null);
   /** Set while the correction dialog handles a term suggestion; called once the correction is applied. */
   const suggestionDone = useRef<(() => void) | null>(null);
@@ -163,7 +168,7 @@ export function TranscriptDetail({
   }
 
   async function saveNotuleEdit() {
-    const html = DOMPurify.sanitize(editorRef.current?.innerHTML ?? editedHTML);
+    const html = DOMPurify.sanitize(currentEditorHTML());
     if (!html.trim()) return;
     setIsSaving(true);
     try {
@@ -178,8 +183,8 @@ export function TranscriptDetail({
 
   const correctionScope = () => transcript.profile_id || useProfilesStore.getState().profiles.find(p => p.name === transcript.profile_name || p.id === transcript.profile_name)?.id || null;
   function openCorrection() {
-    const selection = window.getSelection();
-    const selected = selection?.anchorNode?.parentElement?.closest(".td-doc-body") ? selection.toString().trim() : "";
+    const selection = brandedFrame.current?.contentWindow?.getSelection() ?? window.getSelection();
+    const selected = selection?.anchorNode?.parentElement?.closest(".td-doc-body, .tv-content") ? selection.toString().trim() : "";
     suggestionDone.current = null;
     setCorrection({...newCorrection(correctionScope()), variants:[selected]});
     setRememberCorrection(true); setCorrectionError("");
@@ -190,8 +195,8 @@ export function TranscriptDetail({
     const store = usePersonalCorrectionsStore.getState();
     await store.hydrate();
     validateCorrections({version:1,entries:remember ? upsertCorrection(store.entries,entry) : [entry]});
-    const corrected = correctRecording(entry, isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", transcript.raw_transcription, transcript.title);
-    await onSaveNotule(transcript.id, corrected.notule, corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined, corrected.title !== transcript.title ? corrected.title : undefined);
+    const corrected = correctRecording(entry, isEditingNotule ? currentEditorHTML() : transcript.notule_html || "", transcript.raw_transcription, transcript.title);
+    await onSaveNotule(transcript.id, corrected.notule, !transcript.merge_sources && corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined, corrected.title !== transcript.title ? corrected.title : undefined);
     if (isEditingNotule) setEditedHTML(corrected.notule);
     if (remember) {
       try { await store.save(entry); }
@@ -243,7 +248,7 @@ export function TranscriptDetail({
               className={`td-tab-btn${detailTab === "transcriptie" ? " active" : ""}`}
               onClick={() => { setDetailTab("transcriptie"); setIsEditingNotule(false); }}
             >
-              Transcriptie
+              {transcript.merge_sources ? "Bronnotulen" : "Transcriptie"}
             </button>
           </div>
         )}
@@ -320,6 +325,7 @@ export function TranscriptDetail({
                   <button className="td-export-item" onClick={() => { onExportPDF(exportTranscript); setExportOpen(false); }}>
                     <DocumentPdf24Regular style={{ fontSize: 15 }} /> PDF
                   </button>
+                  <button className="td-export-item" onClick={() => { void saveWordExport(exportTranscript).catch(e=>toast.show(String(e),"error")); setExportOpen(false); }}>Word (.docx)</button>
                   <button className="td-export-item" onClick={() => { onExportMarkdown(exportTranscript); setExportOpen(false); }}>
                     <Code24Regular style={{ fontSize: 15 }} /> Markdown
                   </button>
@@ -379,6 +385,7 @@ export function TranscriptDetail({
         </button>
       </div>
       <ObsidianBrokenNotice />
+      <BrandingPicker transcript={transcript} />
 
       {/* Document content */}
       <div className="td-scroll">
@@ -447,7 +454,9 @@ export function TranscriptDetail({
           {/* Content */}
           {detailTab === "notule" ? (
             transcript.notule_html ? (
-              isEditingNotule ? (
+              transcript.document_branding_json ? (
+                <BrandedDocument transcript={transcript} editable={isEditingNotule} content={isEditingNotule ? editedHTML : undefined} onReady={frame=>{brandedFrame.current=frame;}} />
+              ) : isEditingNotule ? (
                 <div
                   ref={editorRef}
                   className="prose td-doc-body td-doc-editing"

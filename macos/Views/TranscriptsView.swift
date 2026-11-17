@@ -58,6 +58,8 @@ struct TranscriptsView: View {
 
     @State var isSelecting = false
     @State var selectedIds: Set<String> = []
+    @State var showMergeSheet = false
+    @State private var mergeError: String?
     @State var showBulkDeleteConfirm = false
     @State var transcriptToDelete: Transcript? = nil
     @State var showSingleDeleteConfirm = false
@@ -190,6 +192,24 @@ struct TranscriptsView: View {
         } message: {
             Text("Deze transcriptie wordt permanent verwijderd.")
         }
+        .sheet(isPresented: $showMergeSheet) {
+            MergeNotulenSheet(sources: transcripts.filter { selectedIds.contains($0.id) }) { profileId in
+                let ids = transcripts.filter { selectedIds.contains($0.id) }.map(\.taskId)
+                showMergeSheet = false
+                Task {
+                    do {
+                        let result = try await recordingVM.mergeNotulen(sourceIDs: ids, profileId: profileId)
+                        await loadTranscripts()
+                        isSelecting = false
+                        selectedIds.removeAll()
+                        transcriptsNavPath.append(result)
+                    } catch { mergeError = error.localizedDescription }
+                }
+            }
+        }
+        .alert("Samenvoegen mislukt", isPresented: Binding(get: { mergeError != nil }, set: { if !$0 { mergeError = nil } })) {
+            Button("OK", role: .cancel) { mergeError = nil }
+        } message: { Text(mergeError ?? "") }
         .task { await loadTranscripts() }
         .task {
             for await _ in NotificationCenter.default.notifications(named: LocalTranscriptStore.didChange) {
@@ -676,6 +696,8 @@ struct TranscriptsView: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text("Selecteer \(transcript.title)"))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .offset(x: -14)
         .padding(.top, TS.Spacing.sm)
     }
@@ -687,6 +709,8 @@ struct TranscriptsView: View {
         ToolbarItem(placement: .primaryAction) {
             if isSelecting {
                 HStack(spacing: TS.Spacing.sm) {
+                    Button("Samenvoegen", systemImage: "doc.on.doc") { showMergeSheet = true }
+                        .disabled(selectedIds.count < 2 || recordingVM.isMerging)
                     if !selectedIds.isEmpty {
                         Button {
                             showBulkDeleteConfirm = true
@@ -1044,9 +1068,6 @@ struct TranscriptDetailView: View {
     // MARK: State - errors
 
     @State var errorMessage: String? = nil
-    #if os(macOS)
-    @State private var printWebView: WKWebView?
-    #endif
 
     // MARK: Init
 
@@ -1111,7 +1132,7 @@ struct TranscriptDetailView: View {
 #endif
         }
         #if os(macOS)
-        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportAsPDF() })
+        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportDocument("print") })
         #endif
         .alert("Titel bewerken", isPresented: $showTitleEditAlert) {
             TextField("Titel", text: $pendingTitle)
@@ -1227,7 +1248,7 @@ struct TranscriptDetailView: View {
         if hasNotule && hasRaw {
             HStack(spacing: 0) {
                 compactTabButton(.notule, label: "Notule")
-                compactTabButton(.raw, label: "Transcriptie")
+                compactTabButton(.raw, label: transcript.mergeSourcesJSON == nil ? "Transcriptie" : "Bronnotulen")
             }
             .background(Color.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
@@ -1511,6 +1532,8 @@ struct TranscriptDetailView: View {
                 Button { exportAsPDF() } label: {
                     Label("PDF", systemImage: "doc.richtext")
                 }
+                Button { exportDocument("docx") } label: { Label("Word (.docx)", systemImage: "doc.text") }
+                Button { exportDocument("html") } label: { Label("HTML", systemImage: "chevron.left.forwardslash.chevron.right") }
                 Button { exportAsMarkdown() } label: {
                     Label("Markdown", systemImage: "doc.plaintext")
                 }
@@ -1770,23 +1793,34 @@ struct TranscriptDetailView: View {
                     .padding(.vertical, TS.Spacing.xs)
             }
 
-            EditableHTMLWebView(
-                htmlContent: html,
-                editedHTML: $editedHTML,
-                isEditing: isEditingNotule,
-                isDarkMode: colorScheme == .dark,
-                onWebViewReady: { ref in
-                    Task { @MainActor in editableWebViewRef = ref }
-                }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-                if isEditingNotule {
-                    RoundedRectangle(cornerRadius: 0)
-                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
+            DocumentBrandingPicker(taskId: fullTranscript.taskId) { json in
+                fullTranscript.documentBrandingJSON = json
+            }
+            if let snapshot = fullTranscript.documentBrandingJSON {
+                DocumentWebView(html: isEditingNotule ? prepareNotuleContent(html) : html,
+                                title: isEditingNotule ? "" : fullTranscript.title,
+                                snapshot: snapshot, editable: isEditingNotule,
+                                onContent: { editedHTML = $0 },
+                                onWebViewReady: { ref in Task { @MainActor in editableWebViewRef = ref } })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                EditableHTMLWebView(
+                    htmlContent: html,
+                    editedHTML: $editedHTML,
+                    isEditing: isEditingNotule,
+                    isDarkMode: colorScheme == .dark,
+                    onWebViewReady: { ref in
+                        Task { @MainActor in editableWebViewRef = ref }
+                    }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    if isEditingNotule {
+                        RoundedRectangle(cornerRadius: 0)
+                            .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
+                    }
                 }
             }
-
             if !isEditingNotule {
                 NotuleUsageFooter(taskId: fullTranscript.taskId, html: html)
                     .padding(.horizontal, TS.Spacing.md)
@@ -1842,7 +1876,7 @@ struct TranscriptDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: TS.Spacing.md) {
                     HStack(alignment: .center) {
-                        Label("Ruwe transcriptie", systemImage: "waveform")
+                        Label(transcript.mergeSourcesJSON == nil ? "Ruwe transcriptie" : "Bronnotulen", systemImage: "doc.text")
                             .font(TS.Font.captionSemibold)
                             .foregroundStyle(Color.labelTertiary)
                         Spacer()
@@ -2076,7 +2110,8 @@ struct TranscriptDetailView: View {
         let entries = try PersonalCorrections.load()
         try PersonalCorrections.validate(CorrectionDocument(entries: remember ? PersonalCorrections.upsert(entries, entry: entry) : [entry]))
         let original = isEditingNotule ? restoreNotuleMarkup(original: fullTranscript.notuleHtml ?? "", editedBody: editedHTML) : fullTranscript.notuleHtml ?? ""
-        let (html, transcript, title) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription, title: fullTranscript.title)
+        let (html, correctedTranscript, title) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription, title: fullTranscript.title)
+        let transcript = fullTranscript.mergeSourcesJSON == nil ? correctedTranscript : fullTranscript.rawTranscription
         if isLocalTranscript(fullTranscript.taskId) {
             try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html, transcription: transcript, title: title)
         } else {
@@ -2251,46 +2286,16 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    func exportAsPDF() {
+    func exportAsPDF() { exportDocument("pdf") }
+
+    func exportDocument(_ ext: String) {
         guard let html = exportNotuleHTML
-                ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
-
-        let styledHTML = """
-        <!DOCTYPE html>
-        <html><head><meta charset="utf-8">
-        <style>
-        body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 11.5pt; line-height: 1.65; color: #2c2c30; margin: 0; padding: 28pt 36pt; }
-        h1 { font-size: 18pt; font-weight: 700; color: #7830D8; margin-bottom: 14pt; padding-bottom: 8pt; border-bottom: 1.5pt solid rgba(120,48,216,0.15); }
-        h2 { font-size: 14pt; font-weight: 650; margin-top: 20pt; margin-bottom: 8pt; }
-        h3 { font-size: 12pt; font-weight: 600; color: #555; margin-top: 16pt; margin-bottom: 6pt; }
-        p { margin: 7pt 0; }
-        ul, ol { margin: 7pt 0; padding-left: 22pt; }
-        li { margin: 4pt 0; }
-        strong { font-weight: 600; }
-        table { border-collapse: collapse; width: 100%; margin: 14pt 0; }
-        th, td { border: 1px solid #e0e0e0; padding: 7pt 10pt; text-align: left; font-size: 10.5pt; }
-        th { background: #f8f8fa; font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.4pt; color: #666; }
-        blockquote { border-left: 2.5pt solid #7830D8; margin: 12pt 0; padding: 8pt 16pt; background: #f8f5fe; }
-        </style>
-        </head><body>\(html)</body></html>
-        """
-
-        #if os(macOS)
-        NotulePrinter.print(html: styledHTML) { printWebView = $0 }
-        #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "html"))
-        do {
-            try styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
-        } catch {
-            errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
-            return
+            ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
+        Task { @MainActor in
+            do { try await DocumentExporter.export(html: html, title: fullTranscript.title,
+                                                   snapshot: fullTranscript.documentBrandingJSON, ext: ext) }
+            catch { errorMessage = "Exporteren mislukt: \(error.localizedDescription)" }
         }
-        let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.present(activityVC, animated: true)
-        }
-        #endif
     }
 
     func exportAsTXT() {
@@ -2521,4 +2526,51 @@ private struct ProfileSelectionSheet: View {
 #Preview {
     TranscriptsView(transcriptsNavPath: .constant(NavigationPath()))
         .environment(RecordingViewModel())
+}
+
+
+private struct MergeNotulenSheet: View {
+    @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(\.dismiss) private var dismiss
+    let sources: [Transcript]
+    let onMerge: (String) -> Void
+    @State private var profileId = ""
+
+    private var profiles: [Profile] {
+        recordingVM.availableProfiles.isEmpty ? Profile.defaults : recordingVM.availableProfiles
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Bronnotulen") {
+                    ForEach(sources.sorted { $0.date == $1.date ? $0.taskId < $1.taskId : $0.date < $1.date }) { source in
+                        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                            Text(source.title)
+                            Text(source.date, style: .date).font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+                        }
+                    }
+                }
+                Section {
+                    Picker("Notulenprofiel", selection: $profileId) {
+                        ForEach(profiles) { Text($0.name).tag($0.id) }
+                    }
+                    Text("De AI maakt één nieuwe notule. De originelen blijven behouden.")
+                        .font(TS.Font.caption)
+                }
+            }
+            .navigationTitle("Notulen samenvoegen")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuleren") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Samenvoegen") { onMerge(profileId) }
+                        .disabled(recordingVM.isMerging || sources.count < 2 || !profiles.contains { $0.id == profileId })
+                }
+            }
+            .onAppear { profileId = recordingVM.selectedProfile?.id ?? profiles.first?.id ?? "" }
+        }
+        #if os(macOS)
+        .frame(width: 520, height: 440)
+        #endif
+    }
 }

@@ -706,3 +706,19 @@
 "Titel van deze opname" = "Titel van deze opname";
 "Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard." = "Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard.";
 "Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd." = "Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd.";
+
+"Samenvoegen" = "Samenvoegen";
+"Bronnotulen" = "Bronnotulen";
+"Notulenprofiel" = "Notulenprofiel";
+"Notulen samenvoegen" = "Notulen samenvoegen";
+"Samenvoegen mislukt" = "Samenvoegen mislukt";
+"De AI maakt één nieuwe notule. De originelen blijven behouden." = "De AI maakt één nieuwe notule. De originelen blijven behouden.";
+"Samengevoegde notule" = "Samengevoegde notule";
+"Samenvoegen geannuleerd." = "Samenvoegen geannuleerd.";
+"Selecteer minstens twee verschillende notulen." = "Selecteer minstens twee verschillende notulen.";
+"Een bronnotule heeft geen bruikbare inhoud." = "Een bronnotule heeft geen bruikbare inhoud.";
+"De geselecteerde notulen zijn samen te groot. Selecteer minder notulen en probeer opnieuw." = "De geselecteerde notulen zijn samen te groot. Selecteer minder notulen en probeer opnieuw.";
+"Samenvoegen is al bezig of de app wordt bijgewerkt." = "Samenvoegen is al bezig of de app wordt bijgewerkt.";
+"Kies een notulenprofiel." = "Kies een notulenprofiel.";
+
+"Selecteer %@" = "Selecteer %@";

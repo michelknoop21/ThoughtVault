@@ -1,3 +1,4 @@
+import {MemoryRouter} from "react-router-dom";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -47,10 +48,10 @@ it("hides the manual Obsidian buttons when the switch is off", async () => {
   const noop = vi.fn();
   for (const enabled of [false, true]) {
     useSettingsStore.setState({ obsidian_enabled: enabled });
-    const { container, unmount } = await mount(<TranscriptDetail transcript={{ id: "n1", title: "Gesprek", notule_html: "<p>Notule</p>", created_at: "2026-11-10", updated_at: "2026-11-10", duration_seconds: 0, tags: [] }}
+    const { container, unmount } = await mount(<MemoryRouter><TranscriptDetail transcript={{ id: "n1", title: "Gesprek", notule_html: "<p>Notule</p>", created_at: "2026-11-10", updated_at: "2026-11-10", duration_seconds: 0, tags: [] }}
       regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}}
       onSaveNotule={async () => {}} onCopy={noop} onExportPDF={noop} onExportTXT={noop} onExportMarkdown={noop}
-      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />);
+      onExportHTML={noop} onExportObsidian={noop} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} /></MemoryRouter>);
     await act(async () => { container.querySelector<HTMLButtonElement>('[title="Exporteren"]')!.click(); });
     expect(container.textContent?.includes("Naar Obsidian")).toBe(enabled);
     expect(container.textContent?.includes("De koppeling met Obsidian werkt niet meer")).toBe(enabled);

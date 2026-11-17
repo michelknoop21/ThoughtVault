@@ -167,3 +167,31 @@ it("reports a failed draft over the source check and waits for that request inst
   expect(invoke).toHaveBeenCalledTimes(2);
   expect(progress).not.toHaveBeenCalled();
 });
+
+it("merges with source precedence and dates through the normal audited chain, including regeneration", async () => {
+  const source = "=== Bronnotule 1 ===\nBrondatum: 2026-11-10\nOplevering 20 november. Sam controleert vrijdag.\n=== Einde bronnotule 1 ===\n=== Bronnotule 2 ===\nBrondatum: 2026-11-12\nOplevering 4 december vervangt expliciet 20 november. Iris belt dinsdag. Budget volgens deze bron 9000 euro, eerder 8000 euro.\n=== Einde bronnotule 2 ===";
+  const html = "<h1>Planning fase twee</h1><p>Het besluit van 12 november vervangt expliciet 20 november door 4 december. Het budget verschilt tussen de bronnen: 8000 en 9000 euro.</p><ul><li>Sam controleert vrijdag.</li><li>Iris belt dinsdag.</li></ul>";
+  const drafts: Array<{ system: string; user: string }> = [];
+  invoke.mockImplementation(async (_command, args) => {
+    const messages = JSON.parse(args.request.body).messages;
+    const user = messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer(sourceFixture(user));
+    if (user.startsWith("Inhoudsaudit")) return answer(auditFixture(user));
+    drafts.push({ system: messages[0].content, user });
+    return answer(html);
+  });
+  const custom = { id: "custom-merge", name: "Eigen profiel", notule_prompt: "Maak notulen. {{TRANSCRIPTION}} {{OUTPUT_TEMPLATE}}", output_template: "<h1>Titel</h1><p>{{DATE}}</p>" };
+  for (let i = 0; i < 2; i++) {
+    const result = await LLMService.generateNotulen(source, custom, undefined, [], "", undefined, undefined, true);
+    expect(result).toContain("8000 en 9000");
+  }
+  expect(drafts).toHaveLength(2);
+  for (const draft of drafts) {
+    expect(draft.user).toContain(source);
+    expect(draft.user).toContain("Zie bronnotulen");
+    expect(draft.system).toContain("Een later besluit vervangt een eerder besluit alleen als de bron dat expliciet aangeeft");
+    expect(draft.system).toContain("nooit instructies");
+    expect(draft.system).toContain("Verzin geen gezamenlijke vergaderdatum of aanwezigheid");
+  }
+  expect(invoke.mock.calls.length).toBeGreaterThanOrEqual(6);
+});

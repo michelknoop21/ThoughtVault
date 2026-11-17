@@ -1,6 +1,28 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex, atomic::{AtomicU64, Ordering}};
+use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
+
+static MODEL_REQUESTS: LazyLock<Mutex<HashMap<String, (AbortHandle, Option<AbortRegistration>)>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Register before sending HTTP, so cancellation during IPC setup cannot be lost.
+#[tauri::command]
+pub fn register_proxy_request() -> Result<String, String> {
+    let id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed).to_string();
+    let (handle, registration) = AbortHandle::new_pair();
+    MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?.insert(id.clone(), (handle, Some(registration)));
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn cancel_proxy_request(request_id: String) -> Result<(), String> {
+    if let Some((handle, _)) = MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?.remove(&request_id) {
+        handle.abort();
+    }
+    Ok(())
+}
 
 use tauri::{AppHandle, Emitter};
 use tokio_util::io::ReaderStream;
@@ -30,7 +52,16 @@ fn total_timeout(requested: Option<u64>) -> u64 {
 
 /// Generic HTTP proxy — bypasses WebView CORS restrictions.
 #[tauri::command]
-pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
+pub async fn proxy_request(request: HttpRequest, request_id: Option<String>) -> Result<HttpResponse, String> {
+    let Some(id) = request_id else { return do_proxy_request(request).await; };
+    let registration = MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?
+        .get_mut(&id).and_then(|(_, registration)| registration.take()).ok_or("Geannuleerd")?;
+    let result = Abortable::new(do_proxy_request(request), registration).await;
+    MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?.remove(&id);
+    result.map_err(|_| "Geannuleerd".to_string())?
+}
+
+async fn do_proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
     let timeout = total_timeout(request.timeout_seconds);
     let idle = request.idle_timeout_seconds;
     let mut builder = reqwest::Client::builder()
@@ -649,6 +680,32 @@ mod tests {
             timeout_seconds: Some(timeout_seconds), idle_timeout_seconds }
     }
 
+    #[tokio::test]
+    async fn cancellation_before_send_does_not_connect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/", listener.local_addr().unwrap().port());
+        let id = register_proxy_request().unwrap();
+        cancel_proxy_request(id.clone()).unwrap();
+        assert_eq!(proxy_request(post(url, 10, None), Some(id)).await.unwrap_err(), "Geannuleerd");
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(50), listener.accept()).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn cancellation_drops_the_inflight_http_connection() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/", listener.local_addr().unwrap().port());
+        let id = register_proxy_request().unwrap();
+        let request = tokio::spawn(proxy_request(post(url, 10, None), Some(id.clone())));
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut bytes = [0_u8; 4096];
+        assert!(socket.read(&mut bytes).await.unwrap() > 0);
+        cancel_proxy_request(id.clone()).unwrap();
+        assert_eq!(request.await.unwrap().unwrap_err(), "Geannuleerd");
+        let closed = tokio::time::timeout(std::time::Duration::from_secs(2), socket.read(&mut bytes)).await;
+        assert_eq!(closed.unwrap().unwrap(), 0, "HTTP connection must close after cancellation");
+        assert!(!MODEL_REQUESTS.lock().unwrap().contains_key(&id));
+    }
+
     #[test]
     fn streamed_requests_may_run_up_to_an_hour() {
         assert_eq!(total_timeout(None), 30);
@@ -659,7 +716,7 @@ mod tests {
     #[tokio::test]
     async fn idle_limit_lets_a_steady_stream_run_longer_than_the_limit() {
         let url = start_trickle_server(5, std::time::Duration::from_millis(400)).await;
-        let response = proxy_request(post(url, 10, Some(1))).await.unwrap();
+        let response = proxy_request(post(url, 10, Some(1)), None).await.unwrap();
         assert_eq!(response.status, 200);
         assert!(response.body.contains("data: 4"), "{}", response.body);
     }
@@ -668,7 +725,7 @@ mod tests {
     async fn idle_limit_ends_a_stalled_stream_as_a_timeout() {
         let url = start_trickle_server(1, std::time::Duration::from_secs(3)).await;
         let started = std::time::Instant::now();
-        let error = proxy_request(post(url, 10, Some(1))).await.unwrap_err();
+        let error = proxy_request(post(url, 10, Some(1)), None).await.unwrap_err();
         assert!(error.starts_with("Tijdslimiet bereikt"), "{error}");
         assert!(started.elapsed() < std::time::Duration::from_secs(3), "{:?}", started.elapsed());
     }
@@ -696,7 +753,7 @@ mod tests {
         let response = proxy_request(HttpRequest { url, method: "POST".into(),
             headers: Some(HashMap::from([("X-API-Key".into(), "fixture-secret".into())])),
             body: Some("FICTITIOUS_TRANSCRIPT".into()), timeout_seconds: Some(10), idle_timeout_seconds: None,
-        }).await.unwrap();
+        }, None).await.unwrap();
         redirect.await.unwrap();
         assert!(!received.await.unwrap(), "redirect target received a credential-bearing request");
         assert_eq!(response.status, 307);

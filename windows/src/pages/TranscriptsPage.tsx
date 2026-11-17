@@ -1,6 +1,9 @@
+import { mergeNotulen } from "../services/mergeNotulen";
 import { exportWithOwnNotes, getTranscriptQuickNote, getTranscriptIdentity } from "../services/quickNotes";
 import { useTaskHistory } from "../services/taskHistory";
 import { reprocessTask, canReprocess } from "../services/taskActions";
+import {transcriptDocumentOptions} from "../services/documentExport";
+import {renderDocument,paginate,standalone} from "../../../shared/document/dist/document.mjs";
 import { useConfirmation } from "../components/ui/useConfirmation";
 import { DesktopDialog } from "../components/ui/DesktopDialog";
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -13,7 +16,6 @@ import {
   Dismiss24Regular,
   Add24Regular,
 } from "../components/ui/StudioIcons";
-import DOMPurify from "dompurify";
 import { useTranscriptsStore } from "../stores/transcriptsStore";
 import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -53,6 +55,10 @@ export function TranscriptsPage() {
     setSelectedId, setSearchQuery, setSelectedTags, setIsLoading,
   } = useTranscriptsStore();
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [mergeIDs, setMergeIDs] = useState<string[] | null>(null);
+  const [mergeProfileId, setMergeProfileId] = useState("");
+  const mergeBusy = useRef(false);
+  const [merging, setMerging] = useState(false);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<Transcript | null>(null);
   const [regenerateProfileId, setRegenerateProfileId] = useState("");
@@ -258,7 +264,7 @@ export function TranscriptsPage() {
       }
       setRegeneratingId(transcript.id);
       try {
-        transcription = await LLMService.correctTranscription(transcription, profile.id, transcript.id);
+        if (!transcript.merge_sources) transcription = await LLMService.correctTranscription(transcription, profile.id, transcript.id);
         if (transcription !== transcript.raw_transcription) {
           await useLocalTranscriptsStore.getState().update(transcript.id, { raw_transcription: transcription });
           updateTranscript(transcript.id, { raw_transcription: transcription });
@@ -266,7 +272,7 @@ export function TranscriptsPage() {
         const meter = new UsageMeter();
         const generatedHTML = await LLMService.generateNotulen(transcription, profile,
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], "",
-          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter);
+          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter, !!transcript.merge_sources);
         if (!hasUsableNotule(generatedHTML)) throw new Error("Geen bruikbare notule gegenereerd");
         const html = exportWithOwnNotes(generatedHTML, transcript.quick_note || getTranscriptQuickNote(transcript.id), true);
         const title = getTranscriptIdentity(transcript.id)?.title ? transcript.title : (extractTitle(html) || transcript.title);
@@ -404,19 +410,20 @@ export function TranscriptsPage() {
   // --- Export utilities ---
   function handleExportPDF(transcript: Transcript) {
     if (!transcript.notule_html) return;
-    const title = document.createElement("span");
-    title.textContent = transcript.title || "Notulen";
     const frame = document.createElement("iframe");
     frame.title = "Notule afdrukken";
-    frame.style.cssText = "position:fixed;width:0;height:0;border:0";
-    frame.onload = () => {
-      const printWindow = frame.contentWindow;
-      if (!printWindow) { frame.remove(); toast.show("Afdrukvenster openen mislukt", "error"); return; }
-      // WebView2 must unwind printing before its frame is destroyed.
-      printWindow.addEventListener("afterprint", () => window.setTimeout(() => frame.remove(), 0), { once: true });
-      printWindow.print();
+    frame.style.cssText = "position:fixed;left:-10000px;width:900px;height:1200px;border:0";
+    frame.onload = async () => {
+      try {
+        const printWindow = frame.contentWindow;
+        if (!printWindow || !frame.contentDocument) throw Error("Afdrukvenster openen mislukt");
+        await paginate(frame.contentDocument);
+        printWindow.addEventListener("afterprint", () => window.setTimeout(() => frame.remove(), 0), { once: true });
+        printWindow.print();
+      } catch(e) { frame.remove();toast.show(String(e),"error"); }
     };
-    frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title.innerHTML}</title><style>body{font-family:'Segoe UI Variable','Segoe UI',system-ui,sans-serif;font-size:12pt;line-height:1.6;color:#1a1a1a;padding:20pt}h1{font-size:18pt;font-weight:700;color:#9048F0;margin-bottom:12pt}h2{font-size:14pt;font-weight:600;margin-top:16pt}h3{font-size:12pt;font-weight:600;margin-top:12pt}p{margin:6pt 0}ul,ol{margin:6pt 0;padding-left:20pt}li{margin:3pt 0}table{border-collapse:collapse;width:100%;margin:12pt 0}th,td{border:1px solid #ddd;padding:6pt 8pt;text-align:left}th{background:#f5f5f5;font-weight:600}</style></head><body><h1>${title.innerHTML}</h1><p style="color:#666;font-size:10pt">${formatDate(transcript.created_at)} &middot; ${formatDuration(transcript.duration_seconds)}</p>${DOMPurify.sanitize(prepareNotuleHtml(transcript.notule_html, transcript.title))}</body></html>`;
+    try { frame.srcdoc = renderDocument(transcriptDocumentOptions(transcript)); }
+    catch(e) {toast.show(String(e),"error");return;}
     document.body.append(frame);
   }
 
@@ -442,9 +449,9 @@ export function TranscriptsPage() {
 
   function handleExportHTML(transcript: Transcript) {
     if (!transcript.notule_html) return;
-    const title = document.createElement("h1");
-    title.textContent = transcript.title || "Notulen";
-    void exportText(title.outerHTML + prepareNotuleHtml(transcript.notule_html, transcript.title), transcript.title || "notulen", "html");
+    void standalone(transcriptDocumentOptions(transcript))
+      .then(html=>exportText(html,transcript.title||"notulen","html"))
+      .catch(e=>toast.show(String(e),"error"));
   }
 
   async function handleExportObsidian(transcript: Transcript) {
@@ -557,6 +564,11 @@ export function TranscriptsPage() {
         onRefresh={refreshTranscripts}
         onContextMenu={handleContextMenu}
         onBulkDelete={handleBulkDelete}
+        merging={merging}
+        onMerge={ids => {
+          setMergeProfileId(useSettingsStore.getState().default_profile_id || useProfilesStore.getState().profiles[0]?.id || "");
+          setMergeIDs(ids);
+        }}
       />
 
       {selectedId && selected ? (
@@ -610,6 +622,34 @@ export function TranscriptsPage() {
           </button>
         </div>
       )}
+
+      {mergeIDs && <DesktopDialog className="td-overlay" label="Notulen samenvoegen" onClose={() => setMergeIDs(null)}>
+        <div className="td-tags-dialog">
+          <h3 className="td-tags-title">Notulen samenvoegen</h3>
+          <ul>{transcripts.filter(t => mergeIDs.includes(t.id)).sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)).map(t =>
+            <li key={t.id}>{t.title} — {new Date(t.created_at).toLocaleDateString("nl-NL")}</li>)}</ul>
+          <p>De AI maakt één nieuwe notule. De originelen blijven behouden.</p>
+          <label>Notulenprofiel<select className="select" value={mergeProfileId} onChange={e => setMergeProfileId(e.target.value)}>
+            {useProfilesStore.getState().profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select></label>
+          <div className="flex-row gap-8" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+            <button className="btn" onClick={() => setMergeIDs(null)}>Annuleren</button>
+            <button className="btn btn-accent" disabled={merging || !useProfilesStore.getState().getProfile(mergeProfileId)} onClick={async () => {
+              if (mergeBusy.current) return;
+              mergeBusy.current = true;
+              setMerging(true);
+              const ids = mergeIDs;
+              setMergeIDs(null);
+              try {
+                const result = await mergeNotulen(ids, mergeProfileId);
+                setSelectedId(result.id);
+                toast.show("Notulen samengevoegd", "success");
+              } catch (error) { toast.show(error instanceof Error ? error.message : "Samenvoegen mislukt", "error"); }
+              finally { mergeBusy.current = false; setMerging(false); }
+            }}>Samenvoegen</button>
+          </div>
+        </div>
+      </DesktopDialog>}
 
       {regenerateTarget && <DesktopDialog className="td-overlay" label="Notule opnieuw genereren" onClose={() => setRegenerateTarget(null)}>
         <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>
@@ -684,15 +724,3 @@ export function TranscriptsPage() {
 }
 
 // --- Utilities ---
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })
-    + " om " + d.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
-}

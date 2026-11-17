@@ -105,7 +105,11 @@ export interface MonthUsage {
 }
 
 // Completed saved transcript
+export interface MergeSource { id: string; title: string; date: string; }
+
 export interface Transcript {
+  merge_sources?: MergeSource[];
+  document_branding_json?: string | null;
   notule_usage?: NotuleUsage;
   notule_draft_html?: string;
   notule_review_reason?: string;

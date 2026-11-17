@@ -319,6 +319,13 @@ class APIService {
     return mapTranscript(data);
   }
 
+  async getTranscriptNotes(id: string): Promise<string | undefined> {
+    const data = await this.request<unknown>("GET", `/transcripts/${id}/notes`);
+    const items = safeArray<Record<string, unknown>>(data);
+    const note = items[0] ?? (data && typeof data === "object" ? data as Record<string, unknown> : {});
+    return safeOptionalString(note.html, note.notule_html);
+  }
+
   async updateTranscript(id: string, updates: Partial<Transcript>): Promise<Transcript> {
     return this.request<Transcript>("PUT", `/transcripts/${id}`, updates);
   }

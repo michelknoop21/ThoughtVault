@@ -220,3 +220,22 @@ it("locks key changes and Volgende while Testen saves the key", async () => {
   await act(async () => finish());
   expect(button("Volgende").disabled).toBe(false);
 });
+
+
+it("offers the provider model dropdown and saves its selection", async () => {
+  const select = host.querySelector<HTMLSelectElement>('[aria-label="Model van OpenRouter"]')!;
+  expect(select.tagName).toBe("SELECT");
+  expect([...select.options].map(option => option.value)).toContain("anthropic/claude-sonnet-5.5");
+  expect([...select.options].map(option => option.value)).not.toContain("anthropic/claude-opus-5.5");
+  await act(async () => {
+    select.value = "anthropic/claude-sonnet-5.5";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  expect(useSettingsStore.getState().openrouter_model).toBe("anthropic/claude-sonnet-5.5");
+  await act(async () => button("Andere aanbieder").click());
+  expect(host.querySelector<HTMLSelectElement>('[aria-label="Model van OpenAI"]')!.options.length).toBeGreaterThan(1);
+  await act(async () => button("Claude").click());
+  expect(host.querySelector<HTMLSelectElement>('[aria-label="Model van Anthropic"]')!.options.length).toBeGreaterThan(1);
+  await act(async () => button("OpenRouter").click());
+  expect(host.querySelector<HTMLSelectElement>('[aria-label="Model van OpenRouter"]')!.value).toBe("anthropic/claude-sonnet-5.5");
+});

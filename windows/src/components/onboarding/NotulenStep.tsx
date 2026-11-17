@@ -5,6 +5,7 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { loadCredential, storeCredential } from "../../services/tauriCommands";
 import { OLLAMA_LOCAL_URL, isOllamaCloudURL } from "../../services/ollamaModels";
 import { DEFAULT_SETTINGS, type AppSettings, type NotulenProvider } from "../../types";
+import { CappedModelSelect } from "../settings/CappedModelSelect";
 import { DesktopDialog } from "../ui/DesktopDialog";
 import "../../styles/onboarding.css";
 
@@ -160,12 +161,11 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
       </div>
     </div> : <p className="onb-note">Ollama schrijft de notule op deze pc. Installeer Ollama en kies het model later in Instellingen › Verwerking.</p>}
 
-    {/* Spot for the model tiers (Snel / Gebalanceerd / Grondig) once the suggested-model catalog lands. */}
     {modelField && <div className="onb-model">
       <h2>Kies een model</h2>
       <p className="onb-muted">Het aanbevolen model staat al ingevuld. Later wisselen kan in Instellingen › Verwerking.</p>
-      <input className="input onb-model-input" type="text" aria-label={`Model van ${name}`} value={settings[modelField]}
-        onChange={event => settings.updateSettings({ [modelField]: event.target.value } as Partial<AppSettings>)} />
+      <CappedModelSelect provider={keyed!} label={`Model van ${name}`} value={settings[modelField]}
+        onChange={model => settings.updateSettings({ [modelField]: model } as Partial<AppSettings>)} />
     </div>}
 
     <div className="onb-footer">

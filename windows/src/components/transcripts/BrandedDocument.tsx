@@ -63,8 +63,11 @@ export function BrandedDocument({
           const doc = e.currentTarget.contentDocument;
           onReady?.(e.currentTarget);
           if (doc) {
+            const fit = () => fitDocument(doc);
             if (!editable)
-              void paginate(doc).catch((err) => setError(String(err)));
+              void paginate(doc).then(fit).catch((err) => setError(String(err)));
+            else fit();
+            doc.defaultView?.addEventListener("resize", fit);
             const openLink = (event: MouseEvent) => {
               const anchor = (event.target as Element | null)?.closest?.(
                 "a[href]",

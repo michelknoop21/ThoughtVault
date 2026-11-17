@@ -1,58 +1,61 @@
 # Huisstijlen — implementatie en verificatie, 17 november 2026
 
-De bronimplementatie staat op `feat/document-huisstijlen-20261117` in `/Volumes/SSD/Projects/thoughtvault-huisstijlen`, gestart vanaf actuele `origin/main` op `f9ff3e1e`. Er is niets gepubliceerd of naar een remote gepusht.
+De functie en het kant-en-klare Yinga-importbestand zijn geïmplementeerd op `feat/document-huisstijlen-20261117` in `/Volumes/SSD/Projects/thoughtvault-huisstijlen`, vanaf `f9ff3e1e`. De volledige macOS- en iOS-testbuilds slagen. De fysieke Mac/iPhone-proef met CloudKit Production is in beide richtingen geslaagd. Er is vanuit deze werkboom niets gepubliceerd of naar een remote gepusht.
 
-Het kant-en-klare importbestand is [Yinga.tvhuisstijl](Yinga.tvhuisstijl). De app biedt daarnaast **Yinga toevoegen**. Zie [de gebruiksinstructie](README.md).
+Gebruik [Yinga.tvhuisstijl](Yinga.tvhuisstijl), of **Yinga toevoegen** in de app. De [gebruiksinstructie](README.md) beschrijft importeren, standaard maken en toepassen.
 
 ## Wat is aangesloten
 
-- Instellingen en notulekeuze op Windows, macOS en iOS/iPadOS, inclusief beheer, live voorbeeld, standaard, dupliceren, import/export en versies.
-- Optionele snapshots op SwiftData, Swift/TypeScript-overdrachtsmodellen en de bestaande Apple-syncpayload. Oude notulen zonder snapshot houden hun weergave. Nieuwe notulen bewaren ook voor Standaard ThoughtVault een versie-1 snapshot.
-- Resultaat, archief en inhoudseditor. Alleen de inhoud is bewerkbaar; documentassets blijven in de huisstijl. Wijzigingen aan de bibliotheek veranderen opgeslagen snapshots niet.
-- Gedeelde HTML/CSS, gebundelde `docx`-export en A4-paginering. Apple-PDF gebruikt afzonderlijke WebKit-pagina's op A4 en macOS drukt de geproduceerde PDF af. iOS deelt een echt PDF-bestand.
-- Lokale fontbestanden en originele SIL OFL-licenties; vier ongewijzigde Yinga-assets uit Prospect Flow. Alle vier afbeeldingen zijn byte voor byte met hun bron vergeleken. Alle acht TTF-bestanden hebben `OS/2.fsType=0` voor embedding.
-- Tauri krijgt alleen de bestaande opslaanroute met binaire schrijfrechten voor het door de gebruiker gekozen bestand. macOS krijgt de print-entitlement. Geen externe assets of scripts uit imports.
+- Instellingen en huisstijlkeuze op Windows, macOS en iOS/iPadOS: beheer, live voorbeeld, standaard, dupliceren, import/export en versies.
+- Optionele snapshots in SwiftData, Swift-/TypeScript-overdrachtsmodellen en de bestaande Apple-syncpayload. Oude notulen zonder snapshot houden hun weergave. Nieuwe notulen bewaren ook voor Standaard ThoughtVault een snapshot.
+- Resultaat, archief en inhoudseditor. Alleen de inhoud is bewerkbaar; afbeeldingen en documentkader blijven in de huisstijl. Bibliotheekwijzigingen veranderen opgeslagen snapshots niet.
+- Gedeelde HTML/CSS, lokaal gebundelde Word-export en A4-paginering. Apple-PDF legt afzonderlijke A4-pagina's vast; macOS drukt de PDF af en iOS deelt een echt PDF-bestand.
+- Originele Yinga-assets, lokale Carlito/Caladea-fonts en ongewijzigde SIL OFL-licenties. De oorspronkelijke vier afbeeldingen zijn byte voor byte vergeleken; alle acht TTF-bestanden hebben `OS/2.fsType=0` voor embedding.
+- Validatie vóór opslag, bestaande HTML-sanitatie, geen externe documentassets of scripts, binaire opslag via de bestaande Tauri-bestandsroute en de macOS-print-entitlement.
 
-## Uitgevoerd bewijs
+## Verholpen paginabeperkingen
 
-Bewijsmap: `/Volumes/SSD/Projects/task-evidence/thoughtvault-huisstijlen/`.
+De oorspronkelijke fout bij een actierij of lijstpunt groter dan A4 is gereproduceerd en verholpen in de gedeelde paginering. Lange tabelcellen en lijstpunten lopen door op vervolgpagina's, met behoud van rijke tekst, links, bijzondere tekens en lijstnummering. Tabelkoppen worden herhaald; UTF-16-surrogaatparen worden niet gesplitst. De fixtures controleren exact tekstbehoud per tabelkolom en doorlopende lijstnummering.
 
-| Controle | Resultaat | Bewijs |
+De fysieke weergavetest vond daarnaast tekstoverflow na CSS `zoom` op smalle schermen. De papierweergave gebruikt nu een visuele transformatie met passende kaderafmetingen, zonder de inhoud opnieuw te laten afbreken. Mobiele tekstinflatie is voor het papier op 100% gezet; appbediening en documentzoom staan daar los van. Ligaturen zijn voor de documenttekst uitgeschakeld omdat WebKit een combinatie in de PDF-tekstuitlezing als een ander teken doorgaf.
+
+## Definitief bewijs
+
+De eerste verificatieronde staat onder `/Volumes/SSD/Projects/task-evidence/thoughtvault-huisstijlen/`. Het definitieve vervolgbewijs staat onder `/Volumes/SSD/Projects/task-evidence/thoughtvault-huisstijlen-followup/`.
+
+| Controle | Resultaat | Bewijs in vervolgmap |
 |---|---|---|
+| Volledige macOS-app en testbundel | `TEST BUILD SUCCEEDED` | `macos-final-build.log` |
+| Volledige iOS-app en gerichte testbundel | `TEST BUILD SUCCEEDED` | `ios-export-build.log` |
+| Apple-ondertekening | Geldige handtekeningen; bestaande iCloud-container, Production; macOS gesandboxed | `macos-signed-entitlements.plist`, `ios-signed-entitlements.plist` |
+| Gerichte native tests op fysieke Mac | 23 behandeld: 22 geslaagd, 1 expliciete opt-in overgeslagen, nul fouten | `mac-final-tests.log`, `mac-final-tests.xcresult` |
+| Dezelfde tests op fysieke Myphone 18 Pro | 23 behandeld: 22 geslaagd, dezelfde opt-in overgeslagen, nul fouten | `iphone-export-tests.log`, `iphone-export-tests.xcresult` |
+| Werkelijke iCloud-rondreis | Mac upload → fysieke iPhone ontvangt/bewerkt → Mac verifieert retour en verwijdert tijdelijke zone; alle drie fasen geslaagd | `mac-tests.log`, `iphone-tests.log`, `mac-return.log`, bijbehorende xcresults |
 | Windows TypeScript en productiefrontend | Geslaagd | `windows-build.log` |
-| Volledige Windows-testsuite | 819 geslaagd, 2 bestaande tests overgeslagen | `windows-all-tests.log` |
+| Windows-tests | 819 geslaagd, 2 bestaande skips | `windows-tests.log` |
 | Gedeelde module | 7 geslaagd | `shared-tests.log` |
-| Beheer in echte browser | Toevoegen, hernoemen, versies, standaard, dupliceren, verwijderen, import/export; ongeldige import en schijffout behouden opgeslagen data | `browser-editor.log` |
-| Windows-instellingen in bestaande app-shell | Huisstijleditor en Yinga-voorbeeld bekeken | `windows-shell.jpg`, `browser-shell.log` |
-| Telefoonformaat | 390 px breed, geen horizontale overflow, wissel instellingen/voorbeeld | `browser-mobile.log`, `yinga-mobile-fixed.jpg`, `yinga-mobile-preview.jpg` |
-| Korte/lange browsernotulen | 2/17 pagina's; lange notule behoudt alle tekst, 120 actierijen en 30 lijstpunten | `test/fixtures.json`, `test/fixture.html`, exports in bewijsmap |
-| Native macOS WebKit met productresources | 17 pagina's, 120 actierijen, geen overflow; PDF en DOCX geproduceerd | `webkit.log`, `webkit-long.pdf`, `webkit-long.docx`, `webkit-long.html` |
-| PDF-geometrie | 17 pagina's, 595.276 × 841.89 pt, A4 | `pdfinfo`; pagina-afbeeldingen `native-pdf-01.png`, `native-pdf-02.png` |
-| Microsoft Word | Korte en definitieve lange export daadwerkelijk geopend. Lange export heeft 13 pagina's, een bewerkbare tabel met 121 rijen inclusief kolomkoppen en juiste fonts/afbeeldingen. Tekst aan documenteinde toegevoegd en ongedaan gemaakt; beide documenten gesloten | Waargenomen via native UI, `word-check.txt` in bewijsmap |
-| Nieuwe Apple-componenten | Swift 6-typecontrole geslaagd voor macOS en iOS-simulator-SDK, met kleine afhankelijkheidsstubs; dit is geen volledige appbuild | `static-view-typecheck.log`, `static-ios-typecheck.log`, stubs onder `static/` |
-| Aangepaste bestaande Swift-bron en XCTest | Syntaxis gecontroleerd | `swift-parse.log` |
-| Xcode-resources en plists | Geldige plists; nieuwe services, view en Document-folder in beide app-targets; XCTest in testtarget | `plutil`, gecontroleerde targetlidmaatschappen |
+| Korte/lange notulen en grote blokken | 2/17/18/11 pagina's op Mac en iPhone; geen overflow, fonts en afbeeldingen geladen; Word-data geproduceerd | Native weergavetest in beide definitieve xcresults |
+| Echte iPhone-PDF's | A4, paginatelling en uitleesbare titel gecontroleerd; voorblad en inhoud visueel bekeken | `iphone-pdfs/Yinga-*.pdf`, `iphone-cover.png`, `iphone-content.png` |
+| Browserpaginering | Dezelfde vier fixtures; inhoud behouden, herhaalde koppen en juiste lijstnummers | `browser-pagination.log` |
+| Smalle weergave en vergroten/verkleinen | 390 → 768 → 1440 → 390 px; 17 pagina's behouden, geen horizontale of verticale inhoudsoverflow | `browser-final-responsive.log`, `yinga-final-mobile.jpg` |
+| Microsoft Word | Korte en lange export daadwerkelijk geopend en bewerkbaarheid getest in eerste ronde. Ook de grote actierij in Word geopend: 18 pagina's, inclusief lege slotalinea na de tabel; doorlopende tekst en emoji op pagina 17 bekeken | `word-check.txt`; eerste bewijsmap bevat eerdere Word-controle |
 
-De native controle is reproduceerbaar met:
+De native test gebruikt de echte productresources en exporter. Eerst wordt de weergave van 390 px tweemaal opgebouwd; vervolgens gebruikt de PDF-controle dezelfde A4-breedte als de productie-exporter. De vier PDF's worden als XCTest-attachments bewaard. De iOS-testconfiguratie selecteert de drie relevante testklassen omdat andere bestaande testbestanden macOS-specifiek zijn; de app zelf wordt volledig gebouwd.
 
-```sh
-scripts/tests/document-webkit-smoke.sh /Volumes/SSD/Projects/task-evidence/thoughtvault-huisstijlen
-```
+De optionele iCloud-test is buiten de gewone suite expliciet uitgevoerd in fasen `mac-write`, `phone-edit` en `mac-verify`, met één unieke tijdelijke zone en uitsluitend synthetische inhoud. De snapshot, ingebedde afbeeldingen, payloadhash en teruggestuurde inhoud zijn gecontroleerd. De laatste fase heeft de testzone verwijderd. De gewone suite slaat deze externe proef zonder `TV_BRANDING_CLOUD_PHASE` en `TV_BRANDING_CLOUD_RUN` bewust over; dat is geen ontbrekende cloudcontrole.
 
-De browserfixtures horen achter een lokale HTTP-server. De testservers zijn na afronding gestopt.
+De hersteltests gebruiken opzettelijk een beschadigde SQLite-fixture. De foutmeldingen daarover in de logs horen bij de geslaagde controle dat synchronisatie daarna blokkeert, niet bij de echte notulenopslag.
 
-## Nog open voor acceptatie
+## Bestaande gegevens en grenzen
 
-De volledige Apple-appbuild kon niet starten doordat de gedeelde buildwachtrij exclusief bezet was door `thoughtvault-two-hour-physical` uit een andere sessie. Alleen de eigen wachtende build is geannuleerd; er blijft geen latere buildtaak van deze implementatie achter. De andere proef is niet onderbroken. Er is dus geen `BUILD SUCCEEDED` of uitgevoerde nieuwe XCTest-suite voor de volledige app geclaimd.
+De iPhone-opslag is vooraf en na de eerste fysieke proef naar de externe SSD gekopieerd. Een vergelijking van de records bevestigt: alle 47 bestaande notulen ongewijzigd, geen verwijderingen en geen synthetische testnotulen in de echte store. Tijdens het wachten kwam één nieuwe notule bij, aangemaakt om 14:05 vóór de iPhone-tests van 14:14. Beide kopieën doorstaan SQLite `integrity_check`. Journalen, WAL en lokale historie veranderden mee; daarom is inhoud vergeleken en is geen verouderde backup teruggezet. Kopieën en bewijsmap zijn alleen toegankelijk voor de eigenaar. Zie `iphone-logical-record-comparison.json`.
 
-Volledige macOS/iOS-builds en de nieuwe `DocumentBrandingTests`, bestaande migratietests en `NotuleSyncTests` moeten nog worden uitgevoerd. Controleer daarna de werkelijke Mac/iPhone/iPad-route, bestaande SwiftData-opslag en iCloud-synchronisatie tussen fysieke apparaten. Windows-native installatie, bestandsdialogen en WebView2-afdrukken zijn niet op een fysieke Windows-pc getest. Volledige VoiceOver- en Dynamic Type-acceptatie is evenmin uitgevoerd.
+Dit bewijst de fysieke CloudKit-assetoverdracht en de gedeelde syncpayload, plus de gerichte conflict-/offline-/migratielogica. Het is geen volledige handmatige achtergrond-/accountwisselacceptatie van `CKSyncEngine`. De native instellingen, bestands- en deelpanelen zijn niet op ieder fysiek platform handmatig doorgelopen. Volledige VoiceOver/Dynamic Type-acceptatie, een fysieke iPad en een fysieke Windows-installatie/WebView2-afdrukroute blijven buiten dit bewijs.
 
-Er loopt apart werk aan mappen/notulen en PDF/print. Integratie vraagt aandacht voor `LocalTranscriptStore.swift`, de notuleviews en print-entitlements; die andere werkbomen zijn niet aangepast.
+Op de iPhone staat na de proef een lokale ontwikkelbuild met Production CloudKit. De geïnstalleerde Mac-app is door deze taak niet vervangen. Andere werkbomen voor mappen, opnamefuncties en integratie zijn niet aangepast. Integratie vraagt nog aandacht voor gedeelde notuleviews en opslagcode.
 
-Een afzonderlijke tabelrij of lijstpunt moet binnen één A4-pagina passen. Bij een groter blok volgt een foutmelding; tekst wordt niet stil afgekapt. Word mag andere paginaovergangen hebben dan PDF/HTML, zoals ook in het goedgekeurde plan staat.
+## Publicatie en opruiming
 
-Publicatie en uitrol blijven een afzonderlijke stap.
+Publicatie, merge en uitrol zijn niet vanuit deze werkboom uitgevoerd. Word mag andere paginaovergangen hebben dan PDF/HTML.
 
-## Opruiming
-
-Alle builds, voorbeeldexports en screenshots staan op de externe SSD. De drie eigen localhost-testservers zijn gestopt. Elf tijdelijke npm-logs van uitsluitend deze werkboom zijn op de interne SSD verwijderd (45.056 gealloceerde bytes). De totale vrije interne ruimte veranderde tegelijk door andere sessies; dat is geen geïsoleerde nettometing. Vervangbare test-apps, modulecaches en mislukte tussentijdse uitvoer op de externe SSD zijn opgeruimd; het opruimrapport staat in `cleanup.json`. De definitieve exports blijven met SHA-256-manifest bewaard. Bestanden van andere sessies zijn blijven staan.
+Alle builds, exports en screenshots staan op de externe SSD. Definitieve testapps, afhankelijkheden en xcresults blijven bewaard. De eigen testserver wordt gestopt en vervangbare caches en tijdelijke uitvoer worden opgeruimd; exacte aantallen en gealloceerde bytes staan in `cleanup.json` in de vervolgmap. Tijdelijke bestanden zonder bewezen eigenaarschap en werk van andere sessies blijven staan.

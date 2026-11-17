@@ -13,7 +13,7 @@ Tekst, acties en controle-uitkomsten blijven behouden. Een notule bewaart de toe
 
 Pas naam, bedrijfsgegevens, afbeeldingen, kleuren, typografie, marges en kop/voet aan en kies **Opslaan**. Met **Dupliceren** maak je een aparte stijl. Op een telefoon wissel je tussen **Instellingen** en **Voorbeeld**. Exporteer een stijl als `.tvhuisstijl` om hem op een ander apparaat te importeren.
 
-De bibliotheek blijft lokaal. Apple-synchronisatie neemt de bij de notule opgeslagen versie en afbeeldingen mee. Kies **PDF**, **Word (.docx)** of **HTML** bij de notule voor documentexport. Word blijft bewerkbaar. De precieze paginaovergangen kunnen per documentengine verschillen.
+De bibliotheek blijft lokaal. Apple-synchronisatie neemt de bij de notule opgeslagen versie en afbeeldingen mee. Kies **PDF**, **Word (.docx)** of **HTML** bij de notule voor documentexport. Word blijft bewerkbaar. Lange actierijen en lijstpunten kunnen over meerdere A4-pagina's doorlopen. De precieze paginaovergangen kunnen per documentengine verschillen.
 
 De bronassets komen uit `ProspectFlow/deploy/instances/yinga/assets`, met de bijbehorende documentinstellingen. De documentlettertypen zijn Caladea en Carlito; de meegeleverde SIL OFL-licenties staan in `shared/document/assets` en in de applicatiebundel. Er worden geen externe scripts, afbeeldingen of lettertypen geladen.
 

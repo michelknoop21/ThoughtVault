@@ -147,6 +147,33 @@ final class SystemAudioStorageTests: XCTestCase {
     private func checkLiveSpeech(openHeadsetMicrophone: Bool) async throws {
         let root = URL(fileURLWithPath: "/tmp/thoughtvault-system-audio-test")
         try XCTSkipUnless(FileManager.default.fileExists(atPath: root.appendingPathComponent("speech-enabled").path))
+        func outputLatencyFrames() throws -> Double {
+            func value(_ object: AudioObjectID, _ selector: AudioObjectPropertySelector, _ scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) throws -> UInt32 {
+                var address = AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
+                var result: UInt32 = 0, size = UInt32(MemoryLayout<UInt32>.size)
+                let status = AudioObjectGetPropertyData(object, &address, 0, nil, &size, &result)
+                guard status == noErr else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) }
+                return result
+            }
+            let device = try value(AudioObjectID(kAudioObjectSystemObject), kAudioHardwarePropertyDefaultOutputDevice)
+            var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyNominalSampleRate, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
+            var rate: Double = 0, size = UInt32(MemoryLayout<Double>.size)
+            var status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &rate)
+            guard status == noErr, rate > 0 else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) }
+            address.mSelector = kAudioDevicePropertyStreams
+            address.mScope = kAudioDevicePropertyScopeOutput
+            status = AudioObjectGetPropertyDataSize(device, &address, 0, nil, &size)
+            guard status == noErr else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) }
+            var streams = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+            status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &streams)
+            guard status == noErr else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) }
+            let streamLatency = try streams.map { try value($0, kAudioStreamPropertyLatency) }.max() ?? 0
+            let deviceLatency = try value(device, kAudioDevicePropertyLatency, kAudioDevicePropertyScopeOutput)
+            return Double(deviceLatency + streamLatency) / rate * 16_000
+        }
+        // Stay clear of the route transitions at 6/12/18/24 seconds and the recording pause.
+        let markers = [2, 8, 16, 20, 27]
+        var latencies: [Double] = []
         let sourceURL = root.appendingPathComponent("speech.wav")
         let player = try AVAudioPlayer(contentsOf: sourceURL)
         let microphone = AVCaptureSession()
@@ -172,15 +199,18 @@ final class SystemAudioStorageTests: XCTestCase {
             XCTAssertTrue(player.play())
             var phase = 0
             while player.isPlaying {
+                while latencies.count < markers.count, player.currentTime >= Double(markers[latencies.count]) {
+                    latencies.append(try outputLatencyFrames())
+                }
                 if openHeadsetMicrophone, player.currentTime >= Double(phase + 1) * 6, phase < 4 {
                     if phase.isMultiple(of: 2) { microphone.startRunning() } else { microphone.stopRunning() }
                     phase += 1
                     if phase == 2 {
-                        let pauseStart = player.currentTime
+                        let pauseStart = AVAudioTime.seconds(forHostTime: mach_absolute_time())
                         capture.pauseDurationTimer()
                         try await Task.sleep(for: .milliseconds(500))
                         capture.resumeDurationTimer()
-                        skippedSourceFrames = Int(((player.currentTime - pauseStart) * 16_000).rounded())
+                        skippedSourceFrames = Int(((AVAudioTime.seconds(forHostTime: mach_absolute_time()) - pauseStart) * 16_000).rounded())
                     }
                 }
                 try await Task.sleep(for: .milliseconds(100))
@@ -210,9 +240,11 @@ final class SystemAudioStorageTests: XCTestCase {
         let attachment = XCTAttachment(contentsOfFile: url)
         attachment.lifetime = .keepAlways
         add(attachment)
-        var lags: [Int] = []
-        for second in [2, 14, 27] {
-            let start = second * 16_000, length = 16_000
+        XCTAssertEqual(latencies.count, markers.count)
+        guard latencies.count == markers.count else { return }
+        var lags: [Double] = []
+        for (marker, second) in markers.enumerated() {
+            let start = second * 16_000, length = 4000
             guard start + length < source.count else { XCTFail("Speech fixture must be 30 seconds"); return }
             func correlation(_ lag: Int) -> Double {
                 guard start + lag >= 0, start + lag + length < recorded.count else { return -1 }
@@ -233,10 +265,10 @@ final class SystemAudioStorageTests: XCTestCase {
                 let score = correlation(lag)
                 if score > best.score { best = (lag, score) }
             }
-            print("SPEECH_ROUNDTRIP second=\(second) lag_frames=\(best.lag) correlation=\(best.score)")
+            print("SPEECH_ROUNDTRIP second=\(second) lag_frames=\(best.lag) device_latency_frames=\(latencies[marker]) pause_frames=\(skippedSourceFrames) correlation=\(best.score)")
             XCTAssertGreaterThan(best.score, 0.98, "Speech waveform changed at second \(second)")
-            // The meeting keeps playing during a recording pause; exclude exactly that source interval.
-            lags.append(best.lag + (second >= 14 ? skippedSourceFrames : 0))
+            // Compare capture timing, not the Bluetooth route's changing playback latency.
+            lags.append(Double(best.lag + (second >= 16 ? skippedSourceFrames : 0)) - latencies[marker])
         }
         XCTAssertLessThanOrEqual((lags.max() ?? 0) - (lags.min() ?? 0), 320, "Speech drift exceeded 20 ms")
     }

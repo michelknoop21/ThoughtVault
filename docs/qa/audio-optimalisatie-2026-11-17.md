@@ -79,9 +79,10 @@ geen bestaande opname of transcriptie. Zie daar de uitvoer- en testinstructies.
   de koptelefoon hoeft daarvoor niet akoestisch door de microfoon gehoord te worden.
 - De headsetproef opent/sluit de microfoon tweemaal: daadwerkelijk
   48 → 16 → 48 → 16 → 48 kHz. Bij wissels/pauzeren blijft ongeveer 148 ms verschil
-  tussen bronafspelen en opgenomen spraak zichtbaar. Het aandeel van afspeellatentie,
-  routewissel en capture is nog niet geïsoleerd. De 20-ms-hardwaregrens blijft rood.
-  De opt-in-test blijft dit signaleren; de grens is niet verruimd.
+  tussen bronafspelen en opgenomen spraak zichtbaar. In de vervolg-review is dit
+  gelokaliseerd vóór de converter en gekoppeld aan de apparaatlatentie (160 → 10 ms).
+  De gekalibreerde hardwareproef slaagt met 1,9375 ms; de grens is niet verruimd.
+  Zie [oorzaakanalyse en resterende acceptatiepunten](audio-review-2026-11-17.md).
 - Geen twee uur fysieke opname, geen handmatige luisteracceptatie, geen volledig
   beoordeelde referentieset en geen kalibratie van twee echte sprekers uitgevoerd.
   De twee-uursproef is synthetisch en versneld, geen vervanging hiervan.
@@ -96,7 +97,8 @@ succes gepresenteerd. De app is niet geïnstalleerd, gepubliceerd of uitgerold.
 `regression-final.xcresult`: **14 geslaagd, 2 optionele hardwaretests overgeslagen,
 0 fouten**. De twee-uursstroom rapporteert 359.640 gecontroleerde blokken en nul
 afwijkingen. De hardwareproeven staan afzonderlijk in `final.xcresult` en eerdere
-bundels; de Bluetooth-/pauzeacceptatie is daarmee niet groen.
+bundels; deze eerdere afkeuring is in de vervolg-review verklaard. De gekalibreerde
+korte Bluetooth-/pauzeproef is groen; volledige spraakacceptatie blijft open.
 
 `selfcheck-final.log`: 32 normalisatiegevallen geslaagd. `score-tests.log`: vijf
 gatetests geslaagd. De featurebranch is niet gepusht of gemerged.

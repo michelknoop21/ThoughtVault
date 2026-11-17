@@ -723,5 +723,6 @@
 
 "Selecteer %@" = "Select %@";
 
-"Eén nieuwe notule" = "One new note";
 "%lld bronnotulen" = "%lld source notes";
+
+"Originelen blijven bewaard." = "Original notes are kept.";

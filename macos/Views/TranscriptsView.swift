@@ -2552,10 +2552,8 @@ private struct MergeNotulenSheet: View {
                             .background(Color.brandPrimary.opacity(0.12), in: RoundedRectangle(cornerRadius: TS.Radius.sm))
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                            Text("Eén nieuwe notule").font(TS.Font.title3Semibold)
                             Text("\(sources.count) bronnotulen")
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelSecondary)
+                                .font(TS.Font.title3Semibold)
                         }
                     }
 
@@ -2589,7 +2587,7 @@ private struct MergeNotulenSheet: View {
                         Picker("Notulenprofiel", selection: $profileId) {
                             ForEach(profiles) { Text($0.name).tag($0.id) }
                         }
-                        Text("De AI maakt één nieuwe notule. De originelen blijven behouden.")
+                        Text("Originelen blijven bewaard.")
                             .font(TS.Font.caption)
                             .foregroundStyle(Color.labelSecondary)
                             .fixedSize(horizontal: false, vertical: true)

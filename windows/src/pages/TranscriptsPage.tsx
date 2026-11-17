@@ -627,7 +627,7 @@ export function TranscriptsPage() {
         <section className="merge-notulen-dialog">
           <header className="merge-notulen-header">
             <span className="merge-notulen-symbol" aria-hidden="true"><Document24Regular /></span>
-            <div><h3>Notulen samenvoegen</h3><p>{transcripts.filter(t => mergeIDs.includes(t.id)).length} bronnotulen → één nieuwe notule</p></div>
+            <div><h3>Notulen samenvoegen</h3><p>{transcripts.filter(t => mergeIDs.includes(t.id)).length} bronnotulen</p></div>
           </header>
           <div className="merge-notulen-content">
             <div className="merge-notulen-sources" role="list" aria-label="Bronnotulen">
@@ -642,7 +642,7 @@ export function TranscriptsPage() {
               <select id="merge-notulen-profile" className="select" value={mergeProfileId} onChange={e => setMergeProfileId(e.target.value)}>
                 {useProfilesStore.getState().profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <p>De AI maakt één nieuwe notule. De originelen blijven behouden.</p>
+              <p>Originelen blijven bewaard.</p>
             </div>
           </div>
           <footer className="merge-notulen-actions">

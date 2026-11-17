@@ -59,3 +59,12 @@ Op de iPhone staat na de proef een lokale ontwikkelbuild met Production CloudKit
 Publicatie, merge en uitrol zijn niet vanuit deze werkboom uitgevoerd. Word mag andere paginaovergangen hebben dan PDF/HTML.
 
 Alle builds, exports en screenshots staan op de externe SSD. Definitieve testapps, afhankelijkheden en xcresults blijven bewaard. De eigen testserver wordt gestopt en vervangbare caches en tijdelijke uitvoer worden opgeruimd; exacte aantallen en gealloceerde bytes staan in `cleanup.json` in de vervolgmap. Tijdelijke bestanden zonder bewezen eigenaarschap en werk van andere sessies blijven staan.
+
+
+## Aanvullende toegankelijkheidsronde
+
+Bewijs: `/Volumes/SSD/Projects/task-evidence/thoughtvault-huisstijlen-accessibility/ACCEPTATIE.md`. De gedeelde editor behoudt nu de toetsenbordfocus na acties die de velden opnieuw opbouwen. Meerregelige velden hebben dezelfde zichtbare focusrand als andere velden en bedieningselementen zijn minimaal 44 CSS-pixels hoog. Alle 8 gedeelde tests slagen. De ondertekende Mac-QA-app en de native Windows-releasebuild op Dalf38 zijn gebouwd. Op de Mac zijn ongeldige import, de Yinga-keuze, schermlezerlabels en een echte PDF-export via de interface gecontroleerd.
+
+De fysieke iPad is op verzoek overgeslagen. De fysieke Windows-app kwam niet voorbij de processtart; geen venster of applicatielog, ook niet bij een normale interactieve tweede start. Volledige VoiceOver-spraakacceptatie kon niet betrouwbaar met de bedieningstool worden vastgesteld; daarom blijven beide controles open. De Windows-build is geen bewijs voor de verpakte WebView2-import/export/afdrukroute.
+
+De eerste Mac-QA-kopie gebruikte door een hardcoded Info.plist-waarde nog de echte app-identiteit. Vier synthetische testrecords zijn verwijderd, met behoud van alle 48 overige records tijdens de hersteltransactie en een geslaagde SQLite-integriteitscontrole. Supportnaam en e-mailadres zijn met gebruikersinvoer hersteld. Updatecontrole en automatische foutrapporten zijn op gebruikersinstructie beide weer aangezet en gecontroleerd. Latere QA-kopieën gebruiken een aparte gecontroleerde identiteit en sleutelhangerservice, zonder cloudsynchronisatie. De privé-herstelkopie en details staan in de bewijsmap. Geen uitrol uitgevoerd.

@@ -11,7 +11,7 @@ import {
 } from "./branding.js";
 import { renderDocument, paginate, fitDocument, bundled } from "./render.js";
 const clone = (value) => JSON.parse(JSON.stringify(value));
-const css = `.tv-editor{box-sizing:border-box;width:100%;font:14px system-ui;color:inherit;max-width:1500px;margin:auto;padding:20px}.tv-editor *{box-sizing:border-box}.tv-editor h2{margin:0 0 8px}.tv-editor nav,.tv-editor .actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.tv-editor button,.tv-editor select,.tv-editor input,.tv-editor textarea{font:inherit;border:1px solid #89898f;border-radius:6px;padding:8px;background:Canvas;color:CanvasText;min-height:36px}.tv-editor button{cursor:pointer}.tv-editor button:focus-visible,.tv-editor input:focus-visible,.tv-editor select:focus-visible{outline:3px solid #7830d8;outline-offset:2px}.tv-editor button:disabled{opacity:.5;cursor:default}.tv-editor label{display:flex;flex-direction:column;gap:5px;margin:12px 0}.tv-editor .check{flex-direction:row;align-items:center}.tv-editor fieldset{border:1px solid #aaa5;border-radius:8px;margin:16px 0;padding:12px}.tv-editor legend{font-weight:600}.tv-editor .layout{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:24px}.tv-editor .preview{min-width:0;position:sticky;top:8px;align-self:start;background:#e8e8ec}.tv-editor iframe{display:block;border:0;width:100%;height:780px;background:white}.tv-editor .status{min-height:24px}.tv-editor .mobile-toggle{display:none}.tv-editor .asset img{display:block;max-width:150px;max-height:60px;background:white}.tv-editor input[type=file]{width:100%}.tv-editor input[type=color]{width:100%;padding:3px}.tv-editor .hint{font-size:13px;opacity:.8}.tv-editor [hidden]{display:none!important}@media(max-width:700px){.tv-editor{padding:12px}.tv-editor .layout{display:block}.tv-editor .mobile-toggle{display:flex}.tv-editor[data-pane=edit] .preview,.tv-editor[data-pane=preview] .fields{display:none}.tv-editor .preview{position:static}.tv-editor iframe{height:750px}}`;
+const css = `.tv-editor{box-sizing:border-box;width:100%;font:14px system-ui;color:inherit;max-width:1500px;margin:auto;padding:20px}.tv-editor *{box-sizing:border-box}.tv-editor h2{margin:0 0 8px}.tv-editor nav,.tv-editor .actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.tv-editor button,.tv-editor select,.tv-editor input,.tv-editor textarea{font:inherit;border:1px solid #89898f;border-radius:6px;padding:8px;background:Canvas;color:CanvasText;min-height:44px}.tv-editor button{cursor:pointer}.tv-editor button:focus-visible,.tv-editor input:focus-visible,.tv-editor select:focus-visible,.tv-editor textarea:focus-visible{outline:3px solid #7830d8;outline-offset:2px}.tv-editor button:disabled{opacity:.5;cursor:default}.tv-editor label{display:flex;flex-direction:column;gap:5px;margin:12px 0}.tv-editor .check{flex-direction:row;align-items:center}.tv-editor fieldset{border:1px solid #aaa5;border-radius:8px;margin:16px 0;padding:12px}.tv-editor legend{font-weight:600}.tv-editor .layout{display:grid;grid-template-columns:minmax(260px,360px) minmax(0,1fr);gap:24px}.tv-editor .preview{min-width:0;position:sticky;top:8px;align-self:start;background:#e8e8ec}.tv-editor iframe{display:block;border:0;width:100%;height:780px;background:white}.tv-editor .status{min-height:24px}.tv-editor .mobile-toggle{display:none}.tv-editor .asset img{display:block;max-width:150px;max-height:60px;background:white}.tv-editor input[type=file]{width:100%}.tv-editor input[type=color]{width:100%;padding:3px}.tv-editor .hint{font-size:13px;opacity:.8}.tv-editor [hidden]{display:none!important}@media(max-width:700px){.tv-editor{padding:12px}.tv-editor .layout{display:block}.tv-editor .mobile-toggle{display:flex}.tv-editor[data-pane=edit] .preview,.tv-editor[data-pane=preview] .fields{display:none}.tv-editor .preview{position:static}.tv-editor iframe{height:750px}}`;
 export function mountEditor(
   root,
   {
@@ -78,17 +78,24 @@ export function mountEditor(
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = text;
-    b.onclick = () => perform(action);
+    b.onclick = () => perform(action, b);
     parent.append(b);
     return b;
   }
-  async function perform(action) {
+  async function perform(action, trigger) {
     if (busy) return;
     status.textContent = "";
     try {
       await action();
     } catch (e) {
       status.textContent = e.message || String(e);
+    } finally {
+      if (trigger && document.activeElement === document.body) {
+        const replacement = [...root.querySelectorAll("button")].find(
+          (button) => button.textContent === trigger.textContent,
+        );
+        (replacement || picker).focus();
+      }
     }
   }
   async function persist(next) {

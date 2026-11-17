@@ -122,3 +122,23 @@ test("Apple JSON omitting an unset default remains compatible", () => {
   assert.equal(library.defaultId, null);
   assert.equal(library.styles.length, 0);
 });
+
+
+test("editor keeps keyboard focus across save, default and duplicate redraws", async () => {
+  const root = dom.window.document.createElement("main");
+  dom.window.document.body.append(root);
+  const editor = api.mountEditor(root, {
+    library: { schemaVersion: 1, defaultId: null, styles: [template] },
+    onSave: async () => {},
+  });
+  for (const label of ["Opslaan", "Standaard maken", "Dupliceren"]) {
+    const button = [...root.querySelectorAll("button")].find(b => b.textContent === label);
+    button.focus();
+    button.click();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(dom.window.document.activeElement.textContent, label);
+    assert.ok(dom.window.document.activeElement.isConnected);
+  }
+  editor.destroy();
+  root.remove();
+});

@@ -269,9 +269,10 @@ extension RecordingViewModel {
             updateTask(id, status: .completed, progress: 1)
             return result
         } catch {
-            updateTask(id, status: .error, errorMessage: error is CancellationError ? String(localized: "Samenvoegen geannuleerd.") : error.localizedDescription,
-                       supportMessage: Self.supportFailureMessage(error), failure: error)
-            throw error
+            let failure: Error = task.isCancelled ? CancellationError() : error
+            updateTask(id, status: .error, errorMessage: failure is CancellationError ? String(localized: "Samenvoegen geannuleerd.") : failure.localizedDescription,
+                       supportMessage: Self.supportFailureMessage(failure), failure: failure)
+            throw failure
         }
     }
 }

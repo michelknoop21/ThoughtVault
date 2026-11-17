@@ -1,4 +1,4 @@
-versie: 1.0.334
+versie: 1.0.335
 Selecteer twee of meer notulen en kies Samenvoegen. Controleer titels, brondatums en de profielkeuze vooraf. De AI maakt één nieuwe notule; originelen blijven behouden. Controleer overlap, unieke acties, gewijzigde besluiten en tegenstrijdigheden. Bronnotulen toont de vaste momentopname die opnieuw genereren gebruikt. Controleer ook synchronisatie van de samengestelde notule tussen Mac en iPhone.
 
 Kies een documenthuisstijl en controleer de weergave en export naar PDF, Word en HTML. Yinga-notulen hebben geen voorblad. Een toegepaste huisstijl blijft als momentopname bij de notule bewaard, ook na aanpassing van de huisstijlbibliotheek. Controleer dit ook na iCloud-overdracht tussen Mac en iPhone.

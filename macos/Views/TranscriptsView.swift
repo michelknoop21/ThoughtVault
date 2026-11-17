@@ -203,6 +203,8 @@ struct TranscriptsView: View {
                         isSelecting = false
                         selectedIds.removeAll()
                         transcriptsNavPath.append(result)
+                    } catch is CancellationError {
+                        // Cancellation leaves the selection available for another attempt.
                     } catch { mergeError = error.localizedDescription }
                 }
             }

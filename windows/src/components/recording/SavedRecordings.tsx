@@ -49,6 +49,7 @@ export function SavedRecordings({
 }) {
   const [recordings, setRecordings] = useState<RecordingFile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [optimizeAudio, setOptimizeAudio] = useState(false);
   const [expanded, setExpanded] = useState(initiallyExpanded);
   const settings = useSettingsStore();
   const toast = useToast();
@@ -108,6 +109,8 @@ export function SavedRecordings({
         settings.default_recording_mode,
         [],
         file.duration_seconds ?? 0,
+        undefined,
+        optimizeAudio,
       );
       return;
     }
@@ -135,6 +138,7 @@ export function SavedRecordings({
   return (
     <div className="card card-static" style={{ width: "100%", padding: 0, overflow: "hidden" }}>
       {confirmation}
+      {settings.processing_mode === "local" && <label style={{ display: "block", padding: 14 }}><input type="checkbox" checked={optimizeAudio} onChange={e => setOptimizeAudio(e.target.checked)} /> Audio optimaliseren bij opnieuw transcriberen</label>}
       {/* Header */}
       <div
         className="flex-row justify-between"

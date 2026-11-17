@@ -29,6 +29,10 @@ struct NotuleResultView: View {
     @State private var newTagText: String = ""
     @State private var existingTags: [String] = []
     @State private var didCelebrate = false
+    @State private var includeOwnNotes = true
+    private var exportHTML: String? {
+        task.notuleHtml.map { RecordingFeatures.enabled ? QuickNoteStore.exportHTML($0, note: QuickNoteStore.note(forTranscriptId: task.taskId), includeNotes: includeOwnNotes) : $0 }
+    }
 
     enum ResultTab: String, CaseIterable {
         case notule = "Notulen"
@@ -439,6 +443,10 @@ struct NotuleResultView: View {
                 .padding(.top, TS.Spacing.md)
                 .padding(.bottom, TS.Spacing.sm)
 
+            if RecordingFeatures.enabled {
+                Toggle("Eigen notities meenemen", isOn: $includeOwnNotes).font(TS.Font.caption).padding(TS.Spacing.md)
+                Divider()
+            }
             exportButton(icon: "doc.fill", title: "PDF", action: exportAsPDF)
             Divider()
             exportButton(icon: "doc.plaintext", title: "Platte tekst (.txt)", action: exportAsTXT)
@@ -484,7 +492,7 @@ struct NotuleResultView: View {
 
     private func exportAsPDF() {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
+        guard let html = exportHTML else { return }
 
         #if os(macOS)
         let printInfo = NSPrintInfo.shared
@@ -521,7 +529,7 @@ struct NotuleResultView: View {
 
     private func exportAsTXT() {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
+        guard let html = exportHTML else { return }
         let decoded = HTMLPlainText.from(html)
 
         #if os(macOS)
@@ -560,8 +568,8 @@ struct NotuleResultView: View {
             do {
                 if let record = LocalTranscriptStore.shared.record(forTaskId: task.taskId)
                     ?? LocalTranscriptStore.shared.record(forTaskId: task.id) {
-                    try await ObsidianService.tryExport(record)
-                } else if let html = task.notuleHtml, !html.isEmpty {
+                    try await ObsidianService.tryExport(title: record.title, html: exportHTML ?? record.notuleHtml, date: record.createdAt, participants: record.participants, profileName: record.profileName, tags: record.tags, noteID: record.taskId)
+                } else if let html = exportHTML, !html.isEmpty {
                     let title = NotuleTitleExtractor.extract(from: html)
                         ?? (task.filename as NSString).deletingPathExtension
                     try await ObsidianService.tryExport(
@@ -585,7 +593,7 @@ struct NotuleResultView: View {
 
     private func copyContent() {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
+        guard let html = exportHTML else { return }
         let decoded = HTMLPlainText.from(prepareNotuleContent(html))
 
         #if os(macOS)
@@ -598,7 +606,7 @@ struct NotuleResultView: View {
 
     private func shareContent() {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
+        guard let html = exportHTML else { return }
         let stripped = HTMLPlainText.from(html)
 
         #if os(macOS)

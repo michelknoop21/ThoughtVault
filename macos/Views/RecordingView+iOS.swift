@@ -36,6 +36,7 @@ extension RecordingView {
                     }
                     .padding(.horizontal, IOSMetric.gutter)
                 }
+                recordingIdentityFields.padding(.horizontal, IOSMetric.gutter).padding(.top, 12)
                 timerBlock
                     .padding(.top, 14)
                 IOSLiveWave(isActive: recordingVM.recordingState == .recording,
@@ -287,19 +288,7 @@ extension RecordingView {
     // MARK: Note
 
     private var iosNoteCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Notitie")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(IOSColor.text)
-            TextField("Bijv. actiepunt of context\u{2026}", text: Bindable(recordingVM).quickNote, axis: .vertical)
-                .font(.system(size: 14))
-                .foregroundStyle(IOSColor.text)
-                .lineLimit(2...4)
-                .padding(10)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(IOSColor.control))
-        }
-        .padding(14)
-        .iosCard()
+        RecordingNotebook(text: Bindable(recordingVM).quickNote)
     }
 
     // MARK: Source / profile / live row

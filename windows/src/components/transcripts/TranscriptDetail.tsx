@@ -31,7 +31,7 @@ import DOMPurify from "dompurify";
 import { prepareNotuleHtml } from "../../services/notulePresentation";
 import { marked } from "marked";
 import type { Transcript } from "../../types";
-import { getTranscriptQuickNote } from "../../services/quickNotes";
+import { exportWithOwnNotes, getTranscriptQuickNote } from "../../services/quickNotes";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 import { draftForReview } from "../../services/notuleAudit";
 import { usageLine } from "../../services/usageMeter";
@@ -90,6 +90,7 @@ export function TranscriptDetail({
   const [rememberCorrection, setRememberCorrection] = useState(true);
   const [correctionError, setCorrectionError] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [includeOwnNotes, setIncludeOwnNotes] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [pfConfigured, setPfConfigured] = useState(false);
   const [pfDialog, setPfDialog] = useState(false);
@@ -106,6 +107,8 @@ export function TranscriptDetail({
   const hasBothTabs = hasNotule && hasTranscription;
   const isRegenerating = regeneratingId === transcript.id;
   const quickNote = transcript.quick_note || getTranscriptQuickNote(transcript.task_id ?? transcript.id);
+
+  const exportTranscript = { ...transcript, notule_html: transcript.notule_html ? exportWithOwnNotes(transcript.notule_html, quickNote, includeOwnNotes) : transcript.notule_html };
 
   // Auto-select tab based on available content
   useEffect(() => {
@@ -311,20 +314,21 @@ export function TranscriptDetail({
           </button>
           {exportOpen && (
             <div className="td-export-menu">
+              <label className="own-notes-export"><input type="checkbox" checked={includeOwnNotes} onChange={e => setIncludeOwnNotes(e.target.checked)} /> Eigen notities meenemen</label>
               {transcript.notule_html && (
                 <>
-                  <button className="td-export-item" onClick={() => { onExportPDF(transcript); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onExportPDF(exportTranscript); setExportOpen(false); }}>
                     <DocumentPdf24Regular style={{ fontSize: 15 }} /> PDF
                   </button>
-                  <button className="td-export-item" onClick={() => { onExportMarkdown(transcript); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onExportMarkdown(exportTranscript); setExportOpen(false); }}>
                     <Code24Regular style={{ fontSize: 15 }} /> Markdown
                   </button>
-                  <button className="td-export-item" onClick={() => { onExportHTML(transcript); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onExportHTML(exportTranscript); setExportOpen(false); }}>
                     <ArrowDownload24Regular style={{ fontSize: 15 }} /> HTML
                   </button>
                   {obsidianEnabled && (
                     <>
-                      <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
+                      <button className="td-export-item" onClick={() => { onExportObsidian(exportTranscript); setExportOpen(false); }}>
                         <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
                       </button>
                       <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
@@ -334,7 +338,7 @@ export function TranscriptDetail({
                   )}
                 </>
               )}
-              <button className="td-export-item" onClick={() => { onExportTXT(transcript); setExportOpen(false); }}>
+              <button className="td-export-item" onClick={() => { onExportTXT(exportTranscript); setExportOpen(false); }}>
                 <TextDescription24Regular style={{ fontSize: 15 }} /> TXT
               </button>
               {transcript.notule_html && pfConfigured && (
@@ -356,7 +360,7 @@ export function TranscriptDetail({
               {transcript.notule_html && (
                 <>
                   <div className="td-export-divider" />
-                  <button className="td-export-item" onClick={() => { onCopy(htmlToPlainText(prepareNotuleHtml(transcript.notule_html!, transcript.title))); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onCopy(htmlToPlainText(prepareNotuleHtml(exportTranscript.notule_html!, transcript.title))); setExportOpen(false); }}>
                     <Copy24Regular style={{ fontSize: 15 }} /> Kopieer tekst
                   </button>
                 </>
@@ -426,7 +430,7 @@ export function TranscriptDetail({
           </div>
 
           <div className="td-doc-divider" />
-          {quickNote && <details className="td-quick-note"><summary>Snelle notitie bij deze opname</summary><p style={{ whiteSpace: "pre-wrap" }}>{quickNote}</p></details>}
+          {quickNote && !transcript.notule_html?.includes("<!--thoughtvault-own-notes-->") && <details className="td-quick-note"><summary>Eigen notities bij deze opname</summary><p style={{ whiteSpace: "pre-wrap" }}>{quickNote}</p></details>}
           {transcript.notule_draft_html && <section className="td-quick-note" aria-label="Concept ter beoordeling">
             <h3>Concept — niet gevalideerd</h3>
             <p>{transcript.notule_review_reason}</p>

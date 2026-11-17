@@ -106,3 +106,25 @@ it("shows a sanitized rejected draft separately without turning it into an accep
   expect(noop).not.toHaveBeenCalled();
   await act(async () => { root.unmount(); });
 });
+
+
+it("exports with and without own notes without changing the saved document", async () => {
+  const { exportWithOwnNotes } = await import("../../../services/quickNotes");
+  const html = exportWithOwnNotes("<h2>Besluiten</h2><p>Start maandag.</p>", "Persoonlijke aantekening", true);
+  const transcript = { id: "local-export", title: "Overleg", notule_html: html, quick_note: "Persoonlijke aantekening", duration_seconds: 10, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+  const output = vi.fn(), noop = vi.fn();
+  const container = document.createElement("div"); document.body.append(container);
+  const root = createRoot(container);
+  await act(async () => { root.render(<TranscriptDetail transcript={transcript} regeneratingId={null} onBack={noop} onRegenerate={noop} onDelete={noop} onUpdateTitle={async () => {}} onSaveNotule={async () => {}} onCopy={noop} onExportPDF={output} onExportTXT={output} onExportMarkdown={output} onExportHTML={output} onExportObsidian={output} onImportObsidian={noop} onOpenTags={noop} onGenerateTitle={noop} />); });
+  const open = async () => { await act(async () => { container.querySelector<HTMLButtonElement>('[title="Exporteren"]')!.click(); }); };
+  await open();
+  await act(async () => { [...container.querySelectorAll<HTMLButtonElement>(".td-export-item")].find(b => b.textContent?.trim() === "HTML")!.click(); });
+  expect(output.mock.calls[0][0].notule_html).toContain("Persoonlijke aantekening");
+  await open();
+  await act(async () => { container.querySelector<HTMLInputElement>(".own-notes-export input")!.click(); });
+  await act(async () => { [...container.querySelectorAll<HTMLButtonElement>(".td-export-item")].find(b => b.textContent?.trim() === "PDF")!.click(); });
+  expect(output.mock.calls[1][0].notule_html).toContain("Start maandag");
+  expect(output.mock.calls[1][0].notule_html).not.toContain("Persoonlijke aantekening");
+  expect(transcript.notule_html).toBe(html);
+  await act(async () => { root.unmount(); }); container.remove();
+});

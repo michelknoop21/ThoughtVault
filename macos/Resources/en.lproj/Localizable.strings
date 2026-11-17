@@ -679,3 +679,26 @@
 "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "Sync data could not be read safely. Your local minutes are preserved.";
 "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "Local storage needs recovery first. iCloud sync is paused to protect your minutes.";
 "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "Minutes storage was removed from iCloud. Sync is paused; your local minutes are preserved.";
+
+/* Recording notebook and reprocessing */
+"Actiepunt" = "Action item";
+"Actiepunt verwijderen" = "Delete action item";
+"Actiepunten" = "Action items";
+"Agenda: " = "Calendar: ";
+"Audio optimaliseren" = "Optimize audio";
+"Automatisch na verwerking" = "Automatically after processing";
+"Blijft bij deze opname bewaard" = "Saved with this recording";
+"Deelnemers kiezen" = "Choose participants";
+"Eigen notities" = "Own notes";
+"Eigen notities meenemen" = "Include own notes";
+"Eigen titel" = "Custom title";
+"Gekoppeld aan deze agenda-afspraak" = "Linked to this calendar event";
+"Kladblok" = "Notebook";
+"Kladblokonderdeel" = "Notebook section";
+"Nieuw actiepunt…" = "New action item…";
+"Notities" = "Notes";
+"Opnieuw transcriberen" = "Transcribe again";
+"Titel van agendameeting" = "Calendar meeting title";
+"Titel van deze opname" = "Recording title";
+"Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard." = "Adjusts the volume on a temporary copy. Recovery of damaged speech is not guaranteed. The original is preserved.";
+"Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd." = "Adjusts the volume on a temporary copy. The original is preserved; recovery of damaged speech is not guaranteed.";

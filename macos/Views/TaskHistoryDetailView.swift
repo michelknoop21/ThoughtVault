@@ -136,6 +136,13 @@ struct TaskHistoryDetailView: View {
 
     @ViewBuilder
     private func actionButtons(_ entry: TaskHistoryEntry, record: TranscriptRecord?) -> some View {
+        if RecordingFeatures.enabled, let calendar = RecordingIdentity.forTask(entry.transcriptId), let title = calendar.calendarTitle {
+            if let url = calendar.calendarURL, ["https", "http"].contains(url.scheme?.lowercased() ?? "") {
+                Link("Agenda: " + title, destination: url)
+            } else {
+                Label("Agenda: " + title, systemImage: "calendar")
+            }
+        }
         Button("Opnieuw verwerken…", systemImage: "arrow.clockwise") { action = .reprocess(entry) }
             .buttonStyle(.borderedProminent)
             .tint(Color.brandPrimary)

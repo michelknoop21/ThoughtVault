@@ -1017,6 +1017,12 @@ struct TranscriptDetailView: View {
 
     @State private var isRetranscribing = false
     @State private var retranscribeMessage = ""
+    @State var includeOwnNotes = true
+    var exportNotuleHTML: String? {
+        fullTranscript.notuleHtml.map { html in
+            RecordingFeatures.enabled ? QuickNoteStore.exportHTML(html, note: QuickNoteStore.note(forTranscriptId: fullTranscript.taskId), includeNotes: includeOwnNotes) : html
+        }
+    }
 
     // MARK: State - editing notulen
 
@@ -1122,12 +1128,12 @@ struct TranscriptDetailView: View {
             ProspectFlowOfferSheet(transcript: fullTranscript)
         }
         .sheet(isPresented: $showProfileSheet) {
-            ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium in
+            ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium, optimizeAudio, retranscribe in
                 showProfileSheet = false
-                if profileSheetMode == .regenerate {
+                if !retranscribe {
                     Task { await startRegenerate(profileId: profile.id, usePremium: usePremium) }
                 } else {
-                    Task { await startRetranscribe(profileId: profile.id) }
+                    Task { await startRetranscribe(profileId: profile.id, optimizeAudio: optimizeAudio) }
                 }
             }
             .environment(recordingVM)
@@ -1489,6 +1495,7 @@ struct TranscriptDetailView: View {
 
             // Export menu
             Menu {
+                if RecordingFeatures.enabled { Toggle("Eigen notities meenemen", isOn: $includeOwnNotes); Divider() }
                 Button { shareContent() } label: {
                     Label("Delen...", systemImage: "square.and.arrow.up")
                 }
@@ -2190,11 +2197,11 @@ struct TranscriptDetailView: View {
         regeneratingMessage = ""
     }
 
-    private func startRetranscribe(profileId: String) async {
+    private func startRetranscribe(profileId: String, optimizeAudio: Bool) async {
         isRetranscribing = true
         retranscribeMessage = "Controleren op lokale audio..."
 
-        let hasLocal = recordingVM.hasLocalAudio(for: fullTranscript.id)
+        let hasLocal = recordingVM.hasLocalAudio(for: fullTranscript.taskId)
         guard hasLocal else {
             retranscribeMessage = ""
             isRetranscribing = false
@@ -2202,9 +2209,17 @@ struct TranscriptDetailView: View {
             return
         }
 
-        // Retranscription requires RecordingViewModel.retranscribe(), planned for v1.1
-        retranscribeMessage = ""
-        errorMessage = "Hertranscriptie is nog niet beschikbaar"
+        let path = UserDefaults.standard.string(forKey: "localAudio_\(fullTranscript.taskId)")
+            ?? LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId)?.localAudioPath
+        if let path, FileManager.default.fileExists(atPath: path) {
+            if recordingVM.isLocalMode {
+                await recordingVM.processLocally(url: URL(fileURLWithPath: path), profileId: profileId, optimizeAudio: optimizeAudio)
+            } else {
+                await recordingVM.uploadFile(URL(fileURLWithPath: path), profileId: profileId, optimizeAudio: optimizeAudio)
+            }
+        } else {
+            errorMessage = "Geen lokale audio gevonden voor hertranscriptie"
+        }
 
         isRetranscribing = false
         retranscribeMessage = ""
@@ -2212,7 +2227,7 @@ struct TranscriptDetailView: View {
 
     func copyContent() {
         let content: String
-        if selectedTab == .notule, let html = fullTranscript.notuleHtml {
+        if selectedTab == .notule, let html = exportNotuleHTML {
             content = HTMLPlainText.from(html)
         } else {
             content = fullTranscript.rawTranscription ?? ""
@@ -2227,7 +2242,7 @@ struct TranscriptDetailView: View {
     }
 
     func exportAsPDF() {
-        guard let html = fullTranscript.notuleHtml
+        guard let html = exportNotuleHTML
                 ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
 
         let styledHTML = """
@@ -2270,7 +2285,7 @@ struct TranscriptDetailView: View {
 
     func exportAsTXT() {
         // Raw transcripts are already plain text; only notule HTML is converted.
-        let stripped = fullTranscript.notuleHtml.map(HTMLPlainText.from) ?? fullTranscript.rawTranscription ?? ""
+        let stripped = exportNotuleHTML.map(HTMLPlainText.from) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()
@@ -2301,7 +2316,7 @@ struct TranscriptDetailView: View {
 
     func exportAsMarkdown() {
         // A raw transcript is plain text: never run it through the HTML converter.
-        let md = fullTranscript.notuleHtml.map(htmlToMarkdown) ?? fullTranscript.rawTranscription ?? ""
+        let md = exportNotuleHTML.map(htmlToMarkdown) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()
@@ -2333,20 +2348,12 @@ struct TranscriptDetailView: View {
     func exportToObsidian() {
         Task { @MainActor in
             do {
-                if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) {
-                    try await ObsidianService.tryExport(record)
-                } else {
-                    let html = fullTranscript.notuleHtml ?? ""
-                    guard !html.isEmpty else {
-                        errorMessage = "Geen notule om te exporteren."
-                        return
-                    }
-                    try await ObsidianService.tryExport(
-                        title: fullTranscript.title, html: html, date: fullTranscript.date,
-                        participants: [], profileName: fullTranscript.profileName,
-                        tags: fullTranscript.tags, noteID: fullTranscript.taskId
-                    )
-                }
+                let html = exportNotuleHTML ?? ""
+                guard !html.isEmpty else { errorMessage = "Geen notule om te exporteren."; return }
+                let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId)
+                try await ObsidianService.tryExport(title: fullTranscript.title, html: html, date: fullTranscript.date,
+                    participants: record?.participants ?? [], profileName: fullTranscript.profileName,
+                    tags: fullTranscript.tags, noteID: fullTranscript.taskId)
                 errorMessage = nil
             } catch ObsidianService.ObsidianError.vaultLinkBroken {
                 // Shown once by ObsidianLinkBanner.
@@ -2390,7 +2397,7 @@ struct TranscriptDetailView: View {
 
     func shareContent() {
         // The screen shows the notule, so that is what Delen sends; the transcript only when there is no notule.
-        let notule = HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
+        let notule = HTMLPlainText.from(exportNotuleHTML ?? "")
         let text = notule.isEmpty ? (fullTranscript.rawTranscription ?? "") : notule
         #if os(macOS)
         let picker = NSSharingServicePicker(items: [text])
@@ -2413,9 +2420,11 @@ private struct ProfileSelectionSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let mode: TranscriptDetailView.ProfileSheetMode
-    let onSelect: (Profile, Bool) -> Void
+    let onSelect: (Profile, Bool, Bool, Bool) -> Void
 
     @State private var usePremium = false
+    @State private var optimizeAudio = false
+    @State private var transcribeAudio = false
 
     private var displayProfiles: [Profile] {
         recordingVM.availableProfiles.isEmpty
@@ -2426,10 +2435,19 @@ private struct ProfileSelectionSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                if RecordingFeatures.enabled {
+                    Section {
+                        Toggle("Opnieuw transcriberen", isOn: $transcribeAudio)
+                        if transcribeAudio { Toggle("Audio optimaliseren", isOn: $optimizeAudio) }
+                        Text("Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd.")
+                            .font(TS.Font.caption)
+                    }
+                }
+
                 Section {
                     ForEach(displayProfiles) { profile in
                         Button {
-                            onSelect(profile, usePremium)
+                            onSelect(profile, usePremium, transcribeAudio && optimizeAudio, RecordingFeatures.enabled && transcribeAudio)
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(profile.name)
@@ -2483,7 +2501,7 @@ private struct ProfileSelectionSheet: View {
             }
         }
         #if os(macOS)
-        .frame(width: 520, height: 560)
+        .frame(idealWidth: 520, maxWidth: 600, minHeight: 450, idealHeight: 620)
         #endif
     }
 }

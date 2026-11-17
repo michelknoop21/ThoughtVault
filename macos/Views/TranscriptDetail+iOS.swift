@@ -183,6 +183,8 @@ extension TranscriptDetailView {
                 }
             }
             Menu {
+                Toggle("Eigen notities meenemen", isOn: $includeOwnNotes)
+                Divider()
                 Button("PDF", systemImage: "doc.richtext") { exportAsPDF() }
                 Button("Markdown", systemImage: "doc.plaintext") { exportAsMarkdown() }
                 if obsidianEnabled {

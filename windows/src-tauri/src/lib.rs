@@ -139,6 +139,7 @@ pub fn run() {
             transcribe::remove_whisper_model,
             transcribe::show_whisper_model,
             transcribe::transcribe_local,
+            transcribe::cancel_audio_optimization,
             personal_corrections::load_personal_corrections,
             personal_corrections::save_personal_corrections,
             personal_corrections::read_context_file,

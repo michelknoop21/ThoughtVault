@@ -60,7 +60,22 @@ final class RecordingViewModel {
 
     /// The calendar event linked to the current (or most recent) recording.
     /// Set at recording start sites in ContentView; cleared after attendees are captured.
-    var activeMeeting: CalendarEvent? = nil
+    var activeMeeting: CalendarEvent? = nil {
+        didSet {
+            if RecordingFeatures.enabled, let meeting = activeMeeting, oldValue?.id != meeting.id, recordingTitleMode == "automatic" { recordingTitleMode = "meeting" }
+        }
+    }
+    var recordingTitleMode = "automatic" { didSet { saveQuickNoteDraft() } }
+    var recordingTitle = "" { didSet { saveQuickNoteDraft() } }
+    var currentCalendarMeeting: CalendarEvent? {
+        activeMeeting ?? CalendarService.shared.upcomingMeetings.first { $0.date <= Date() && $0.endDate > Date() }
+    }
+    var recordingIdentity: RecordingIdentity {
+        let meeting = recordingTitleMode == "meeting" ? currentCalendarMeeting : nil
+        let manual = recordingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return RecordingIdentity(title: meeting?.title ?? (recordingTitleMode == "manual" && !manual.isEmpty ? manual : nil),
+                                 calendarID: meeting?.id, calendarTitle: meeting?.title, calendarStart: meeting?.date, calendarURL: nil)
+    }
 
     /// Attendee emails captured from activeMeeting when stopAndUpload completes.
     /// The View layer observes this to trigger SeedReviewSheet after recordingState settles.
@@ -84,7 +99,10 @@ final class RecordingViewModel {
         #else
         url = audioRecorder.currentRecordingURL
         #endif
-        if let url { QuickNoteStore.saveDraft(quickNote, audioFilename: url.lastPathComponent) }
+        if let url {
+            QuickNoteStore.saveDraft(quickNote, audioFilename: url.lastPathComponent)
+            if RecordingFeatures.enabled { recordingIdentity.save(audioFilename: url.lastPathComponent) }
+        }
     }
 
     // YouTube transcription
@@ -439,7 +457,8 @@ final class RecordingViewModel {
         // Capture attendees before clearing activeMeeting (D-07 / T-02-06).
         // Signal is set after recordingState settles to .idle so the View layer
         // presents the sheet only when the UI is ready (Pitfall 3 avoidance).
-        let capturedAttendees = activeMeeting?.attendees ?? []
+        let identity = RecordingFeatures.enabled ? recordingIdentity : RecordingIdentity(title: nil, calendarID: nil, calendarTitle: nil, calendarStart: nil, calendarURL: nil)
+        let capturedAttendees = (recordingTitleMode == "meeting" ? currentCalendarMeeting : activeMeeting)?.attendees ?? []
         activeMeeting = nil
 
         // Resolve the participant list (self + calendar attendees + manual picks)
@@ -470,6 +489,9 @@ final class RecordingViewModel {
             return
         }
 
+        identity.save(audioFilename: url.lastPathComponent)
+        recordingTitleMode = "automatic"
+        recordingTitle = ""
         QuickNoteStore.save(quickNote, audioFilename: url.lastPathComponent)
         quickNote = ""
 
@@ -604,13 +626,15 @@ final class RecordingViewModel {
         await MainActor.run {
             recordingState = .idle
             activeMeeting = nil
+            recordingTitleMode = "automatic"
+            recordingTitle = ""
             quickNote = ""
         }
     }
 
     // MARK: - Upload
 
-    func uploadFile(_ url: URL, profileId: String, participants: [Participant] = []) async {
+    func uploadFile(_ url: URL, profileId: String, participants: [Participant] = [], optimizeAudio: Bool = false) async {
         log.info("[RecordingVM] uploadFile: starting for \(LogRedact.mask(url.lastPathComponent))")
         logSettings(trigger: "processing")
 
@@ -634,8 +658,13 @@ final class RecordingViewModel {
             do {
                 try Task.checkCancellation()
 
+                let input = try await AudioPreConverter.transcriptionInput(url, optimize: optimizeAudio) { [weak self] progress in
+                    Task { @MainActor in self?.updateTask(tempId, status: .uploading, progress: progress * 0.1) }
+                }
+                defer { if input != url { try? FileManager.default.removeItem(at: input) } }
+                try Task.checkCancellation()
                 let task = try await APIService.shared.uploadAudio(
-                    fileURL: url,
+                    fileURL: input,
                     profileId: profileId,
                     usePremium: usePremium,
                     participants: participants
@@ -652,6 +681,7 @@ final class RecordingViewModel {
                 await MainActor.run {
                     // Replace temp task with real server task
                     self.activeTasks.removeAll { $0.id == tempId }
+                    self.saveLocalAudioPath(url: url, taskId: task.taskId)
                     self.addTask(task)
                 }
 
@@ -728,7 +758,7 @@ final class RecordingViewModel {
 
     // MARK: - On-Device Transcription
 
-    func transcribeOnDeviceThenUpload(url: URL, profileId: String, participants: [Participant] = []) async {
+    func transcribeOnDeviceThenUpload(url: URL, profileId: String, participants: [Participant] = [], optimizeAudio: Bool = false) async {
         logSettings(trigger: "processing")
         await MainActor.run {
             isLiveTranscribing = true
@@ -745,8 +775,12 @@ final class RecordingViewModel {
             let transcriber = onDeviceTranscriber
             let jobId = "ondevice-\(UUID().uuidString)"
             let job = Task {
-                try await LocalTranscriptionQueue.shared.run(id: jobId) {
-                    try await transcriber.transcribe(url: url, profileId: profileId)
+                let input = try await AudioPreConverter.transcriptionInput(url, optimize: optimizeAudio) { _ in }
+                defer { if input != url { try? FileManager.default.removeItem(at: input) } }
+                return try await AudioPreConverter.$usesOptimizedAudio.withValue(input != url) {
+                    try await LocalTranscriptionQueue.shared.run(id: jobId) {
+                        try await transcriber.transcribe(url: input, profileId: profileId)
+                    }
                 }
             }
             onDeviceJob = (jobId, job)
@@ -803,7 +837,7 @@ final class RecordingViewModel {
     /// Transcribes and generates notulen entirely on-device, then stores the result
     /// in the local SwiftData store. No backend server is contacted.
     /// Runs on a detached Task so the MainActor stays responsive and the user can cancel.
-    func processLocally(url: URL, profileId: String, participants: [Participant] = []) async {
+    func processLocally(url: URL, profileId: String, participants: [Participant] = [], optimizeAudio: Bool = false) async {
         guard !updateInstalling else { return }
         logSettings(trigger: "processing")
         let profile = availableProfiles.first { $0.id == profileId }
@@ -812,6 +846,7 @@ final class RecordingViewModel {
             ?? Profile.defaults[0]
 
         let localId = "local-\(UUID().uuidString)"
+        saveLocalAudioPath(url: url, taskId: localId)
         let task = TranscriptTask(
             id: localId,
             taskId: localId,
@@ -839,14 +874,14 @@ final class RecordingViewModel {
         // Run on a detached Task so the MainActor stays responsive. The task
         // reference is stored for cancellation.
         localProcessingTasks[localId] = Task.detached(priority: .userInitiated) { [weak self] in
-            await self?.processLocallyWorker(url: url, localId: localId, profile: profile, participants: participants)
+            await self?.processLocallyWorker(url: url, localId: localId, profile: profile, participants: participants, optimizeAudio: optimizeAudio)
         }
         await ContinuedProcessing.shared?.submit(runId: localId)
     }
 
     /// Worker that does the actual transcription + notule generation. Runs off the
     /// MainActor on a detached Task. All @MainActor state updates go through Task hops.
-    private func processLocallyWorker(url: URL, localId: String, profile: Profile, participants: [Participant]) async {
+    private func processLocallyWorker(url: URL, localId: String, profile: Profile, participants: [Participant], optimizeAudio: Bool) async {
         // 1. Local transcription
         let transcription: String
         let audioSeconds = await Self.audioDuration(url)
@@ -856,6 +891,10 @@ final class RecordingViewModel {
         do {
             try Task.checkCancellation()
             try LocalTranscriberFactory.validateAudioFile(at: url)
+            let inputURL = try await AudioPreConverter.transcriptionInput(url, optimize: optimizeAudio) { [weak self] fraction in
+                Task { @MainActor in self?.updateTask(localId, status: .transcribing, progress: fraction * 0.15, statusDetail: "Audio optimaliseren") }
+            }
+            defer { if inputURL != url { try? FileManager.default.removeItem(at: inputURL) } }
             let transcriber = LocalTranscriberFactory.make()
             transcription = try await LocalTranscriptionQueue.shared.run(id: localId, onWait: { [weak self] in
                 Task { @MainActor in
@@ -864,7 +903,8 @@ final class RecordingViewModel {
                 }
             }) { [weak self] in
                 await self?.updateTask(localId, status: .transcribing)  // clears the waiting note
-                return try await transcriber.transcribe(url: url, profileId: profile.id) { [weak self] fraction in
+                return try await AudioPreConverter.$usesOptimizedAudio.withValue(inputURL != url) {
+                try await transcriber.transcribe(url: inputURL, profileId: profile.id) { [weak self] fraction in
                     Task { @MainActor in
                         guard let self else { return }
                         guard !Task.isCancelled else { return }
@@ -873,6 +913,7 @@ final class RecordingViewModel {
                         self.updateTask(localId, status: .transcribing,
                                          progress: 0.15 + fraction * 0.35)
                     }
+                }
                 }
             }
             log.info("[RecordingVM] Local transcription done task=\(LogRedact.mask(localId)) s=\(Int(Date().timeIntervalSince(transcriptionStart).rounded())) chars=\(transcription.count)")
@@ -1098,7 +1139,7 @@ final class RecordingViewModel {
 
     // MARK: - Reprocess Saved Recording
 
-    func reprocessRecording(_ recording: SavedRecording, profileId: String, useOnDevice: Bool) async {
+    func reprocessRecording(_ recording: SavedRecording, profileId: String, useOnDevice: Bool, optimizeAudio: Bool = false) async {
         log.info("[RecordingVM] reprocessRecording: \(LogRedact.mask(recording.filename)), onDevice=\(useOnDevice ? "true" : "false")")
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = docs.appendingPathComponent("Recordings").appendingPathComponent(recording.filename)
@@ -1111,11 +1152,11 @@ final class RecordingViewModel {
         }
 
         if isLocalMode {
-            await processLocally(url: url, profileId: profileId)
+            await processLocally(url: url, profileId: profileId, optimizeAudio: optimizeAudio)
         } else if useOnDevice && onDeviceTranscriptionAvailable {
-            await transcribeOnDeviceThenUpload(url: url, profileId: profileId)
+            await transcribeOnDeviceThenUpload(url: url, profileId: profileId, optimizeAudio: optimizeAudio)
         } else {
-            await uploadFile(url, profileId: profileId)
+            await uploadFile(url, profileId: profileId, optimizeAudio: optimizeAudio)
         }
     }
 
@@ -1166,13 +1207,17 @@ final class RecordingViewModel {
 
     func hasLocalAudio(for transcriptId: String) -> Bool {
         let key = "localAudio_\(transcriptId)"
-        guard let path = UserDefaults.standard.string(forKey: key) else { return false }
+        guard let path = UserDefaults.standard.string(forKey: key)
+            ?? LocalTranscriptStore.shared.record(forTaskId: transcriptId)?.localAudioPath else { return false }
         return FileManager.default.fileExists(atPath: path)
     }
 
     func saveLocalAudioPath(url: URL, taskId: String) {
         let key = "localAudio_\(taskId)"
         UserDefaults.standard.set(url.path, forKey: key)
+        if RecordingFeatures.enabled, TaskHistoryStore.shared.entry(taskId) == nil, let title = RecordingIdentity.load(audioFilename: url.lastPathComponent)?.title {
+            TaskHistoryStore.shared.carryTitle(title, to: taskId)
+        }
     }
 
     // MARK: - Live Transcription
@@ -1360,8 +1405,14 @@ final class RecordingViewModel {
     /// The server never sees the quick note: a finished cloud notule gets its Notities section
     /// on the client and is written back. Once per task, so repeated completion events stay quiet; a regenerate forces it because the server wiped the section.
     func addNotesSectionToCloudNotule(taskId: String, html: String, profileId: String? = nil, force: Bool = false) async throws -> String {
+        let titleKey = "recordingIdentityApplied_" + taskId
+        if RecordingFeatures.enabled, !UserDefaults.standard.bool(forKey: titleKey), let title = RecordingIdentity.forTask(taskId)?.title {
+            try await APIService.shared.updateTranscriptTitle(taskId: taskId, title: title)
+            UserDefaults.standard.set(true, forKey: titleKey)
+        }
         let entries = PersonalCorrections.loadOrEmpty()
-        let withNotes = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
+        let note = QuickNoteStore.note(forTranscriptId: taskId)
+        let withNotes = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(html, note: note, includeNotes: true) : QuickNoteStore.ensureNotesSection(html, note: note)
         let fixed = PersonalCorrections.html(withNotes, entries: entries, profileId: profileId)
         guard fixed != html, force || notesSectionWritten.insert(taskId).inserted else { return fixed }
         do {

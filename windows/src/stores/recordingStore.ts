@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { RecordingMode, TranscriptTask } from "../types";
+import type { CalendarEvent, RecordingMode, TranscriptTask } from "../types";
 import { saveQuickNoteDraft } from "../services/quickNotes";
 import { isExpectedProcessingNotice } from "../services/automaticFailure";
 import { failureFromTransition, markStage, processingDiagnostic, reportFailure, stageForStatus } from "../services/crashReporter";
@@ -32,6 +32,9 @@ interface RecordingState {
   elapsedSeconds: number;
   filePath: string | null;
   quickNote: string;
+  recordingTitle: string;
+  recordingTitleMode: "automatic" | "manual" | "meeting";
+  activeMeeting: CalendarEvent | null;
   processOnStop: boolean;
   setQuickNote: (note: string) => void;
   autoStart: boolean;
@@ -100,6 +103,9 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
   elapsedSeconds: 0,
   filePath: null,
   quickNote: "",
+  recordingTitle: "",
+  recordingTitleMode: "automatic",
+  activeMeeting: null,
   processOnStop: true,
   setQuickNote: (quickNote) => {
     const { phase, filePath } = get();
@@ -195,6 +201,9 @@ export const useRecordingStore = create<RecordingState>()((set, get) => ({
       elapsedSeconds: 0,
       filePath: null,
       quickNote: "",
+      recordingTitle: "",
+      recordingTitleMode: "automatic",
+      activeMeeting: null,
       processOnStop: true,
       autoStart: false,
       minimizeOnAutoStart: false,

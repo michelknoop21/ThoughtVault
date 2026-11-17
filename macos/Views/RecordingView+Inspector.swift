@@ -19,6 +19,7 @@ extension RecordingView {
                     .padding(.top, 44)
                 identityCard
                     .padding(.top, 13)
+                if RecordingFeatures.enabled { recordingIdentityFields.padding(.top, TS.Spacing.sm) }
                 VStack(spacing: 0) {
                     metaRow(icon: "tag", text: "Tags na verwerking")
                     metaRow(icon: "person.2", text: participantsText) {
@@ -48,6 +49,14 @@ extension RecordingView {
         .background(StudioColor.inspector)
     }
 
+    var compactStudioActions: some View {
+        VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+            Button("Deelnemers kiezen") { showParticipantPicker = true }
+            ForEach(quickActions) { action in quickActionRow(action) }
+        }
+        .padding(TS.Spacing.md)
+    }
+
     private func inspectorTitle(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 18, weight: .semibold))
@@ -68,11 +77,11 @@ extension RecordingView {
             VStack(alignment: .leading, spacing: 3) {
                 // A calendar meeting started from the call alert already has a
                 // title; otherwise the title is extracted after processing.
-                Text(recordingVM.activeMeeting?.title ?? "Nieuwe opname")
+                Text(RecordingFeatures.enabled ? recordingVM.recordingIdentity.title ?? "Nieuwe opname" : recordingVM.activeMeeting?.title ?? "Nieuwe opname")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                Text("Titel na verwerking")
+                Text(!RecordingFeatures.enabled || recordingVM.recordingIdentity.title == nil ? "Titel na verwerking" : "Titel blijft behouden")
                     .font(.system(size: 14))
                     .foregroundStyle(Color(red: 0.682, green: 0.698, blue: 0.8))
                     .lineLimit(1)

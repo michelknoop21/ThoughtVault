@@ -119,6 +119,8 @@ pub fn run() {
             commands::filesystem::concatenate_wav_files,
             // HTTP
             commands::http::proxy_request,
+            commands::http::register_proxy_request,
+            commands::http::cancel_proxy_request,
             commands::http::proxy_upload,
             commands::http::http_sse_stream,
             commands::http::obsidian_put,

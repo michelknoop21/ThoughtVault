@@ -48,7 +48,7 @@ it("fetches current server details and saves a new record with immutable provena
   expect(merged.merge_sources?.map(s => s.id)).toEqual([a.id, "server"]);
   expect(merged.duration_seconds).toBe(0);
   expect(add).toHaveBeenCalledWith(merged);
-  expect(LLMService.generateNotulen).toHaveBeenCalledWith(merged.raw_transcription, expect.objectContaining({ id: "standaard" }), undefined, [], "", expect.any(Function), expect.anything(), true);
+  expect(LLMService.generateNotulen).toHaveBeenCalledWith(merged.raw_transcription, expect.objectContaining({ id: "standaard" }), undefined, [], "", expect.any(Function), expect.anything(), true, expect.any(AbortSignal));
   expect(useTranscriptsStore.getState().transcripts).toEqual([merged, a, b]);
 });
 it("does not generate when a server source cannot load", async () => {

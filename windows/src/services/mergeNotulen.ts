@@ -42,9 +42,8 @@ export async function mergeNotulen(sourceIDs: string[], profileId: string): Prom
     const snapshot = prepareMerge(notes);
     checkCancelled();
     const meter = new UsageMeter();
-    // shortcut: provider requests have no abort signal; discard cancelled output until transport supports abort.
     const html = await LLMService.generateNotulen(snapshot.text, profile, undefined, [], "",
-      step => { if (!controller.signal.aborted) tasks.updateBackgroundTask(id, { message: stepLabel(step), progress: 60 }); }, meter, true);
+      step => { if (!controller.signal.aborted) tasks.updateBackgroundTask(id, { message: stepLabel(step), progress: 60 }); }, meter, true, controller.signal);
     checkCancelled();
     if (!hasUsableNotule(html)) throw new Error("Geen bruikbare notule gegenereerd.");
     const now = new Date().toISOString();

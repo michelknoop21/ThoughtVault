@@ -1,14 +1,2 @@
-versie: 1.0.330
-Wat te testen — macOS-audio
-
-Nieuwe opnames
-Maak een microfoon-, systeemaudio- en gecombineerde opname. Controleer beide sprekers, zachte woorden en het begin en einde van zinnen. Stop de opname en controleer direct de juiste duur en afspeelbaarheid.
-
-Bluetooth-headset
-Open en sluit de headsetmicrofoon tijdens een systeemaudio-opname. Controleer of spraak verstaanbaar blijft bij de omschakeling tussen luister- en belstand. Pauzeer en hervat de opname. Let vooral op weggevallen of herhaalde woorden precies tijdens deze overgangen; volledige acceptatie daarvan staat nog open.
-
-Lange opnames
-Controleer de synchronisatie van microfoon en systeemaudio bij begin, midden en einde. De automatische twee-uursproef is synthetisch; een fysieke twee-uursproef moet nog worden uitgevoerd.
-
-Bestaande opnames en notulen
-Controleer dat eerdere opnames en notulen beschikbaar blijven. Audio wordt niet automatisch genormaliseerd: daarvoor is nog geen kwaliteitswinst bewezen.
+versie: 1.0.331
+Selecteer twee of meer notulen en kies Samenvoegen. Controleer titels, brondatums en de profielkeuze vooraf. De AI maakt één nieuwe notule; originelen blijven behouden. Controleer overlap, unieke acties, gewijzigde besluiten en tegenstrijdigheden. Bronnotulen toont de vaste momentopname die opnieuw genereren gebruikt. Controleer ook synchronisatie van de samengestelde notule tussen Mac en iPhone.

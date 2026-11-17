@@ -33,6 +33,7 @@ function logLabel(step: ModelStep | undefined): string {
 
 /** Metadata of one model request. `status` is set by the request once the provider answered. */
 export interface RequestTrace {
+  signal?: AbortSignal;
   step?: ModelStep;
   provider: string;
   model: string;

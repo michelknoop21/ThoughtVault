@@ -11,6 +11,7 @@ struct NotuleGenerator: Sendable {
     var noteConcurrency = NotuleAudit.auditConcurrency
     /// Names the run in its usage and decides how its cost counts in the monthly ledger.
     var provider: NotulenProvider? = nil
+    var merging = false
 
     /// `onStep` reports the running step for the task label (`ModelStep.displayLabel`).
     /// `onUsage` gets length, requests, tokens, cost and duration of a successful run. Every run, also a
@@ -75,7 +76,7 @@ struct NotuleGenerator: Sendable {
         let draft = try await ModelStep.$current.withValue(ModelStep(.draft)) {
             try await service.generateNotulen(
                 transcription: source,
-                systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? ""),
+                systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? "") + (merging ? "\n\n" + NotuleMerge.instructions : ""),
                 notulePrompt: QuickNoteStore.promptBlock(quickNote)
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
                     + context,
@@ -94,7 +95,8 @@ struct NotuleGenerator: Sendable {
             throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
         }
         let candidate = PersonalCorrections.html(
-            Self.injectDate(into: QuickNoteStore.ensureNotesSection(stripped, note: quickNote), date: createdAt),
+            merging ? QuickNoteStore.ensureNotesSection(stripped, note: quickNote).replacingOccurrences(of: "{{DATE}}", with: "Zie bronnotulen")
+                : Self.injectDate(into: QuickNoteStore.ensureNotesSection(stripped, note: quickNote), date: createdAt),
             entries: corrections, profileId: profile.id)
 
         var warning: String?

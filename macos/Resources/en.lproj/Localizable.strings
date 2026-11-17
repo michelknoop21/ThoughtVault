@@ -702,3 +702,19 @@
 "Titel van deze opname" = "Recording title";
 "Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard." = "Adjusts the volume on a temporary copy. Recovery of damaged speech is not guaranteed. The original is preserved.";
 "Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd." = "Adjusts the volume on a temporary copy. The original is preserved; recovery of damaged speech is not guaranteed.";
+
+"Samenvoegen" = "Merge";
+"Bronnotulen" = "Source notes";
+"Notulenprofiel" = "Notes profile";
+"Notulen samenvoegen" = "Merge notes";
+"Samenvoegen mislukt" = "Merge failed";
+"De AI maakt één nieuwe notule. De originelen blijven behouden." = "AI creates one new note. The originals are preserved.";
+"Samengevoegde notule" = "Merged note";
+"Samenvoegen geannuleerd." = "Merge cancelled.";
+"Selecteer minstens twee verschillende notulen." = "Select at least two different notes.";
+"Een bronnotule heeft geen bruikbare inhoud." = "A source note has no usable content.";
+"De geselecteerde notulen zijn samen te groot. Selecteer minder notulen en probeer opnieuw." = "The selected notes are too large together. Select fewer notes and try again.";
+"Samenvoegen is al bezig of de app wordt bijgewerkt." = "A merge is already running or the app is being updated.";
+"Kies een notulenprofiel." = "Choose a notes profile.";
+
+"Selecteer %@" = "Select %@";

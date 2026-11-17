@@ -256,7 +256,7 @@ final class LocalTranscriptStore {
 
     func save(_ record: TranscriptRecord) throws {
         context.insert(record)
-        try saveTranscriptChanges()
+        do { try saveTranscriptChanges() } catch { context.delete(record); throw error }
     }
 
     /// All locally stored records, newest first.
@@ -310,7 +310,7 @@ final class LocalTranscriptStore {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
         let original = (record.notuleHtml, record.rawTranscription)
         record.notuleHtml = html
-        if let transcription { record.rawTranscription = transcription }
+        if let transcription, record.mergeSourcesJSON == nil { record.rawTranscription = transcription }
         do { try saveTranscriptChanges() } catch { (record.notuleHtml, record.rawTranscription) = original; throw error }
     }
 

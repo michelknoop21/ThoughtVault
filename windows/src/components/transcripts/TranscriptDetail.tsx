@@ -191,7 +191,7 @@ export function TranscriptDetail({
     await store.hydrate();
     validateCorrections({version:1,entries:remember ? upsertCorrection(store.entries,entry) : [entry]});
     const corrected = correctRecording(entry, isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", transcript.raw_transcription);
-    await onSaveNotule(transcript.id, corrected.notule, corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined);
+    await onSaveNotule(transcript.id, corrected.notule, !transcript.merge_sources && corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined);
     if (isEditingNotule) setEditedHTML(corrected.notule);
     if (remember) {
       try { await store.save(entry); }
@@ -243,7 +243,7 @@ export function TranscriptDetail({
               className={`td-tab-btn${detailTab === "transcriptie" ? " active" : ""}`}
               onClick={() => { setDetailTab("transcriptie"); setIsEditingNotule(false); }}
             >
-              Transcriptie
+              {transcript.merge_sources ? "Bronnotulen" : "Transcriptie"}
             </button>
           </div>
         )}

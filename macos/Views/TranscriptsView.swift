@@ -58,6 +58,8 @@ struct TranscriptsView: View {
 
     @State var isSelecting = false
     @State var selectedIds: Set<String> = []
+    @State var showMergeSheet = false
+    @State private var mergeError: String?
     @State var showBulkDeleteConfirm = false
     @State var transcriptToDelete: Transcript? = nil
     @State var showSingleDeleteConfirm = false
@@ -190,6 +192,24 @@ struct TranscriptsView: View {
         } message: {
             Text("Deze transcriptie wordt permanent verwijderd.")
         }
+        .sheet(isPresented: $showMergeSheet) {
+            MergeNotulenSheet(sources: transcripts.filter { selectedIds.contains($0.id) }) { profileId in
+                let ids = transcripts.filter { selectedIds.contains($0.id) }.map(\.taskId)
+                showMergeSheet = false
+                Task {
+                    do {
+                        let result = try await recordingVM.mergeNotulen(sourceIDs: ids, profileId: profileId)
+                        await loadTranscripts()
+                        isSelecting = false
+                        selectedIds.removeAll()
+                        transcriptsNavPath.append(result)
+                    } catch { mergeError = error.localizedDescription }
+                }
+            }
+        }
+        .alert("Samenvoegen mislukt", isPresented: Binding(get: { mergeError != nil }, set: { if !$0 { mergeError = nil } })) {
+            Button("OK", role: .cancel) { mergeError = nil }
+        } message: { Text(mergeError ?? "") }
         .task { await loadTranscripts() }
         .task {
             for await _ in NotificationCenter.default.notifications(named: NotuleSyncService.didImport) {
@@ -671,6 +691,8 @@ struct TranscriptsView: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text("Selecteer \(transcript.title)"))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .offset(x: -14)
         .padding(.top, TS.Spacing.sm)
     }
@@ -682,6 +704,8 @@ struct TranscriptsView: View {
         ToolbarItem(placement: .primaryAction) {
             if isSelecting {
                 HStack(spacing: TS.Spacing.sm) {
+                    Button("Samenvoegen", systemImage: "doc.on.doc") { showMergeSheet = true }
+                        .disabled(selectedIds.count < 2 || recordingVM.isMerging)
                     if !selectedIds.isEmpty {
                         Button {
                             showBulkDeleteConfirm = true
@@ -1222,7 +1246,7 @@ struct TranscriptDetailView: View {
         if hasNotule && hasRaw {
             HStack(spacing: 0) {
                 compactTabButton(.notule, label: "Notule")
-                compactTabButton(.raw, label: "Transcriptie")
+                compactTabButton(.raw, label: transcript.mergeSourcesJSON == nil ? "Transcriptie" : "Bronnotulen")
             }
             .background(Color.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
@@ -1837,7 +1861,7 @@ struct TranscriptDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: TS.Spacing.md) {
                     HStack(alignment: .center) {
-                        Label("Ruwe transcriptie", systemImage: "waveform")
+                        Label(transcript.mergeSourcesJSON == nil ? "Ruwe transcriptie" : "Bronnotulen", systemImage: "doc.text")
                             .font(TS.Font.captionSemibold)
                             .foregroundStyle(Color.labelTertiary)
                         Spacer()
@@ -2071,7 +2095,8 @@ struct TranscriptDetailView: View {
         let entries = try PersonalCorrections.load()
         try PersonalCorrections.validate(CorrectionDocument(entries: remember ? PersonalCorrections.upsert(entries, entry: entry) : [entry]))
         let original = isEditingNotule ? restoreNotuleMarkup(original: fullTranscript.notuleHtml ?? "", editedBody: editedHTML) : fullTranscript.notuleHtml ?? ""
-        let (html, transcript) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription)
+        let (html, correctedTranscript) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription)
+        let transcript = fullTranscript.mergeSourcesJSON == nil ? correctedTranscript : fullTranscript.rawTranscription
         if isLocalTranscript(fullTranscript.taskId) {
             try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html, transcription: transcript)
         } else {
@@ -2514,4 +2539,51 @@ private struct ProfileSelectionSheet: View {
 #Preview {
     TranscriptsView(transcriptsNavPath: .constant(NavigationPath()))
         .environment(RecordingViewModel())
+}
+
+
+private struct MergeNotulenSheet: View {
+    @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(\.dismiss) private var dismiss
+    let sources: [Transcript]
+    let onMerge: (String) -> Void
+    @State private var profileId = ""
+
+    private var profiles: [Profile] {
+        recordingVM.availableProfiles.isEmpty ? Profile.defaults : recordingVM.availableProfiles
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Bronnotulen") {
+                    ForEach(sources.sorted { $0.date == $1.date ? $0.taskId < $1.taskId : $0.date < $1.date }) { source in
+                        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                            Text(source.title)
+                            Text(source.date, style: .date).font(TS.Font.caption).foregroundStyle(Color.labelSecondary)
+                        }
+                    }
+                }
+                Section {
+                    Picker("Notulenprofiel", selection: $profileId) {
+                        ForEach(profiles) { Text($0.name).tag($0.id) }
+                    }
+                    Text("De AI maakt één nieuwe notule. De originelen blijven behouden.")
+                        .font(TS.Font.caption)
+                }
+            }
+            .navigationTitle("Notulen samenvoegen")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuleren") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Samenvoegen") { onMerge(profileId) }
+                        .disabled(recordingVM.isMerging || sources.count < 2 || !profiles.contains { $0.id == profileId })
+                }
+            }
+            .onAppear { profileId = recordingVM.selectedProfile?.id ?? profiles.first?.id ?? "" }
+        }
+        #if os(macOS)
+        .frame(width: 520, height: 440)
+        #endif
+    }
 }

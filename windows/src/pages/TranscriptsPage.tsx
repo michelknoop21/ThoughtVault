@@ -1,3 +1,4 @@
+import { mergeNotulen } from "../services/mergeNotulen";
 import { exportWithOwnNotes, getTranscriptQuickNote, getTranscriptIdentity } from "../services/quickNotes";
 import { useTaskHistory } from "../services/taskHistory";
 import { reprocessTask, canReprocess } from "../services/taskActions";
@@ -53,6 +54,10 @@ export function TranscriptsPage() {
     setSelectedId, setSearchQuery, setSelectedTags, setIsLoading,
   } = useTranscriptsStore();
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
+  const [mergeIDs, setMergeIDs] = useState<string[] | null>(null);
+  const [mergeProfileId, setMergeProfileId] = useState("");
+  const mergeBusy = useRef(false);
+  const [merging, setMerging] = useState(false);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [regenerateTarget, setRegenerateTarget] = useState<Transcript | null>(null);
   const [regenerateProfileId, setRegenerateProfileId] = useState("");
@@ -260,7 +265,7 @@ export function TranscriptsPage() {
         const meter = new UsageMeter();
         const generatedHTML = await LLMService.generateNotulen(transcription, profile,
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], "",
-          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter);
+          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter, !!transcript.merge_sources);
         if (!hasUsableNotule(generatedHTML)) throw new Error("Geen bruikbare notule gegenereerd");
         const html = exportWithOwnNotes(generatedHTML, transcript.quick_note || getTranscriptQuickNote(transcript.id), true);
         const title = getTranscriptIdentity(transcript.id)?.title ? transcript.title : (extractTitle(html) || transcript.title);
@@ -551,6 +556,11 @@ export function TranscriptsPage() {
         onRefresh={refreshTranscripts}
         onContextMenu={handleContextMenu}
         onBulkDelete={handleBulkDelete}
+        merging={merging}
+        onMerge={ids => {
+          setMergeProfileId(useSettingsStore.getState().default_profile_id || useProfilesStore.getState().profiles[0]?.id || "");
+          setMergeIDs(ids);
+        }}
       />
 
       {selectedId && selected ? (
@@ -604,6 +614,34 @@ export function TranscriptsPage() {
           </button>
         </div>
       )}
+
+      {mergeIDs && <DesktopDialog className="td-overlay" label="Notulen samenvoegen" onClose={() => setMergeIDs(null)}>
+        <div className="td-tags-dialog">
+          <h3 className="td-tags-title">Notulen samenvoegen</h3>
+          <ul>{transcripts.filter(t => mergeIDs.includes(t.id)).sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)).map(t =>
+            <li key={t.id}>{t.title} — {new Date(t.created_at).toLocaleDateString("nl-NL")}</li>)}</ul>
+          <p>De AI maakt één nieuwe notule. De originelen blijven behouden.</p>
+          <label>Notulenprofiel<select className="select" value={mergeProfileId} onChange={e => setMergeProfileId(e.target.value)}>
+            {useProfilesStore.getState().profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select></label>
+          <div className="flex-row gap-8" style={{ justifyContent: "flex-end", marginTop: 16 }}>
+            <button className="btn" onClick={() => setMergeIDs(null)}>Annuleren</button>
+            <button className="btn btn-accent" disabled={merging || !useProfilesStore.getState().getProfile(mergeProfileId)} onClick={async () => {
+              if (mergeBusy.current) return;
+              mergeBusy.current = true;
+              setMerging(true);
+              const ids = mergeIDs;
+              setMergeIDs(null);
+              try {
+                const result = await mergeNotulen(ids, mergeProfileId);
+                setSelectedId(result.id);
+                toast.show("Notulen samengevoegd", "success");
+              } catch (error) { toast.show(error instanceof Error ? error.message : "Samenvoegen mislukt", "error"); }
+              finally { mergeBusy.current = false; setMerging(false); }
+            }}>Samenvoegen</button>
+          </div>
+        </div>
+      </DesktopDialog>}
 
       {regenerateTarget && <DesktopDialog className="td-overlay" label="Notule opnieuw genereren" onClose={() => setRegenerateTarget(null)}>
         <div className="td-tags-dialog" onClick={(e) => e.stopPropagation()}>

@@ -528,3 +528,164 @@ final class ProspectFlowReferenceTests: XCTestCase {
     }
 
 }
+
+final class NotuleMergeTests: XCTestCase {
+    private func note(_ id: String, _ day: TimeInterval = 0, html: String = "<p>Sam controleert vrijdag de definitieve planning.</p>") -> Transcript {
+        Transcript(id: id, title: "Overleg \(id)", date: Date(timeIntervalSince1970: day),
+                   rawTranscription: "Deze oude transcriptie mag niet worden gebruikt.", notuleHtml: html)
+    }
+
+    func testUsesEditedNotesAndStableChronologicalOrder() throws {
+        let a = note("a", 10, html: "<style>geheim</style><p>Gewijzigd besluit &amp; unieke actie voor Sam.</p>")
+        let b = note("b", 20)
+        let c = note("c", 20)
+        let first = try NotuleMerge.prepare([c, a, b, a])
+        let second = try NotuleMerge.prepare([b, c, a])
+        XCTAssertEqual(first.text, second.text)
+        XCTAssertEqual(first.metadata, second.metadata)
+        XCTAssertTrue(first.text.contains("Gewijzigd besluit & unieke actie"))
+        XCTAssertFalse(first.text.contains("oude transcriptie"))
+        XCTAssertFalse(first.text.contains("<p>"))
+        XCTAssertFalse(first.text.contains("geheim"))
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try decoder.decode([NotuleMergeSource].self, from: Data(first.metadata.utf8)).map(\.id), ["a", "b", "c"])
+    }
+
+    func testRequiresTwoDistinctUsableNotesAndRejectsOversizeWithoutTruncating() throws {
+        XCTAssertThrowsError(try NotuleMerge.prepare([note("a"), note("a")]))
+        XCTAssertThrowsError(try NotuleMerge.prepare([note("a"), note("b", html: "<p></p>")]))
+        XCTAssertThrowsError(try NotuleMerge.prepare([note("a"), note("b", html: String(repeating: "Inhoud ", count: 160_000))]))
+        XCTAssertNoThrow(try NotuleMerge.prepare([note("a"), note("b")]))
+    }
+
+    func testMergeGenerationKeepsChecksAndAvoidsInventedMeetingDate() async throws {
+        let llm = StubLLM(draft: "<h1>Besluiten bij planning</h1><p>Sam controleert vrijdag de planning. {{DATE}}</p>")
+        let snapshot = try NotuleMerge.prepare([note("a"), note("b")])
+        let html = try await NotuleGenerator(service: llm, merging: true).generate(transcription: snapshot.text,
+            profile: profile, participants: [], quickNote: nil, createdAt: Date(), corrections: [])
+        XCTAssertEqual(llm.generations.first?.transcription, snapshot.text)
+        XCTAssertTrue(llm.generations.first?.systemPrompt.contains(NotuleMerge.instructions) == true)
+        XCTAssertTrue(html.contains("Zie bronnotulen"))
+        XCTAssertFalse(html.contains("{{DATE}}"))
+        XCTAssertFalse(llm.audits.isEmpty)
+    }
+
+    @MainActor func testSnapshotAndMetadataSurviveLocalStorageAndSyncAndOldPayload() throws {
+        let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none))
+        let store = try LocalTranscriptStore(container: container)
+        let snapshot = try NotuleMerge.prepare([note("a"), note("b")])
+        let merged = TranscriptRecord(id: "local-merged", title: "Samengevoegd", rawTranscription: snapshot.text)
+        merged.mergeSourcesJSON = snapshot.metadata
+        try store.save(merged)
+        try store.updateNotule(taskId: merged.taskId, html: "<p>Handmatig bijgewerkt.</p>", transcription: "Mag de bronmomentopname niet vervangen")
+        XCTAssertEqual(merged.rawTranscription, snapshot.text)
+        XCTAssertEqual(merged.notuleHtml, "<p>Handmatig bijgewerkt.</p>")
+        XCTAssertNil(merged.localAudioPath)
+        XCTAssertNil(merged.durationSeconds)
+        let saved = try XCTUnwrap(store.record(forTaskId: "local-merged"))
+        let encoded = try SyncedNotule(saved).encoded()
+        let incoming = try JSONDecoder().decode(SyncedNotule.self, from: encoded)
+        let copy = TranscriptRecord(title: "Kopie")
+        incoming.apply(to: copy)
+        XCTAssertEqual(copy.rawTranscription, snapshot.text)
+        XCTAssertEqual(copy.mergeSourcesJSON, snapshot.metadata)
+        XCTAssertEqual(copy.asTranscript.mergeSourcesJSON, snapshot.metadata)
+        let value = try JSONDecoder().decode(Transcript.self, from: JSONEncoder().encode(copy.asTranscript))
+        XCTAssertEqual(value.mergeSourcesJSON, snapshot.metadata)
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        legacy.removeValue(forKey: "mergeSourcesJSON")
+        let old = try JSONDecoder().decode(SyncedNotule.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertNil(old.mergeSourcesJSON)
+        XCTAssertNil(try JSONDecoder().decode(Transcript.self, from: Data(#"{"id":"old","title":"Oud"}"#.utf8)).mergeSourcesJSON)
+    }
+}
+
+private enum PreMergeSchema {
+@Model
+final class TranscriptRecord {
+
+    /// Stable local identifier (also used as the task id for locally processed items).
+    @Attribute(.unique) var id: String
+    var taskId: String
+    var title: String
+    var filename: String
+    var rawTranscription: String
+    var notuleHtml: String
+    var profileId: String
+    var profileName: String?
+    var tags: [String]
+    var createdAt: Date
+    var localAudioPath: String?
+    /// "local" for on-device processed records, "cloud" for server-synced records.
+    var source: String
+    /// JSON-encoded [Participant] captured at record time, so local notule
+    /// regeneration (other profile) can re-inject the deelnemerslijst. Optional →
+    /// lightweight-migration safe for existing stores.
+    var participantsJSON: String?
+    /// A generated notule that failed the fact audit, kept apart from `notuleHtml`
+    /// for manual review. Optional → lightweight-migration safe.
+    var notuleDraftHtml: String?
+    /// Why that draft was not approved (Dutch, shown to the user).
+    var notuleReviewReason: String?
+    /// Audio length in seconds, set on record/import. Optional → lightweight-migration safe.
+    var durationSeconds: Double?
+    /// JSON-encoded `NotuleUsage` of the run that generated `notuleHtml`. Optional → lightweight-migration safe.
+    var notuleUsageJSON: String?
+
+    init(
+        id: String = UUID().uuidString,
+        taskId: String = "",
+        title: String,
+        filename: String = "",
+        rawTranscription: String = "",
+        notuleHtml: String = "",
+        profileId: String = "",
+        profileName: String? = nil,
+        tags: [String] = [],
+        createdAt: Date = Date(),
+        localAudioPath: String? = nil,
+        source: String = "local",
+        participantsJSON: String? = nil
+    ) {
+        self.id = id
+        self.taskId = taskId.isEmpty ? id : taskId
+        self.title = title
+        self.filename = filename
+        self.rawTranscription = rawTranscription
+        self.notuleHtml = notuleHtml
+        self.profileId = profileId
+        self.profileName = profileName
+        self.tags = tags
+        self.createdAt = createdAt
+        self.localAudioPath = localAudioPath
+        self.source = source
+        self.participantsJSON = participantsJSON
+    }
+
+}
+}
+
+@MainActor
+extension NotuleMergeTests {
+    func testExistingDiskStoreMigratesWithoutMergeMetadata() throws {
+        let directory = AppEnvironment.supportDirectory.appending(path: "pre-merge-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appending(path: "Local.store")
+        try autoreleasepool {
+            let container = try ModelContainer(for: PreMergeSchema.TranscriptRecord.self, PersonProfile.self,
+                configurations: ModelConfiguration(url: url, cloudKitDatabase: .none))
+            let note = PreMergeSchema.TranscriptRecord(id: "legacy", title: "Handmatig bewaard", rawTranscription: "Originele transcriptie", notuleHtml: "<p>Mijn gewijzigde notule blijft bewaard.</p>")
+            container.mainContext.insert(note)
+            try container.mainContext.save()
+        }
+        let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
+            configurations: ModelConfiguration(url: url, cloudKitDatabase: .none))
+        let record = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<TranscriptRecord>()).first)
+        XCTAssertEqual(record.id, "legacy")
+        XCTAssertEqual(record.notuleHtml, "<p>Mijn gewijzigde notule blijft bewaard.</p>")
+        XCTAssertEqual(record.rawTranscription, "Originele transcriptie")
+        XCTAssertNil(record.mergeSourcesJSON)
+    }
+}

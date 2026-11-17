@@ -33,12 +33,12 @@ extension RecordingViewModel {
 
     /// Generates with `provider`, and once with the configured fallback provider when that fails.
     /// The usage is that of the run that produced the notule.
-    private static func generateNotule(provider: NotulenProvider, transcription: String, profile: Profile, participants: [Participant],
+    private static func generateNotule(provider: NotulenProvider, merging: Bool = false, transcription: String, profile: Profile, participants: [Participant],
                                        quickNote: String?, createdAt: Date,
                                        onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> (html: String, usage: NotuleUsage?) {
         let usage = OSAllocatedUnfairLock<NotuleUsage?>(initialState: nil)
         let once: @Sendable (NotulenProvider) async throws -> String = { p in
-            try await generateNotuleOnce(provider: p, transcription: transcription, profile: profile, participants: participants,
+            try await generateNotuleOnce(provider: p, merging: merging, transcription: transcription, profile: profile, participants: participants,
                                          quickNote: quickNote, createdAt: createdAt, onStep: onStep,
                                          onUsage: { run in usage.withLock { $0 = run } })
         }
@@ -53,14 +53,14 @@ extension RecordingViewModel {
     }
 
     /// Generates with the glossary and people context block for `provider`'s budget.
-    private static func generateNotuleOnce(provider: NotulenProvider, transcription: String, profile: Profile, participants: [Participant],
+    private static func generateNotuleOnce(provider: NotulenProvider, merging: Bool = false, transcription: String, profile: Profile, participants: [Participant],
                                            quickNote: String?, createdAt: Date,
                                            onStep: @escaping @Sendable (ModelStep) -> Void,
                                            onUsage: @Sendable (NotuleUsage) -> Void) async throws -> String {
         let corrections = PersonalCorrections.loadOrEmpty()
         log.info("Notule start provider=\(provider.rawValue) \(DiagnosticLog.notuleTarget(provider)) transcript_chars=\(transcription.count)")
         return try await NotuleGenerator(service: LLMServiceFactory.service(for: provider, serverURL: ""),
-                                         noteConcurrency: provider.auditNoteConcurrency, provider: provider).generate(
+                                         noteConcurrency: provider.auditNoteConcurrency, provider: provider, merging: merging).generate(
             transcription: transcription, profile: profile, participants: participants, quickNote: RecordingFeatures.enabled ? nil : quickNote,
             createdAt: createdAt, corrections: corrections,
             context: PersonalCorrections.contextBlock(entries: corrections, transcript: transcription, profileId: profile.id, provider: provider),
@@ -177,7 +177,7 @@ extension RecordingViewModel {
         do {
             let provider = Self.localNotuleProvider()
             let (generatedHTML, usage) = try await Self.generateNotule(
-                provider: provider, transcription: record.rawTranscription, profile: profile, participants: record.participants,
+                provider: provider, merging: record.mergeSourcesJSON != nil, transcription: record.rawTranscription, profile: profile, participants: record.participants,
                 quickNote: QuickNoteStore.note(forTranscriptId: taskId), createdAt: record.createdAt,
                 onStep: showStep(taskId: regenerationId))
             let html = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(generatedHTML, note: QuickNoteStore.note(forTranscriptId: taskId), includeNotes: true) : generatedHTML
@@ -193,6 +193,65 @@ extension RecordingViewModel {
             throw NotuleReviewError(reason: message, draftHtml: review.draftHtml, supportReason: review.supportReason)
         } catch {
             updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error), failure: error)
+            throw error
+        }
+    }
+}
+
+
+extension RecordingViewModel {
+    /// Resolve current saved content before generating; never edit or replace a source record.
+    func mergeNotulen(sourceIDs: [String], profileId: String) async throws -> Transcript {
+        guard !isMerging, !updateInstalling else {
+            throw LLMError.generationFailed(String(localized: "Samenvoegen is al bezig of de app wordt bijgewerkt."))
+        }
+        guard let profile = (availableProfiles.isEmpty ? Profile.defaults : availableProfiles).first(where: { $0.id == profileId }) else {
+            throw LLMError.generationFailed(String(localized: "Kies een notulenprofiel."))
+        }
+        let id = "local-merge-" + UUID().uuidString
+        let task = Task { @MainActor in
+            var sources: [Transcript] = []
+            for sourceID in Set(sourceIDs).sorted() {
+                try Task.checkCancellation()
+                if let record = LocalTranscriptStore.shared.record(forTaskId: sourceID),
+                   record.source != "cloud" || !record.notuleHtml.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    sources.append(record.asTranscript)
+                } else {
+                    guard !sourceID.hasPrefix("local-") else { throw LocalStoreError.recordNotFound }
+                    var source = try await APIService.shared.getTranscript(taskId: sourceID)
+                    if (source.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        source.notuleHtml = try await APIService.shared.getTranscriptNotes(taskId: sourceID)
+                    }
+                    sources.append(source)
+                }
+            }
+            let snapshot = try NotuleMerge.prepare(sources)
+            try Task.checkCancellation()
+            let createdAt = Date()
+            let (html, usage) = try await Self.generateNotule(provider: Self.localNotuleProvider(), merging: true,
+                transcription: snapshot.text, profile: profile, participants: [], quickNote: nil, createdAt: createdAt,
+                onStep: self.showStep(taskId: id))
+            try Task.checkCancellation()
+            let record = TranscriptRecord(id: id, title: NotuleTitleExtractor.extract(from: html) ?? String(localized: "Samengevoegde notule"),
+                rawTranscription: snapshot.text, notuleHtml: html, profileId: profile.id, profileName: profile.name, createdAt: createdAt)
+            record.mergeSourcesJSON = snapshot.metadata
+            record.notuleUsageJSON = usage?.json
+            try LocalTranscriptStore.shared.save(record)
+            return record.asTranscript
+        }
+        mergeTask = task
+        isMerging = true
+        pendingRegenerations += 1
+        addTask(TranscriptTask(id: id, taskId: id, filename: String(localized: "Notulen samenvoegen"),
+            status: .generatingLocal, progress: 0.1, profileId: profileId, createdAt: Date()))
+        defer { mergeTask = nil; isMerging = false; pendingRegenerations -= 1 }
+        do {
+            let result = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+            updateTask(id, status: .completed, progress: 1)
+            return result
+        } catch {
+            updateTask(id, status: .error, errorMessage: error is CancellationError ? String(localized: "Samenvoegen geannuleerd.") : error.localizedDescription,
+                       supportMessage: Self.supportFailureMessage(error), failure: error)
             throw error
         }
     }

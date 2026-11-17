@@ -28,8 +28,9 @@ afterEach(() => {
   useRecordingStore.setState({ backgroundTasks: [] });
 });
 
-it("asks for a template before regeneration and shows the job on Taken", async () => {
+it.each([false, true])("asks for a template and regenerates the saved snapshot (merged=%s)", async merged => {
   const note: Transcript = {
+    merge_sources: merged ? [{ id: "source-a", title: "Bron A", date: "2026-11-10T10:00:00Z" }, { id: "source-b", title: "Bron B", date: "2026-11-12T10:00:00Z" }] : undefined,
     id: "local-regenerate", title: "Overleg", raw_transcription: "We hebben de planning goedgekeurd.",
     notule_html: "<p>Oud</p>", duration_seconds: 12, profile_name: "Standaard", tags: [],
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -56,7 +57,8 @@ it("asks for a template before regeneration and shows the job on Taken", async (
   await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-overlay button"))
     .find((button) => button.textContent === "Regenereren")!.click(); });
 
-  expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], undefined, expect.any(Function), expect.any(UsageMeter));
+  expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], "", expect.any(Function), expect.any(UsageMeter), merged);
+  expect(useLocalTranscriptsStore.getState().items.find(item => item.id === note.id)?.raw_transcription).toBe(note.raw_transcription);
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
   expect(useLocalTranscriptsStore.getState().items.find((item) => item.id === note.id)).toMatchObject({ profile_name: "Besluiten", has_notes: true });
   expect(useTranscriptsStore.getState().transcripts.find((item) => item.id === note.id)?.has_notes).toBe(true);

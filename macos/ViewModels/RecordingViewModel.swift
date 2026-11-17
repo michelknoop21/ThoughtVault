@@ -26,6 +26,8 @@ final class RecordingViewModel {
     @ObservationIgnored var loggedTranscriptionQuarter: [String: Int] = [:]
     var updateInstalling = false
     var pendingRegenerations = 0
+    @ObservationIgnored var mergeTask: Task<Transcript, Error>?
+    var isMerging = false
     var updateIsBusy: Bool {
         switch recordingState {
         case .idle, .error: return activeTasks.contains { $0.status.isActive } || isProcessingQueue || !localProcessingTasks.isEmpty || pendingRegenerations > 0
@@ -266,6 +268,7 @@ final class RecordingViewModel {
     }
 
     deinit {
+        mergeTask?.cancel()
         liveTranscriptionTask?.cancel()
         for task in pendingRemovalTasks.values { task.cancel() }
         for task in localProcessingTasks.values { task.cancel() }
@@ -986,6 +989,7 @@ final class RecordingViewModel {
 
     /// Cancels an in-progress local processing task (transcription or notule generation).
     func cancelLocalProcessing(_ taskId: String, message: String = "Geannuleerd door gebruiker.") {
+        if taskId.hasPrefix("local-merge-") { mergeTask?.cancel() }
         localProcessingTasks[taskId]?.cancel()
         localProcessingTasks.removeValue(forKey: taskId)
         cancelLocalTaskCleanup(taskId, message: message)

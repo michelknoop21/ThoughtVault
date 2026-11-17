@@ -25,6 +25,8 @@ interface TranscriptsListProps {
   onContextMenu: (e: React.MouseEvent, transcript: Transcript) => void;
   /** Resolves true once the items are deleted; false when the user cancels or it fails. */
   onBulkDelete: (ids: string[]) => Promise<boolean>;
+  onMerge?: (ids: string[]) => void;
+  merging?: boolean;
 }
 
 const TIME_FILTERS: { key: TimeFilter; label: string }[] = [
@@ -107,6 +109,8 @@ export function TranscriptsList({
   onRefresh,
   onContextMenu,
   onBulkDelete,
+  onMerge,
+  merging,
 }: TranscriptsListProps) {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("alles");
   const [bulkMode, setBulkMode] = useState(false);
@@ -217,6 +221,7 @@ export function TranscriptsList({
           </button>
           {bulkSelected.size > 0 && (
             <>
+              {onMerge && <button className="btn btn-sm" disabled={bulkSelected.size < 2 || merging} onClick={() => onMerge([...bulkSelected])}>Samenvoegen</button>}
               <span className="tl-bulk-count">{bulkSelected.size} geselecteerd</span>
               <button className="btn btn-sm tl-bulk-delete" onClick={async () => {
                 if (!await onBulkDelete(Array.from(bulkSelected))) return;
@@ -258,6 +263,7 @@ export function TranscriptsList({
                   role="button"
                   tabIndex={0}
                   aria-label={t.title || "Naamloze opname"}
+                  aria-pressed={bulkMode ? bulkSelected.has(t.id) : undefined}
                   onKeyDown={(event) => {
                     if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
                     event.preventDefault();

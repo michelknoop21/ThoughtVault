@@ -26,7 +26,7 @@ extension TranscriptDetailView {
                 .padding(.top, 6)
             if hasNotule && hasRaw && !isEditingNotule {
                 IOSSegmented(options: [(DetailTab.notule, "Notule", "doc.text"),
-                                       (.raw, "Transcript", "waveform")],
+                                       (.raw, fullTranscript.mergeSourcesJSON == nil ? "Transcript" : "Bronnotulen", "doc.text")],
                              selection: $selectedTab, height: 38)
                     .padding(.horizontal, IOSMetric.gutter)
                     .padding(.top, 14)

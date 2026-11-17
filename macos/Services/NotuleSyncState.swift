@@ -20,6 +20,7 @@ struct SyncedNotule: Codable, Equatable, Sendable {
     var notuleReviewReason: String?
     var durationSeconds: Double?
     var notuleUsageJSON: String?
+    var mergeSourcesJSON: String?
 
     @MainActor init(_ record: TranscriptRecord) {
         id = record.id
@@ -38,6 +39,7 @@ struct SyncedNotule: Codable, Equatable, Sendable {
         notuleReviewReason = record.notuleReviewReason
         durationSeconds = record.durationSeconds
         notuleUsageJSON = record.notuleUsageJSON
+        mergeSourcesJSON = record.mergeSourcesJSON
     }
 
     func encoded() throws -> Data {
@@ -66,6 +68,7 @@ struct SyncedNotule: Codable, Equatable, Sendable {
         record.notuleReviewReason = notuleReviewReason
         record.durationSeconds = durationSeconds
         record.notuleUsageJSON = notuleUsageJSON
+        record.mergeSourcesJSON = mergeSourcesJSON
     }
 
     func conflictCopy() throws -> Self {

@@ -2603,6 +2603,7 @@ private struct MergeNotulenSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuleren") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Samenvoegen") { onMerge(profileId) }
+                        .keyboardShortcut(.defaultAction)
                         .buttonStyle(.borderedProminent)
                         .tint(Color.brandPrimary)
                         .disabled(recordingVM.isMerging || sources.count < 2 || !profiles.contains { $0.id == profileId })

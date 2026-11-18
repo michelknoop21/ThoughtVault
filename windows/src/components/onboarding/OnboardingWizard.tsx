@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MicRecord24Regular,
@@ -23,6 +23,13 @@ const NOTULEN_STEP = 3;
 
 export function OnboardingWizard() {
   const [step, setStep] = useState<Step>(0);
+  const panel = useRef<HTMLDivElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    panel.current?.querySelector("h1")?.focus();
+  }, [step]);
   const settings = useSettingsStore();
   const navigate = useNavigate();
 
@@ -82,216 +89,153 @@ export function OnboardingWizard() {
   }
 
   return (
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        background: "var(--bg-solid-tertiary)",
-      }}
-    >
+    <div className="onb-shell">
       <BrandBar />
-      <div className="onb-scroll" style={{ flex: 1, display: "flex", alignItems: "safe center", justifyContent: "center", minHeight: 0, overflowY: "auto" }}>
-      <div style={{ width: "100%", maxWidth: step === NOTULEN_STEP ? 780 : 480, padding: "32px clamp(16px, 4vw, 32px)", boxSizing: "border-box" }}>
-        <ol className="onb-stepper" aria-label={`Stap ${step + 1} van ${STEPS.length}`}>
-          {STEPS.map((label, i) => (
-            <li key={label} className={i < step ? "done" : i === step ? "current" : ""} aria-current={i === step ? "step" : undefined}>
-              <i aria-hidden="true">{i < step ? "✓" : i + 1}</i>{label}
-            </li>
-          ))}
-        </ol>
-
-        {/* Step content */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {step === 0 && (
-            <StepContent
-              icon={
-                <img
-                  src={appLogo}
-                  alt="ThoughtVault"
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: 16,
-                    margin: "0 auto 16px",
-                    display: "block",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-                  }}
+      <div className="onb-scroll">
+        <main className="onb-frame">
+          <div className="onb-rail">
+            <div className="onb-brand"><img src={appLogo} alt="" />ThoughtVault</div>
+            <ol className="onb-stepper" aria-label={`Stap ${step + 1} van ${STEPS.length}`}>
+              {STEPS.map((label, i) => (
+                <li key={label} className={i < step ? "done" : i === step ? "current" : ""} aria-current={i === step ? "step" : undefined}>
+                  <i aria-hidden="true">{i < step ? "✓" : i + 1}</i><span>{label}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="onb-panel" ref={panel}>
+            <div key={step} className="onb-content">
+              {step === 0 && (
+                <StepContent
+                  title="Welkom bij ThoughtVault"
+                  description="Neem vergaderingen op, genereer automatisch notulen en sla alles overzichtelijk op."
                 />
-              }
-              title="Welkom bij ThoughtVault"
-              description="Neem vergaderingen op, genereer automatisch notulen en sla alles overzichtelijk op. Laten we je setup in orde maken."
-            />
-          )}
+              )}
 
-          {step === 1 && (
-            <StepContent
-              icon={<StepIcon icon={<MicRecord24Regular style={{ fontSize: 28 }} />} />}
-              title="Microfoon toegang"
-              description="ThoughtVault heeft toegang nodig tot je microfoon voor het opnemen van vergaderingen."
-            >
-              <div
-                style={{
-                  padding: "12px 14px",
-                  background: "rgba(0, 95, 184, 0.06)",
-                  border: "1px solid rgba(0, 95, 184, 0.20)",
-                  borderRadius: "var(--radius-md)",
-                }}
-              >
-                <p style={{ fontSize: 13, color: "var(--fill-system-attention)", lineHeight: 1.5 }}>
-                  <strong>Windows privacy-instellingen:</strong> Zorg dat microfoon toegang is ingeschakeld via{" "}
-                  <em>Instellingen → Privacy → Microfoon</em>.
-                </p>
-              </div>
-            </StepContent>
-          )}
+              {step === 1 && (
+                <StepContent
+                  icon={<StepIcon icon={<MicRecord24Regular style={{ fontSize: 28 }} />} />}
+                  title="Microfoon instellen"
+                  description="ThoughtVault heeft toegang nodig tot je microfoon voor het opnemen van vergaderingen."
+                >
+                  <p className="onb-note">
+                    Zet microfoontoegang aan via <strong>Windows-instellingen › Privacy › Microfoon</strong>.
+                  </p>
+                </StepContent>
+              )}
 
-          {step === 2 && (
-            <StepContent
-              icon={<StepIcon icon={<Calendar24Regular style={{ fontSize: 28 }} />} />}
-              title="Agenda integratie"
-              description={
-                settings.ms365_client_id
-                  ? "Verbind je Microsoft 365 agenda om aankomende vergaderingen te zien. Dit is optioneel."
-                  : "Agenda-koppeling is nog niet geconfigureerd door de beheerder. Je kunt dit later instellen via Instellingen."
-              }
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {settings.ms365_client_id ? (
-                  <button
-                    onClick={handleConnectCalendar}
-                    className="btn btn-accent"
-                    style={{ width: "100%", padding: "9px 16px", fontSize: 14 }}
-                  >
-                    Verbinden met Microsoft 365
-                  </button>
-                ) : null}
+              {step === 2 && (
+                <StepContent
+                  icon={<StepIcon icon={<Calendar24Regular style={{ fontSize: 28 }} />} />}
+                  title="Agenda verbinden"
+                  description={
+                    settings.ms365_client_id
+                      ? "Verbind je Microsoft 365 agenda om aankomende vergaderingen te zien. Dit is optioneel."
+                      : "Agenda-koppeling is nog niet geconfigureerd door de beheerder. Je kunt dit later instellen via Instellingen."
+                  }
+                >
+                  {settings.ms365_client_id && (
+                    <button onClick={handleConnectCalendar} className="btn btn-secondary">
+                      Verbinden met Microsoft 365
+                    </button>
+                  )}
+                </StepContent>
+              )}
+
+              {step === NOTULEN_STEP && <NotulenStep onBack={handleBack} onDone={handleNext} />}
+
+              {step === 4 && (
+                <StepContent
+                  icon={<StepIcon icon={<Person24Regular style={{ fontSize: 28 }} />} />}
+                  title="Vertel iets over jezelf"
+                  description="ThoughtVault gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen."
+                >
+                  <div className="onb-profile">
+                    <ProfileField
+                      label="Naam"
+                      value={profileName}
+                      onChange={setProfileName}
+                      placeholder="Voornaam Achternaam"
+                    />
+                    <ProfileField
+                      label="Rol / Functie"
+                      value={profileRole}
+                      onChange={setProfileRole}
+                      placeholder="Product Manager"
+                    />
+                    <ProfileField
+                      label="Organisatie"
+                      value={profileOrganization}
+                      onChange={setProfileOrganization}
+                      placeholder="Bedrijfsnaam"
+                    />
+                    <ProfileField
+                      label="Hoe noemen collega's jou?"
+                      value={profileAliases}
+                      onChange={setProfileAliases}
+                      placeholder="Voornaam, bijnaam, initialen (kommagescheiden)"
+                    />
+                    <ProfileField
+                      label="Typische vergadertypen"
+                      value={profileMeetingTypes}
+                      onChange={setProfileMeetingTypes}
+                      placeholder="Wekelijks overleg, Klantgesprek (kommagescheiden)"
+                    />
+                    <ProfileField
+                      label="Expertise / onderwerpen"
+                      value={profileExpertiseTags}
+                      onChange={setProfileExpertiseTags}
+                      placeholder="grafisch ontwerp, marketing, IT (kommagescheiden)"
+                    />
+                  </div>
+                </StepContent>
+              )}
+
+              {step === 5 && (
+                <StepContent
+                  icon={<StepIcon icon={<Checkmark24Regular />} />}
+                  title="Je bent klaar!"
+                  description="Start een korte testopname of neem direct je volgende vergadering op."
+                />
+              )}
+            </div>
+
+            {/* Navigation; the notulen step has its own footer */}
+            {step !== NOTULEN_STEP && <div className="onb-footer">
+              {step > 0 ? (
+                <button
+                  onClick={handleBack}
+                  className="btn btn-ghost"
+                >
+                  <ArrowLeft24Regular style={{ fontSize: 15 }} />
+                  Vorige
+                </button>
+              ) : null}
+              <span className="onb-spacer" />
+
+              {step < 5 ? (
                 <button
                   onClick={handleNext}
-                  className="btn btn-ghost"
-                  style={{ width: "100%", fontSize: 13 }}
+                  className="btn btn-accent"
                 >
-                  {settings.ms365_client_id ? "Overslaan" : "Volgende"}
+                  {step === 2 && settings.ms365_client_id ? "Overslaan" : "Volgende"}
+                  <ArrowRight24Regular style={{ fontSize: 16 }} />
                 </button>
-              </div>
-            </StepContent>
-          )}
-
-          {step === NOTULEN_STEP && <NotulenStep onBack={handleBack} onDone={handleNext} />}
-
-          {step === 4 && (
-            <StepContent
-              icon={<StepIcon icon={<Person24Regular style={{ fontSize: 28 }} />} />}
-              title="Vertel iets over jezelf"
-              description="ThoughtVault gebruikt jouw profiel om actiepunten straks aan de juiste persoon te koppelen. Je kunt dit altijd later aanpassen."
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                <ProfileField
-                  label="Naam"
-                  value={profileName}
-                  onChange={setProfileName}
-                  placeholder="Voornaam Achternaam"
-                />
-                <ProfileField
-                  label="Rol / Functie"
-                  value={profileRole}
-                  onChange={setProfileRole}
-                  placeholder="Product Manager"
-                />
-                <ProfileField
-                  label="Organisatie"
-                  value={profileOrganization}
-                  onChange={setProfileOrganization}
-                  placeholder="Bedrijfsnaam"
-                />
-                <ProfileField
-                  label="Hoe noemen collega's jou?"
-                  value={profileAliases}
-                  onChange={setProfileAliases}
-                  placeholder="Voornaam, bijnaam, initialen (kommagescheiden)"
-                />
-                <ProfileField
-                  label="Typische vergadertypen"
-                  value={profileMeetingTypes}
-                  onChange={setProfileMeetingTypes}
-                  placeholder="Wekelijks overleg, Klantgesprek (kommagescheiden)"
-                />
-                <ProfileField
-                  label="Expertise / onderwerpen"
-                  value={profileExpertiseTags}
-                  onChange={setProfileExpertiseTags}
-                  placeholder="grafisch ontwerp, marketing, IT (kommagescheiden)"
-                />
-              </div>
-            </StepContent>
-          )}
-
-          {step === 5 && (
-            <StepContent
-              icon={
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    background: "rgba(15, 123, 15, 0.10)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 16px",
-                  }}
+              ) : (
+                <button
+                  onClick={handleComplete}
+                  className="btn btn-accent"
                 >
-                  <Checkmark24Regular style={{ fontSize: 32, color: "var(--fill-system-success)" }} />
-                </div>
-              }
-              title="Je bent klaar!"
-              description="Je bent klaar om je eerste gesprek vast te leggen. Start een korte testopname of neem direct je volgende meeting op."
-            />
-          )}
-        </div>
+                  Maak je eerste opname
+                  <ArrowRight24Regular style={{ fontSize: 16 }} />
+                </button>
+              )}
+            </div>}
 
-        {/* Navigation; the notulen step has its own footer */}
-        {step !== NOTULEN_STEP && <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 32 }}>
-          {step > 0 ? (
-            <button
-              onClick={handleBack}
-              className="btn btn-ghost"
-              style={{ fontSize: 13, gap: 6 }}
-            >
-              <ArrowLeft24Regular style={{ fontSize: 15 }} />
-              Vorige
-            </button>
-          ) : (
-            <div />
-          )}
-
-          {step < 5 ? (
-            <button
-              onClick={handleNext}
-              className="btn btn-accent"
-              style={{ padding: "8px 20px", gap: 6 }}
-            >
-              {step === 2 || step === 4 ? "Overslaan" : "Volgende"}
-              <ArrowRight24Regular style={{ fontSize: 16 }} />
-            </button>
-          ) : (
-            <button
-              onClick={handleComplete}
-              className="btn btn-accent"
-              style={{ padding: "8px 20px", gap: 6 }}
-            >
-              Maak je eerste opname
-              <ArrowRight24Regular style={{ fontSize: 16 }} />
-            </button>
-          )}
-        </div>}
-
+          </div>
+        </main>
       </div>
-      </div>
-      <div style={{ marginTop: "auto", flexShrink: 0 }}>
-        <BrandFooter />
-      </div>
+      <BrandFooter />
     </div>
   );
 }
@@ -308,74 +252,30 @@ function ProfileField({
   placeholder?: string;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <label style={{ fontSize: 13, fontWeight: 500, color: "var(--text-secondary)" }}>
-        {label}
-      </label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width: "100%",
-          padding: "7px 10px",
-          background: "var(--fill-control-default)",
-          border: "1px solid var(--stroke-control-secondary)",
-          borderBottom: "1px solid var(--stroke-control-default)",
-          borderRadius: "var(--radius-sm)",
-          color: "var(--text-primary)",
-          fontSize: 13,
-          outline: "none",
-          fontFamily: "inherit",
-          boxSizing: "border-box",
-        }}
-      />
-    </div>
+    <label className="onb-field">
+      {label}
+      <input className="input" type="text" value={value}
+        onChange={event => onChange(event.target.value)} placeholder={placeholder} />
+    </label>
   );
 }
 
 function StepIcon({ icon }: { icon: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        width: 64,
-        height: 64,
-        background: "rgba(144, 72, 240, 0.08)",
-        borderRadius: 16,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        margin: "0 auto 16px",
-        color: "var(--fill-accent-default)",
-      }}
-    >
-      {icon}
-    </div>
-  );
+  return <span className="onb-step-icon" aria-hidden="true">{icon}</span>;
 }
 
-function StepContent({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: React.ReactNode;
+function StepContent({ icon, title, description, children }: {
+  icon?: React.ReactNode;
   title: string;
   description: string;
   children?: React.ReactNode;
 }) {
   return (
-    <div>
+    <>
       {icon}
-      <h2 style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", textAlign: "center", margin: 0 }}>
-        {title}
-      </h2>
-      <p style={{ fontSize: 13, color: "var(--text-tertiary)", textAlign: "center", marginTop: 8, marginBottom: 20, lineHeight: 1.6 }}>
-        {description}
-      </p>
-      {children}
-    </div>
+      <h1 className="onb-title" tabIndex={-1}>{title}</h1>
+      <p className="onb-lead">{description}</p>
+      {children && <div className="onb-body">{children}</div>}
+    </>
   );
 }

@@ -485,6 +485,15 @@ import WhisperKit
 /// CoreML Whisper transcription via WhisperKit. Never downloads; the model must be installed (see WhisperModelStore).
 final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
+    /// Joins segments after dropping whitespace-separated tokens made only of `*` (WhisperKit emits `***`
+    /// on silence). Tokens that merely contain an asterisk inside other text are kept; other punctuation is untouched.
+    static func cleanedTranscript(_ segments: [String]) -> String {
+        segments
+            .map { $0.split(whereSeparator: \.isWhitespace).filter { !$0.allSatisfy { $0 == "*" } }.joined(separator: " ") }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
     private let model: String
     /// Injectable so tests need no model on disk.
     private let isInstalled: @Sendable (String) -> Bool
@@ -623,8 +632,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             }
             onProgress(0.95)
 
-            let text = results.map(\.text).joined(separator: " ")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = Self.cleanedTranscript(results.map(\.text))
 
             guard !text.isEmpty else { throw LocalTranscriberError.emptyResult }
             onProgress(1.0)

@@ -1,6 +1,7 @@
 import { act } from "react";
 import { Store } from "@tauri-apps/plugin-store";
 import { createRoot } from "react-dom/client";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { TranscriptsPage } from "../TranscriptsPage";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -26,13 +27,13 @@ async function openDialog(note: Transcript) {
   useProfilesStore.setState({ profiles: [
     { id: "executive", name: "Executive" }, { id: "klantgesprek", name: "Klantgesprek" }, { id: "promptnotitie", name: "Promptnotitie" },
   ] });
-  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn().mockResolvedValue([]), set: vi.fn(), save: vi.fn() } as unknown as Store);
+  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn(async (key: string) => key === "library" ? { schemaVersion: 1, defaultId: null, styles: [] } : []), set: vi.fn(), save: vi.fn() } as unknown as Store);
   await useLocalTranscriptsStore.getState().hydrate();
   if (note.id.startsWith("local-")) await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
   const container = document.createElement("div");
   const root = createRoot(container);
-  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>); });
   await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Notulen opnieuw genereren met AI"]')!.click(); });
   const dialog = () => container.querySelector(".td-overlay")!;
   const pressed = () => dialog().querySelector('[aria-label="Detailniveau"] button[aria-pressed="true"]')?.textContent;

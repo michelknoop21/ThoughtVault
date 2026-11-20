@@ -148,3 +148,19 @@ it("StrictMode late old listener cannot activate the replacement generation", as
   await act(async () => root.unmount()); expect(newStop).toHaveBeenCalledOnce();
   vi.mocked(listen).mockImplementation(original);
 });
+
+it("keeps recording and processes normally after a non-fatal system audio warning", async () => {
+  useSettingsStore.setState({ processing_mode: "local" });
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(<Handler />));
+  useRecordingStore.setState({ phase: "recording", filePath: "partial.wav", recordingStartedAt: 5000 });
+  await act(async () => mocks.events.get("recording-warning")!({ payload: "Alleen je microfoon neemt verder op." }));
+  expect(useRecordingStore.getState()).toMatchObject({ phase: "recording", filePath: "partial.wav", recordingStartedAt: 5000 });
+  expect(useToast.getState().toasts).toEqual(expect.arrayContaining([
+    expect.objectContaining({ message: "Alleen je microfoon neemt verder op.", severity: "warning" }),
+  ]));
+  await act(async () => mocks.events.get("recording-stopped")!({ payload: { file_path: "partial.wav", duration_seconds: 30 } }));
+  expect(mocks.process).toHaveBeenCalledWith("partial.wav", expect.any(String), "combined", [], 30);
+  await act(async () => root.unmount());
+  expect(mocks.events.has("recording-warning")).toBe(false);
+});

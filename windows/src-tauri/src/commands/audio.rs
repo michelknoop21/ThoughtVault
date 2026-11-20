@@ -117,6 +117,9 @@ pub async fn start_recording(
                         Some(RecordingEvent::AudioSpectrum(bands)) => mic_bands = (bands, std::time::Instant::now()),
                         Some(RecordingEvent::SystemAudioSpectrum(bands)) => system_bands = (bands, std::time::Instant::now()),
                         Some(RecordingEvent::Stopped { .. }) => break,
+                        Some(RecordingEvent::Warning(message)) => {
+                            let _ = app_clone.emit("recording-warning", message);
+                        }
                         Some(RecordingEvent::Error(error)) => {
                             // A losing callback may enqueue first; consume the atomically published winner.
                             if let Some(code) = event_terminal.take() { emit_diagnostic(&app_clone, code); }

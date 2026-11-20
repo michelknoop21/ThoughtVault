@@ -41,6 +41,10 @@ export function useGlobalRecordingHandler() {
       }
       if (state.phase !== previous.phase || state.pausedAt !== previous.pausedAt || state.pausedDuration !== previous.pausedDuration) syncWidget();
     });
+    const warning = listen<string>("recording-warning", (event) => {
+      if (disposed) return;
+      useToast.getState().show(event.payload, "warning");
+    });
     const ready = listen("widget-ready", syncWidget);
     const paused = listen("recording-paused", () => {
       if (disposed) return;
@@ -104,7 +108,7 @@ export function useGlobalRecordingHandler() {
       void reportFailure("opnemen", shown, code);
     });
     // Register every handler before native recording or widget creation can begin.
-    void Promise.all([ready, paused, resumed, stopping, stopped, error, diagnostic].map(listener => listener.then(retain)))
+    void Promise.all([ready, paused, resumed, stopping, stopped, error, diagnostic, warning].map(listener => listener.then(retain)))
       .then(() => { if (!disposed) registration.activate(); })
       .catch(error => { dispose(); console.error(error); });
 

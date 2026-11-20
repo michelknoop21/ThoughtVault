@@ -47,6 +47,8 @@ pub enum RecordingEvent {
     SystemAudioSpectrum([f32; 7]),
     /// Recording stopped, file path and duration
     Stopped { file_path: String, duration_seconds: f64 },
+    /// Recoverable loss of system audio; recording continues.
+    Warning(String),
     /// Error occurred
     Error(String),
 }

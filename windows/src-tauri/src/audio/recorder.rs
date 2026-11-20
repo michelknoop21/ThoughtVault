@@ -1,3 +1,6 @@
+#[path = "loopback.rs"]
+mod loopback;
+
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::Sample;
 use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};
@@ -245,6 +248,8 @@ fn recording_thread_body(
 ) -> Result<RecordingResult, String> {
     let host = cpal::default_host();
 
+    if mode == RecordingMode::Combined { loopback::log_devices(&host, "before microphone opens"); }
+
     // Select input device
     let input_device = if let Some(ref id) = device_id {
         host.input_devices()
@@ -361,42 +366,13 @@ fn recording_thread_body(
     // Loopback writes to a SEPARATE file to avoid interleaved sample corruption.
     // After recording stops, both files are mixed together.
     let loopback_path = format!("{}.loopback.wav", output_path.trim_end_matches(".wav"));
-    let loopback_writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>> =
-        Arc::new(Mutex::new(None));
-    let has_loopback;
-
-    // Keep loopback stream alive until recording stops — underscore-prefixed
-    // name creates a real binding (unlike bare `_` which drops immediately).
-    let _loopback_stream: Option<Box<dyn StreamTrait>> = if mode == RecordingMode::Combined {
-        #[cfg(target_os = "windows")]
-        {
-            match try_build_loopback_stream(
-                &host, &loopback_path,
-                Arc::clone(&loopback_writer), Arc::clone(&is_paused), Arc::clone(&clock), event_tx.clone(), Arc::clone(terminal),
-            ) {
-                Ok(stream) => {
-                    elog!("[Audio] Loopback stream gestart voor systeemaudio opname");
-                    has_loopback = true;
-                    Some(Box::new(stream))
-                },
-                Err(e) => {
-                    // A combined recording must never silently become mic-only.
-                    // Clean up in case a file was partially created
-                    *loopback_writer.lock().unwrap() = None;
-                    let _ = std::fs::remove_file(&loopback_path);
-                    return Err(format!("Systeemaudio niet beschikbaar: {e}. Kies Microfoon om alleen je microfoon op te nemen."));
-                }
-            }
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            has_loopback = false;
-            None
-        }
-    } else {
-        has_loopback = false;
-        None
-    };
+    let mut loopback: Option<loopback::LoopbackCapture> = None;
+    #[cfg(target_os = "windows")]
+    if mode == RecordingMode::Combined {
+        loopback = Some(loopback::LoopbackCapture::start(
+            &host, &loopback_path, Arc::clone(&is_paused), Arc::clone(&clock), event_tx.clone(), Arc::clone(terminal),
+        ).map_err(|error| format!("Systeemaudio niet beschikbaar: {error}. Kies Microfoon om alleen je microfoon op te nemen."))?);
+    }
 
     input_stream.play().map_err(|e| format!("Kan stream niet starten: {}", e))?;
     if let Some(ready) = ready.take() { let _ = ready.send(Ok(())); }
@@ -405,8 +381,21 @@ fn recording_thread_body(
 
     // Block waiting for commands using the handle captured from the caller
     rt_handle.block_on(async {
+        let mut poll = tokio::time::interval(std::time::Duration::from_secs(1));
+        let mut logged_devices = false;
         loop {
-            match cmd_rx.recv().await {
+            let command = tokio::select! {
+                command = cmd_rx.recv() => command,
+                _ = poll.tick() => {
+                    if mode == RecordingMode::Combined && !logged_devices && start.elapsed().as_secs() >= 2 {
+                        loopback::log_devices(&host, "two seconds after microphone starts");
+                        logged_devices = true;
+                    }
+                    if let Some(capture) = loopback.as_mut() { capture.poll(&host); }
+                    continue;
+                }
+            };
+            match command {
                 Some(RecordingCommand::Pause) => {
                     is_paused.store(true, Ordering::Relaxed);
                     let mut clock = clock.lock().unwrap();
@@ -431,7 +420,7 @@ fn recording_thread_body(
 
     // Drop streams before finalizing writers
     drop(input_stream);
-    drop(_loopback_stream);
+    if let Some(capture) = loopback.as_mut() { capture.stop_stream(); }
 
     // Finalize mic WAV
     if let Ok(mut guard) = mic_writer.lock() {
@@ -446,15 +435,9 @@ fn recording_thread_body(
         elog!("[Audio] ERROR: Failed to lock mic writer for finalize!");
     }
 
-    // Finalize loopback WAV
-    if has_loopback {
-        if let Ok(mut guard) = loopback_writer.lock() {
-            if let Some(w) = guard.take() {
-                elog!("[Audio] Finalizing loopback WAV file...");
-                w.finalize().map_err(|e| format!("Systeemaudio opslaan mislukt: {e}"))?;
-                elog!("[Audio] Loopback WAV file finalized successfully");
-            }
-        }
+    // Finalize the persistent loopback WAV, including any pre-disconnection audio.
+    if let Some(capture) = loopback.as_mut() {
+        capture.finalize()?;
 
         // Mix mic + loopback into the final output file
         elog!("[Audio] Mixing mic and loopback audio...");
@@ -911,234 +894,6 @@ fn build_input_stream_f32(
     ).map_err(|e| format!("Kan f32 audio stream niet openen: {}", e))?;
 
     Ok(stream)
-}
-
-/// Build a WASAPI loopback capture stream on Windows.
-/// Discovers the output device's native format, creates a WAV file at loopback_path
-/// with the correct sample rate, and writes mono-downmixed audio.
-#[cfg(target_os = "windows")]
-fn try_build_loopback_stream(
-    host: &cpal::Host,
-    loopback_path: &str,
-    writer: Arc<Mutex<Option<WavWriter<std::io::BufWriter<std::fs::File>>>>>,
-    is_paused: Arc<AtomicBool>,
-    clock: Arc<Mutex<CaptureClock>>,
-    event_tx: mpsc::UnboundedSender<RecordingEvent>,
-    terminal: Arc<TerminalDiagnostic>,
-) -> Result<cpal::Stream, String> {
-    use cpal::traits::HostTrait;
-
-    // On WASAPI: enumerate output devices — they support loopback capture
-    let output_device = host.default_output_device()
-        .ok_or("Geen standaard uitvoerapparaat voor loopback")?;
-
-    let device_name = output_device.name().unwrap_or_else(|_| "unknown".to_string());
-    elog!("[Audio] Loopback device: {}", device_name);
-
-    // CRITICAL FIX: Use supported_output_configs() instead of supported_input_configs().
-    // cpal returns empty from supported_input_configs() for output devices, but
-    // build_input_stream() internally adds AUDCLNT_STREAMFLAGS_LOOPBACK for output devices.
-    // We just need the correct format info from the output config query.
-    let configs_vec: Vec<_> = output_device
-        .supported_output_configs()
-        .map_err(|e| format!("Kan loopback configs niet lezen: {}", e))?
-        .map(|cfg| {
-            elog!("[Audio] Loopback config: channels={}, rate={}-{}, format={:?}",
-                cfg.channels(), cfg.min_sample_rate().0, cfg.max_sample_rate().0, cfg.sample_format());
-            cfg
-        })
-        .collect();
-
-    if configs_vec.is_empty() {
-        return Err("Geen loopback configuraties gevonden (supported_output_configs leeg)".to_string());
-    }
-
-    // Find a config — prefer one that includes our target rate, otherwise use highest available
-    let supported = configs_vec
-        .iter()
-        .find(|c| c.channels() >= CHANNELS
-            && c.min_sample_rate() <= cpal::SampleRate(TARGET_SAMPLE_RATE)
-            && c.max_sample_rate() >= cpal::SampleRate(TARGET_SAMPLE_RATE))
-        .or_else(|| {
-            elog!("[Audio] Loopback: {} Hz niet beschikbaar, zoekt alternatief", TARGET_SAMPLE_RATE);
-            configs_vec.iter()
-                .filter(|c| c.channels() >= CHANNELS)
-                .max_by_key(|c| c.max_sample_rate())
-        })
-        .ok_or("Geen geschikte loopback configuratie gevonden")?;
-
-    let sample_format = supported.sample_format();
-    let loopback_channels = supported.channels();
-
-    // Use the closest sample rate to TARGET, clamped to device's supported range
-    let device_min = supported.min_sample_rate().0;
-    let device_max = supported.max_sample_rate().0;
-    let loopback_rate = TARGET_SAMPLE_RATE.clamp(device_min, device_max);
-
-    elog!("[Audio] Loopback: rate={} Hz (range: {}-{}), channels={}, format={:?}",
-        loopback_rate, device_min, device_max, loopback_channels, sample_format);
-
-    let config: cpal::StreamConfig = supported.clone()
-        .with_sample_rate(cpal::SampleRate(loopback_rate))
-        .into();
-
-    // Loopback WAV ALWAYS at 16 kHz — resampling happens in the callback
-    let loopback_wav_spec = WavSpec {
-        channels: CHANNELS,
-        sample_rate: TARGET_SAMPLE_RATE,
-        bits_per_sample: BITS_PER_SAMPLE,
-        sample_format: HoundSampleFormat::Int,
-    };
-
-    let loopback_writer = WavWriter::create(loopback_path, loopback_wav_spec)
-        .map_err(|e| format!("Kan loopback WAV niet aanmaken: {}", e))?;
-    *writer.lock().unwrap() = Some(loopback_writer);
-
-    // Streaming resampler for loopback: device rate → 16 kHz
-    let loopback_resampler = Arc::new(Mutex::new(StreamingResampler::new(loopback_rate, TARGET_SAMPLE_RATE)));
-    if loopback_rate != TARGET_SAMPLE_RATE {
-        elog!("[Audio] Loopback resampler active: {} Hz → {} Hz (ratio {:.2})",
-            loopback_rate, TARGET_SAMPLE_RATE, loopback_rate as f64 / TARGET_SAMPLE_RATE as f64);
-    }
-
-    // Loopback needs format-specific handling with stereo-to-mono downmix + resample
-    match sample_format {
-        cpal::SampleFormat::I16 => {
-            let writer_clone = Arc::clone(&writer);
-            let resampler_clone = Arc::clone(&loopback_resampler);
-            let mut meter = LevelMeter::new(loopback_rate);
-            let mut written = 0_u64;
-            let levels_tx = event_tx.clone();
-            let errors_tx = event_tx.clone();
-    let errors_terminal = Arc::clone(&terminal);
-
-            // Log first callback once
-            let first_callback = Arc::new(AtomicBool::new(true));
-            let first_callback_clone = Arc::clone(&first_callback);
-
-            let stream = output_device.build_input_stream(
-                &config,
-                move |data: &[i16], info| {
-                    if first_callback_clone.swap(false, Ordering::Relaxed) {
-                        elog!("[Audio] Loopback FIRST CALLBACK: {} raw samples, {} channels → mono downmix + resample",
-                            data.len(), loopback_channels);
-                    }
-
-                    if is_paused.load(Ordering::Relaxed) {
-                        return;
-                    }
-                    let position = clock.lock().unwrap().position(info);
-                    if let Ok(mut guard) = writer_clone.lock() {
-                        if let Some(ref mut w) = &mut *guard {
-                            let ch = loopback_channels as usize;
-                            let frame_count = data.len() / ch;
-
-                            // Downmix, meter system audio, then resample for storage.
-                            let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
-                            for frame_idx in 0..frame_count {
-                                let base = frame_idx * ch;
-                                let mut sum: i32 = 0;
-                                for c in 0..ch {
-                                    sum += data[base + c] as i32;
-                                }
-                                let mono = (sum / loopback_channels as i32) as i16;
-                                mono_chunk.push(mono);
-                                if let Some((level, bands)) = meter.push(mono.to_float_sample()) {
-                                    let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
-                                    let _ = levels_tx.send(RecordingEvent::SystemAudioSpectrum(bands));
-                                }
-                            }
-
-                            // Step 2: Resample chunk from device rate to 16 kHz
-                            let resampled = if let Ok(mut r) = resampler_clone.lock() {
-                                r.process_i16(&mono_chunk)
-                            } else {
-                                mono_chunk
-                            };
-
-                            if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
-                                is_paused.store(true, Ordering::Relaxed);
-                                terminal.claim(RecordingDiagnosticCode::CaptureFailed);
-                                let _ = levels_tx.send(RecordingEvent::Error(format!("Systeemaudio opslaan mislukt: {error}")));
-                            }
-                        }
-                    }
-                },
-                move |err| { errors_terminal.claim(RecordingDiagnosticCode::CaptureFailed); let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
-                None,
-            ).map_err(|e| format!("Loopback i16 stream fout: {}", e))?;
-            stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
-            Ok(stream)
-        }
-        cpal::SampleFormat::F32 => {
-            let writer_clone = Arc::clone(&writer);
-            let resampler_clone = Arc::clone(&loopback_resampler);
-            let mut meter = LevelMeter::new(loopback_rate);
-            let mut written = 0_u64;
-            let levels_tx = event_tx.clone();
-            let errors_tx = event_tx.clone();
-    let errors_terminal = Arc::clone(&terminal);
-
-            // Log first callback once
-            let first_callback = Arc::new(AtomicBool::new(true));
-            let first_callback_clone = Arc::clone(&first_callback);
-
-            let stream = output_device.build_input_stream(
-                &config,
-                move |data: &[f32], info| {
-                    if first_callback_clone.swap(false, Ordering::Relaxed) {
-                        elog!("[Audio] Loopback FIRST CALLBACK (f32): {} raw samples, {} channels → mono downmix + resample",
-                            data.len(), loopback_channels);
-                    }
-
-                    if is_paused.load(Ordering::Relaxed) {
-                        return;
-                    }
-                    let position = clock.lock().unwrap().position(info);
-                    if let Ok(mut guard) = writer_clone.lock() {
-                        if let Some(ref mut w) = &mut *guard {
-                            let ch = loopback_channels as usize;
-                            let frame_count = data.len() / ch;
-
-                            // Step 1: Downmix to mono and convert f32 → i16
-                            let mut mono_chunk: Vec<i16> = Vec::with_capacity(frame_count);
-                            for frame_idx in 0..frame_count {
-                                let base = frame_idx * ch;
-                                let mut sum: f32 = 0.0;
-                                for c in 0..ch {
-                                    sum += data[base + c];
-                                }
-                                let mono_sample = sum / loopback_channels as f32;
-                                mono_chunk.push((mono_sample.clamp(-1.0, 1.0) * i16::MAX as f32) as i16);
-                                if let Some((level, bands)) = meter.push(mono_sample) {
-                                    let _ = levels_tx.send(RecordingEvent::SystemAudioLevel(level));
-                                    let _ = levels_tx.send(RecordingEvent::SystemAudioSpectrum(bands));
-                                }
-                            }
-
-                            // Step 2: Resample chunk from device rate to 16 kHz
-                            let resampled = if let Ok(mut r) = resampler_clone.lock() {
-                                r.process_i16(&mono_chunk)
-                            } else {
-                                mono_chunk
-                            };
-
-                            if let Err(error) = write_timed_chunk(w, &resampled, position, &mut written) {
-                                is_paused.store(true, Ordering::Relaxed);
-                                terminal.claim(RecordingDiagnosticCode::CaptureFailed);
-                                let _ = levels_tx.send(RecordingEvent::Error(format!("Systeemaudio opslaan mislukt: {error}")));
-                            }
-                        }
-                    }
-                },
-                move |err| { errors_terminal.claim(RecordingDiagnosticCode::CaptureFailed); let _ = errors_tx.send(RecordingEvent::Error(format!("Systeemgeluidverbinding onderbroken: {err}"))); },
-                None,
-            ).map_err(|e| format!("Loopback f32 stream fout: {}", e))?;
-            stream.play().map_err(|e| format!("Kan loopback stream niet starten: {}", e))?;
-            Ok(stream)
-        }
-        _ => Err("Niet-ondersteunde loopback sample format".to_string()),
-    }
 }
 
 #[cfg(test)]

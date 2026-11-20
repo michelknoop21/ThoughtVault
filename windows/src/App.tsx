@@ -1,3 +1,4 @@
+import { refreshProfileAccess } from "./services/prospectFlow";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useContext, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
@@ -123,6 +124,7 @@ function ProtectedRoutes() {
   useEffect(() => logRoute(location.pathname), [location.pathname]);
   const setProfiles = useProfilesStore((s) => s.setProfiles);
   const showLocalProfiles = useProfilesStore((s) => s.showLocalProfiles);
+  useEffect(() => { void refreshProfileAccess(); }, []);
 
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);

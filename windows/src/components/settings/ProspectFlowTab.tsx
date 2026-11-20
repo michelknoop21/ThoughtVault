@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DocumentText24Regular, CheckmarkCircle24Regular, ErrorCircle24Regular } from "../ui/StudioIcons";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { testConnection, PROSPECTFLOW_KEY } from "../../services/prospectFlow";
+import { testConnection, refreshProfileAccess, PROSPECTFLOW_KEY } from "../../services/prospectFlow";
 import { SettingsField, CredentialField, CardHead } from "./SettingsFields";
 
 export function ProspectFlowTab() {
   const settings = useSettingsStore();
   const [status, setStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [error, setError] = useState("");
+
+  useEffect(() => { void refreshProfileAccess(); }, [settings.prospectflow_base_url]);
 
   async function handleTest() {
     setStatus("testing");
@@ -32,7 +34,7 @@ export function ProspectFlowTab() {
         </SettingsField>
       </div>
       <div style={{ padding: "0 14px 14px" }}>
-        <CredentialField credentialKey={PROSPECTFLOW_KEY} label="API-sleutel">
+        <CredentialField credentialKey={PROSPECTFLOW_KEY} label="API-sleutel" onCredentialChange={() => { void refreshProfileAccess(); }}>
           <button onClick={handleTest} className="btn btn-secondary btn-sm" disabled={status === "testing"} style={{ alignSelf: "flex-start" }}>
             {status === "testing" ? "Testen..." :
              status === "success" ? <><CheckmarkCircle24Regular style={{ fontSize: 14 }} /> Verbonden</> :

@@ -1551,6 +1551,7 @@ struct TranscriptDetailView: View {
                     Label("Platte tekst", systemImage: "doc.text")
                 }
                 ProspectFlowMenuItems(transcript: fullTranscript, onOpenError: { errorMessage = $0 }) { showProspectFlowSheet = true }
+                    .disabled(isEditingNotule)
                 Divider()
                 Button { copyContent() } label: {
                     Label("Kopieer tekst", systemImage: "doc.on.doc")
@@ -1788,6 +1789,16 @@ struct TranscriptDetailView: View {
             if !isEditingNotule {
                 ContextSuggestionBar(taskId: fullTranscript.taskId, profileName: fullTranscript.profileName ?? "", scope: correctionProfileId,
                                      profiles: recordingVM.availableProfiles, applyCorrection: applyWordCorrection)
+            }
+            if fullTranscript.profileName == "Prospectflow offerte", ProspectFlowService.hasVerifiedKey {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    Text("Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig.")
+                        .font(TS.Font.footnote).foregroundStyle(Color.labelSecondary)
+                    Button("Notule accorderen en naar Prospect Flow") { showProspectFlowSheet = true }
+                        .buttonStyle(.borderedProminent).tint(Color.brandPrimary)
+                        .disabled(isEditingNotule)
+                }
+                .padding(TS.Spacing.md).frame(maxWidth: .infinity, alignment: .leading)
             }
             if isEditingNotule {
                 FormattingToolbar(webView: editableWebViewRef)

@@ -1,0 +1,46 @@
+.pf-dialog { display: flex; flex-direction: column; gap: 14px; padding: 24px; border-color: var(--card-border); border-radius: var(--radius-md); }
+.pf-dialog h3 { margin: 4px 0 6px; }
+.pf-dialog p { margin: 0; }
+.pf-eyebrow { font-size: 11px; font-weight: 650; letter-spacing: .06em; color: var(--brand-primary); }
+.pf-suggestion { display: grid; gap: 5px; padding: 16px; border-radius: var(--radius-sm); background: var(--interactive-bg-subtle); box-shadow: inset 0 0 0 1px var(--card-border); }
+.pf-suggestion strong { font-size: 18px; overflow-wrap: anywhere; }
+.pf-suggestion small, .pf-suggestion blockquote { color: var(--text-secondary); }
+.pf-suggestion blockquote { margin: 3px 0 0; font-size: 12px; line-height: 1.5; }
+.pf-picker { border: 0; padding: 0; min-width: 0; display: grid; gap: 8px; }
+.pf-picker legend { font-weight: 600; margin-bottom: 8px; }
+.pf-search { display: flex; gap: 8px; }
+.pf-search input { min-width: 0; flex: 1; }
+.pf-options { max-height: 176px; overflow-y: auto; }
+.pf-option { display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: var(--radius-xs); cursor: pointer; overflow-wrap: anywhere; }
+.pf-option:has(:checked) { background: var(--interactive-bg-subtle); box-shadow: inset 0 0 0 1px var(--brand-primary); }
+.pf-dialog input[type=radio], .pf-dialog input[type=checkbox] { accent-color: var(--brand-primary); flex-shrink: 0; }
+.pf-review summary { cursor: pointer; font-weight: 600; }
+.pf-review > div { max-height: 180px; overflow-y: auto; white-space: pre-wrap; padding: 12px 0; font-size: 13px; }
+.pf-approval { display: flex; gap: 8px; align-items: start; font-size: 13px; }
+.pf-footer { border-top: 1px solid var(--card-border); padding-top: 16px; flex-wrap: wrap; }
+.pf-dialog :is(button, input, summary):focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+.pf-dialog button { transition: transform 160ms cubic-bezier(.23,1,.32,1); }
+.pf-dialog button:active:not(:disabled) { transform: scale(.97); }
+.pf-loading { display: grid; gap: 10px; }
+.pf-loading span { display: block; height: 32px; background: var(--interactive-bg-subtle); border-radius: var(--radius-xs); }
+.pf-loading span:nth-child(2) { width: 65%; }
+.pf-dialog, .pf-options, .pf-review > div { scrollbar-color: var(--text-tertiary) transparent; }
+@supports selector(::-webkit-scrollbar) {
+  .pf-dialog, .pf-options, .pf-review > div { scrollbar-color: auto; }
+  .pf-dialog::-webkit-scrollbar, .pf-options::-webkit-scrollbar, .pf-review > div::-webkit-scrollbar { width: 12px; }
+  .pf-dialog::-webkit-scrollbar-thumb, .pf-options::-webkit-scrollbar-thumb, .pf-review > div::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text-primary) 22%, transparent); background-clip: padding-box; border: 3px solid transparent; border-radius: 12px; }
+}
+@supports not selector(::-webkit-scrollbar) { .pf-dialog, .pf-options, .pf-review > div { scrollbar-width: thin; } }
+@media (hover: hover) { .pf-option:hover { background: var(--interactive-bg-hover); } }
+@starting-style { .pf-dialog { opacity: 0; transform: scale(.97); } }
+.pf-dialog { transition: opacity 200ms cubic-bezier(.23,1,.32,1), transform 200ms cubic-bezier(.23,1,.32,1); }
+@media (max-width: 390px) { .pf-dialog { padding: 16px; gap: 12px; } .pf-footer { display: grid; } .pf-search { flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) { .pf-dialog, .pf-dialog button { transition: none; } .pf-dialog button:active:not(:disabled) { transform: none; } }
+/* The shared correction dialog has a fixed dark surface; use adaptive tokens here. */
+.correction-dialog.pf-dialog { background: var(--surface-primary); color: var(--text-primary); }
+.pf-dialog .input { background: var(--surface-secondary); color: var(--text-primary); box-shadow: inset 0 0 0 1px var(--card-border); }
+.pf-dialog .btn-secondary { background: var(--surface-secondary); color: var(--text-primary); }
+@media (max-width: 390px) { .correction-dialog.pf-dialog { padding: 16px; } }
+@media (hover: hover) {
+  .pf-options::-webkit-scrollbar-thumb:hover, .pf-review > div::-webkit-scrollbar-thumb:hover, .pf-dialog::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--text-primary) 42%, transparent); }
+}

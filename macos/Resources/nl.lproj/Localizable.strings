@@ -726,3 +726,19 @@
 "%lld bronnotulen" = "%lld bronnotulen";
 
 "Originelen blijven bewaard." = "Originelen blijven bewaard.";
+
+// Prospect Flow customer review
+"Controleer de definitieve notule" = "Controleer de definitieve notule";
+"Beoordeel eerst de woordenboekvoorstellen en sla eventuele wijzigingen op in de notule." = "Beoordeel eerst de woordenboekvoorstellen en sla eventuele wijzigingen op in de notule.";
+"Ik accordeer deze notule voor Prospect Flow" = "Ik accordeer deze notule voor Prospect Flow";
+"Voorgestelde opdrachtgever" = "Voorgestelde opdrachtgever";
+"Bron: notule" = "Bron: notule";
+"Bron: transcriptie" = "Bron: transcriptie";
+"Bron: agenda-afspraak" = "Bron: agenda-afspraak";
+"Bron: titel" = "Bron: titel";
+"Geen eenduidige klantnaam gevonden. Kies of vul een klant in." = "Geen eenduidige klantnaam gevonden. Kies of vul een klant in.";
+"Klantvoorstel niet beschikbaar. Kies of vul zelf een klant in." = "Klantvoorstel niet beschikbaar. Kies of vul zelf een klant in.";
+"Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig." = "Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig.";
+"Notule accorderen en naar Prospect Flow" = "Notule accorderen en naar Prospect Flow";
+"Geen klanten gevonden. Kies een nieuwe klant of zoek opnieuw." = "Geen klanten gevonden. Kies een nieuwe klant of zoek opnieuw.";
+"Zoeken mislukt. Probeer opnieuw of vul zelf een klant in." = "Zoeken mislukt. Probeer opnieuw of vul zelf een klant in.";

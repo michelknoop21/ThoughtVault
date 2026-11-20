@@ -189,3 +189,14 @@ it("sends the colleague's e-mail so the draft lands in their own inbox", async (
   await createOffer({ ...input, taskId: "t3", customerId: 12 });
   expect(body()).not.toHaveProperty("maker_email");
 });
+
+it("only unlocks the offer profile after successful key validation and locks it again on failure", async () => {
+  const { testConnection } = await import("../prospectFlow");
+  const { useProfilesStore } = await import("../../stores/profilesStore");
+  invoke.mockResolvedValueOnce({ status: 200, body: JSON.stringify({ kandidaten: [] }) });
+  await testConnection();
+  expect(useProfilesStore.getState().profiles.some(p => p.id === "prospectflow_offerte")).toBe(true);
+  invoke.mockResolvedValueOnce({ status: 401, body: "{}" });
+  await expect(testConnection()).rejects.toThrow();
+  expect(useProfilesStore.getState().profiles.some(p => p.id === "prospectflow_offerte")).toBe(false);
+});

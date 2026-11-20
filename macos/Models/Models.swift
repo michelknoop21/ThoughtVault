@@ -423,7 +423,7 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
     /// Only current built-ins appear for new recordings. The static legacy
     /// definitions above remain available when reading old document IDs.
     static var defaults: [Profile] {
-        ProfileTemplates.entries.map { entry in
+        ProfileTemplates.entries.filter { $0.id != "prospectflow_offerte" || ProspectFlowService.hasVerifiedKey }.map { entry in
             Profile(id: entry.id, name: entry.name, description: entry.description,
                     icon: entry.icon, systemPrompt: entry.systemPrompt,
                     notulePrompt: entry.notulePrompt, template: entry.template,
@@ -445,7 +445,7 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
         let legacyIds: Set<String> = ["zakelijk", "informeel", "technisch", "handleiding", "blog_samenvatting", "notitie"]
         let currentIds = Set(defaults.map(\.id))
         return defaults + remote.filter {
-            $0.isDefault != true && !legacyIds.contains($0.id) && !currentIds.contains($0.id)
+            $0.isDefault != true && !legacyIds.contains($0.id) && !currentIds.contains($0.id) && $0.id != "prospectflow_offerte"
         }
     }
 
@@ -460,7 +460,7 @@ enum LocalProfileStore {
     }
 
     static func choices(defaults: UserDefaults = .standard) -> [Profile] {
-        Profile.defaults + load(defaults: defaults)
+        Profile.defaults + load(defaults: defaults).filter { $0.id != "prospectflow_offerte" }
     }
 
     static func save(_ profile: Profile, defaults: UserDefaults = .standard) throws {

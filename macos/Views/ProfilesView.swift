@@ -223,6 +223,7 @@ struct ProfilesView: View {
     // MARK: - Data Operations
 
     private func loadProfiles() async {
+        await ProspectFlowService.validateKey()
         isLoading = true
         defer { isLoading = false }
         if ProcessingMode.isLocalMode {

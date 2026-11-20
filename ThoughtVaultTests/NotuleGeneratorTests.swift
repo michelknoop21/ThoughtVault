@@ -687,5 +687,22 @@ extension NotuleMergeTests {
         XCTAssertEqual(record.notuleHtml, "<p>Mijn gewijzigde notule blijft bewaard.</p>")
         XCTAssertEqual(record.rawTranscription, "Originele transcriptie")
         XCTAssertNil(record.mergeSourcesJSON)
+final class ProspectFlowCustomerSuggestionTests: XCTestCase {
+    func testNameMustBeGroundedInTheNamedSource() {
+        let sources = ProspectFlowService.customerSources(title: "Offerte Friese Installatietechniek", notes: "Sanne is contactpersoon bij Friese Installatietechniek.", transcript: "", meeting: "")
+        let raw = #"{"name":"Friese Installatietechniek","source":"notes","quote":"Sanne is contactpersoon bij Friese Installatietechniek."}"#
+        XCTAssertEqual(ProspectFlowService.parseCustomerSuggestion(raw, sources: sources)?.name, "Friese Installatietechniek")
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion(raw.replacingOccurrences(of: "\"notes\"", with: "\"meeting\""), sources: sources))
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion(#"{"name":"Verzonnen BV","source":"notes","quote":"Verzonnen BV"}"#, sources: sources))
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion("{}", sources: sources))
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion("not JSON", sources: sources))
+        XCTAssertNotNil(ProspectFlowService.parseCustomerSuggestion("<think>{ reasoning }</think>```json\n" + raw + "\n```", sources: sources))
+    }
+
+    func testInputIsBoundedAndOfferProfileIsGated() {
+        let sources = ProspectFlowService.customerSources(title: "", notes: String(repeating: "x", count: 20_000), transcript: String(repeating: "y", count: 50_000), meeting: "")
+        XCTAssertEqual(sources["notes"]?.count, 16_000)
+        XCTAssertEqual(sources["transcript"]?.count, 48_000)
+        XCTAssertEqual(Profile.defaults.contains { $0.id == "prospectflow_offerte" }, ProspectFlowService.hasVerifiedKey)
     }
 }

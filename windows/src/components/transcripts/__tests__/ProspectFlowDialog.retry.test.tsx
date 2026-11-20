@@ -1,3 +1,4 @@
+vi.mock("../../../services/customerSuggestion", async () => ({ ...await vi.importActual("../../../services/customerSuggestion"), suggestCustomer: vi.fn(async () => null) }));
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -20,6 +21,7 @@ async function mount() {
   await act(async () => { root.render(<ProspectFlowDialog transcript={transcript} onClose={() => {}} />); });
 }
 async function click(label: string) {
+  if (label === "Maak conceptofferte") await act(async () => { const box = host.querySelector<HTMLInputElement>('input[type="checkbox"]'); if (box && !box.checked) box.click(); });
   await act(async () => { [...host.querySelectorAll("button")].find(b => b.textContent === label)!.click(); });
 }
 async function loseReplyAndReopen() {

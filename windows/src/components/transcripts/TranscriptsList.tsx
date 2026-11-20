@@ -13,6 +13,7 @@ import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 type TimeFilter = "alles" | "vandaag" | "week" | "maand";
 
 interface TranscriptsListProps {
+  organization?: (ids: string[]) => React.ReactNode;
   transcripts: Transcript[];
   selectedId: string | null;
   searchQuery: string;
@@ -96,6 +97,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function TranscriptsList({
+  organization,
   transcripts,
   selectedId,
   searchQuery,
@@ -164,6 +166,7 @@ export function TranscriptsList({
           </div>
         </div>
     <div className={`tl-panel${!selectedId ? " tl-panel-full" : ""}`}>
+      {organization?.(bulkMode ? [...bulkSelected] : selectedId ? [selectedId] : [])}
       {/* Header */}
       <div className="tl-header">
 
@@ -254,6 +257,8 @@ export function TranscriptsList({
               {group.items.map((t) => (
                 <div
                   key={t.id}
+                  draggable
+                  onDragStart={event => event.dataTransfer.setData("application/x-thoughtvault-notes", JSON.stringify(bulkMode && bulkSelected.has(t.id) ? [...bulkSelected] : [t.id]))}
                   className={`tl-item${selectedId === t.id ? " active" : ""}`}
                   role="button"
                   tabIndex={0}

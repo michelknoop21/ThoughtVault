@@ -679,3 +679,27 @@
 "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "Sync data could not be read safely. Your local minutes are preserved.";
 "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "Local storage needs recovery first. iCloud sync is paused to protect your minutes.";
 "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "Minutes storage was removed from iCloud. Sync is paused; your local minutes are preserved.";
+
+/* Folders and automatic labels */
+"Alle notulen" = "All notes";
+"Zonder map" = "Unfiled";
+"Mappen" = "Folders";
+"Slimme mappen" = "Smart folders";
+"Nieuwe map…" = "New folder…";
+"Nieuwe slimme map…" = "New smart folder…";
+"Labels beheren…" = "Manage labels…";
+"Labels beheren" = "Manage labels";
+"Nieuw label…" = "New label…";
+"Labelinstellingen" = "Label settings";
+"Map bewerken" = "Edit folder";
+"Automatisch toekennen" = "Assign automatically";
+"Verplaats naar…" = "Move to…";
+"Verplaatsen mislukt" = "Move failed";
+"Bestaande notulen labelen…" = "Label existing notes…";
+"Bestaande notulen labelen?" = "Label existing notes?";
+"Toon notulen met minstens één van deze labels." = "Show notes matching at least one of these labels.";
+"De ingestelde AI-provider gebruikt deze omschrijving. Labels blijven handmatig corrigeerbaar." = "The configured AI provider uses this description. You can still change labels manually.";
+"De ingestelde AI-provider verwerkt de titel en notuletekst. Handmatige labels blijven bewaard. Afgeronde resultaten blijven behouden bij annuleren." = "The configured AI provider processes the title and note text. Manual labels are preserved. Cancelling keeps completed results.";
+"Automatisch labelen opnieuw proberen (%lld)" = "Retry automatic labeling (%lld)";
+"Label %lld notulen" = "Label %lld notes";
+"De huidige AI-aanvraag wordt afgerond. Het resultaat wordt niet opgeslagen." = "The current AI request is finishing. Its result will not be saved.";

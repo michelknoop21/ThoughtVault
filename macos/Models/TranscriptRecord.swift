@@ -22,6 +22,8 @@ final class TranscriptRecord {
     var notuleHtml: String
     var profileId: String
     var profileName: String?
+    var organizationJSON: String?
+    var autoLabelError: String?
     var tags: [String]
     var createdAt: Date
     var localAudioPath: String?
@@ -69,6 +71,14 @@ final class TranscriptRecord {
         self.localAudioPath = localAudioPath
         self.source = source
         self.participantsJSON = participantsJSON
+    }
+
+    var organization: NoteOrganization {
+        get {
+            guard let data = organizationJSON?.data(using: .utf8) else { return NoteOrganization() }
+            return (try? JSONDecoder().decode(NoteOrganization.self, from: data)) ?? NoteOrganization()
+        }
+        set { organizationJSON = String(data: try! JSONEncoder().encode(newValue), encoding: .utf8) }
     }
 
     /// Typed accessor over participantsJSON.

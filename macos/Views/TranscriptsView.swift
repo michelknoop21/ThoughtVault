@@ -49,6 +49,7 @@ struct TranscriptsView: View {
     @State private var searchDebounceTask: Task<Void, Never>? = nil
     @State var sortNewest = true
     @State var selectedDateFilter: DateFilter = .all
+    @State var librarySelection = "all"
     @State var selectedTags: Set<String> = []
 
     // MARK: State - selection / bulk
@@ -80,7 +81,10 @@ struct TranscriptsView: View {
     }
 
     var filteredTranscripts: [Transcript] {
-        var result = transcripts
+        var result = transcripts.filter {
+            LibraryOrganization.shared.matches(librarySelection,
+                folderID: LocalTranscriptStore.shared.record(forTaskId: $0.taskId)?.organization.folderID, tags: $0.tags)
+        }
 
         // Search
         if !searchText.isEmpty {
@@ -131,6 +135,11 @@ struct TranscriptsView: View {
         recordingVM.activeTasks.filter { $0.status == .error }
     }
 
+    var libraryNavigation: some View {
+        LibraryNavigation(selection: $librarySelection, transcripts: transcripts, selectedIDs: selectedIds, refresh: { await loadTranscripts() })
+
+    }
+
     // MARK: Body
 
     var body: some View {
@@ -143,6 +152,7 @@ struct TranscriptsView: View {
             // card metadata; wide windows get a capped, centered column.
             let isCompact = geo.size.width < 640
             VStack(spacing: 0) {
+                libraryNavigation
                 searchBar(isCompact: isCompact)
                 filtersRow(isCompact: isCompact)
                 tagFilterRow(isCompact: isCompact)
@@ -154,6 +164,8 @@ struct TranscriptsView: View {
         .toolbar { toolbarContent }
 #endif
         }
+        .onReceive(NotificationCenter.default.publisher(for: LibraryOrganization.didChange)) { _ in Task { await loadTranscripts() } }
+        .onChange(of: librarySelection) { _, _ in selectedIds.removeAll() }
         .navigationTitle("Notulen")
         .navigationDestination(for: Transcript.self) { transcript in
             TranscriptDetailView(transcript: transcript, availableTags: availableTags)
@@ -393,6 +405,7 @@ struct TranscriptsView: View {
                 } else {
                     ForEach(filteredTranscripts) { transcript in
                         transcriptCardRow(transcript, isCompact: isCompact)
+                            .draggable(transcript.taskId)
                     }
                 }
             }
@@ -634,6 +647,7 @@ struct TranscriptsView: View {
             showSingleDeleteConfirm = true
         }
         .contextMenu {
+            LibraryMoveMenu(taskIDs: [transcript.taskId], refresh: { await loadTranscripts() })
             Button {
                 transcriptsNavPath.append(transcript)
             } label: {

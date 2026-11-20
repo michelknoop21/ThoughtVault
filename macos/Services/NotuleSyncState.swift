@@ -20,8 +20,11 @@ struct SyncedNotule: Codable, Equatable, Sendable {
     var notuleReviewReason: String?
     var durationSeconds: Double?
     var notuleUsageJSON: String?
+    var organizationJSON: String?
+    var libraryEntries: [LibraryEntry]?
 
     @MainActor init(_ record: TranscriptRecord) {
+        organizationJSON = record.organizationJSON
         id = record.id
         taskId = record.taskId
         title = record.title
@@ -40,6 +43,13 @@ struct SyncedNotule: Codable, Equatable, Sendable {
         notuleUsageJSON = record.notuleUsageJSON
     }
 
+    @MainActor static func library(_ entries: [LibraryEntry]) -> Self {
+        var note = SyncedNotule(TranscriptRecord(id: LibraryOrganization.syncID, title: "Organisatie"))
+        note.createdAt = Date(timeIntervalSince1970: 0)
+        note.libraryEntries = entries.sorted { $0.id < $1.id }
+        return note
+    }
+
     func encoded() throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
@@ -51,6 +61,7 @@ struct SyncedNotule: Codable, Equatable, Sendable {
     }
 
     @MainActor func apply(to record: TranscriptRecord) {
+        if let organizationJSON { record.organizationJSON = organizationJSON }
         record.taskId = taskId
         record.title = title
         record.filename = filename
@@ -114,6 +125,8 @@ struct NotuleSyncState: Codable {
             }
         }
         for id in Array(entries.keys) where !present.contains(id) && entries[id]?.digest != nil {
+            // A lost catalog file is not a deletion; folder removals use tombstones.
+            guard id != LibraryOrganization.syncID else { throw NotuleSyncError.invalidData }
             entries[id]?.digest = nil
             entries[id]?.pending = true
         }

@@ -106,6 +106,8 @@ export interface MonthUsage {
 
 // Completed saved transcript
 export interface Transcript {
+  organization?: import("./services/libraryOrganization").NoteOrganization;
+  auto_label_error?: string;
   notule_usage?: NotuleUsage;
   notule_draft_html?: string;
   notule_review_reason?: string;

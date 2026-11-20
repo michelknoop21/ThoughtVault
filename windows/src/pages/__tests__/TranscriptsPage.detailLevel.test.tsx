@@ -27,7 +27,7 @@ async function openDialog(note: Transcript) {
   useProfilesStore.setState({ profiles: [
     { id: "executive", name: "Executive" }, { id: "klantgesprek", name: "Klantgesprek" }, { id: "promptnotitie", name: "Promptnotitie" },
   ] });
-  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn(async (key: string) => key === "library" ? { schemaVersion: 1, defaultId: null, styles: [] } : []), set: vi.fn(), save: vi.fn() } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({ get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? { schemaVersion: 1, defaultId: null, styles: [] } : []), set: vi.fn(), save: vi.fn() } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   if (note.id.startsWith("local-")) await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });

@@ -1,6 +1,12 @@
-versie: 1.0.335
-Selecteer twee of meer notulen en kies Samenvoegen. Controleer titels, brondatums en de profielkeuze vooraf. De AI maakt één nieuwe notule; originelen blijven behouden. Controleer overlap, unieke acties, gewijzigde besluiten en tegenstrijdigheden. Bronnotulen toont de vaste momentopname die opnieuw genereren gebruikt. Controleer ook synchronisatie van de samengestelde notule tussen Mac en iPhone.
+versie: 1.0.336
+Mappen: maak in Notulen een map, verplaats er twee notulen naartoe (ook via slepen op de Mac) en hernoem en verwijder de map. Bij verwijderen blijven de notulen bestaan. Maak een slimme map op basis van een label en controleer welke notulen erin verschijnen. Werk eerst Mac en iPhone allebei bij voordat je mappen gebruikt; controleer daarna of de mappen via iCloud op het andere apparaat verschijnen.
 
-Kies een documenthuisstijl en controleer de weergave en export naar PDF, Word en HTML. Yinga-notulen hebben geen voorblad. Een toegepaste huisstijl blijft als momentopname bij de notule bewaard, ook na aanpassing van de huisstijlbibliotheek. Controleer dit ook na iCloud-overdracht tussen Mac en iPhone.
+Automatisch labelen: geef een label een omschrijving, zet Automatisch toekennen aan en maak een nieuwe notule. Probeer ook bestaande notulen te labelen en annuleer halverwege. Handmatig toegevoegde labels moeten blijven staan.
 
-Annuleer een lopende samenvoeging: er wordt geen nieuwe notule opgeslagen en er verschijnt geen technische foutmelding. Controleer ook de bijgewerkte meldingen voor beschikbare app-updates.
+Detailniveau: kies per notuleprofiel Kort, Normaal of Volledig en genereer een notule opnieuw met een ander niveau. Kort moet merkbaar korter zijn zonder besluiten of acties te verliezen.
+
+Cloud-transcriptie (nieuw, optioneel): kies onder Verwerking de engine Cloud-API met een eigen sleutel van OpenAI, Groq of OpenRouter. De audio gaat dan naar die aanbieder; controleer dat de app dat duidelijk meldt. Test een opname van meer dan tien minuten en een ongeldige sleutel.
+
+Prospect Flow: maak vanuit een notule een conceptofferte. Controleer de voorgestelde opdrachtgever en de bron die erbij staat, en dat je de notule eerst moet accorderen.
+
+Mac: losse sterretjes aan het begin van een transcript (bij stilte) horen niet meer voor te komen.

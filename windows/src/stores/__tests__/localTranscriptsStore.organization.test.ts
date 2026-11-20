@@ -8,7 +8,10 @@ it("migrates unchanged content, persists folder operations, rolls back failed wr
   const disk: Record<string, unknown> = { items: [note] };
   const cache: Record<string, unknown> = structuredClone(disk);
   const save = vi.fn(async () => Object.assign(disk, structuredClone(cache)));
-  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn(async key => cache[key]), set: vi.fn(async (key, value) => { cache[key] = value; }), save } as unknown as Store);
+  // Document branding has its own store file; keep it apart from the notes store.
+  vi.spyOn(Store, "load").mockImplementation(async file => (file === "document-branding.json"
+    ? { get: vi.fn(async () => undefined), set: vi.fn(), save: vi.fn() }
+    : { get: vi.fn(async key => cache[key]), set: vi.fn(async (key, value) => { cache[key] = value; }), save }) as unknown as Store);
   const { useLocalTranscriptsStore } = await import("../localTranscriptsStore");
   await useLocalTranscriptsStore.getState().hydrate();
   expect(useLocalTranscriptsStore.getState().items[0]).toEqual(note);

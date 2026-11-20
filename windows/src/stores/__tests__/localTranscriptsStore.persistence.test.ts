@@ -16,9 +16,9 @@ beforeEach(() => {
 
 it("keeps the edited note and reports failure when disk save fails", async () => {
   const save = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("disk full"));
-  vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn(async (key: string) => key === "library" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save,
-  } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({
+    get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save,
+  } as unknown as Store));
 
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
@@ -32,8 +32,8 @@ it("reopens the same corrected title, note and transcript", async () => {
   const original = { ...note, title: "A-E-oplossingen", notule_html: "<p>A–E werkt.</p>", raw_transcription: "A-E modellen." };
   let disk = [original];
   vi.spyOn(Store, "load").mockImplementation(async () => ({
-    get: vi.fn(async () => structuredClone(disk)),
-    set: vi.fn(async (_key, value) => { disk = structuredClone(value); }), save: vi.fn(),
+    get: vi.fn(async (key: string) => key === "items" ? structuredClone(disk) : undefined),
+    set: vi.fn(async (key: string, value) => { if (key === "items") disk = structuredClone(value); }), save: vi.fn(),
   } as unknown as Store));
   vi.resetModules();
   const first = (await import("../localTranscriptsStore")).useLocalTranscriptsStore;

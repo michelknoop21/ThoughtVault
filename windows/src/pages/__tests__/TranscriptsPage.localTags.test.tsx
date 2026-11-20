@@ -40,9 +40,9 @@ it.each([false, true])("asks for a template and regenerates the saved snapshot (
   useProfilesStore.setState({ profiles: [
     { id: "standard", name: "Standaard" }, { id: "decisions", name: "Besluiten" },
   ] });
-  vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn(async (key: string) => key === "library" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
-  } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({
+    get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
+  } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
@@ -72,9 +72,9 @@ it("acknowledges Obsidian metadata edits even when imported HTML is unchanged", 
     tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   useSettingsStore.getState().updateSettings({ processing_mode: "local", obsidian_enabled: true });
-  vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn(async (key: string) => key === "library" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
-  } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({
+    get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
+  } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
@@ -98,9 +98,9 @@ it("adds a tag to a local note without a server request", async () => {
     tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   useSettingsStore.getState().updateSettings({ processing_mode: "local" });
-  vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn(async (key: string) => key === "library" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
-  } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({
+    get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
+  } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
@@ -123,7 +123,7 @@ it("prints a sanitized note inside the app without relying on a popup", async ()
   const note: Transcript = { id: "local-print", title: "Overleg <test>", notule_html: '<p>Planning</p><script>alert(1)</script>',
     duration_seconds: 43.553, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
   useSettingsStore.getState().updateSettings({ processing_mode: "local" });
-  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn(async (key: string) => key === "library" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn() } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({ get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn() } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });

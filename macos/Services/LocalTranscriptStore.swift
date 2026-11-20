@@ -19,12 +19,15 @@ final class LocalTranscriptStore {
     static let recoveryKey = "localStoreRecoveryRequiresReview"
     var onTranscriptChange: (() -> Void)?
 
+    private var library: LibraryOrganization { organizationStore ?? .shared }
+    private var organizationStore: LibraryOrganization?
     let container: ModelContainer
 
     private var context: ModelContext { container.mainContext }
 
     /// Test seam: a store over an injected (in-memory) container.
-    init(container: ModelContainer) {
+    init(container: ModelContainer, library: LibraryOrganization? = nil) {
+        self.organizationStore = library
         self.container = container
     }
 
@@ -210,13 +213,16 @@ final class LocalTranscriptStore {
     }
 
     private func saveTranscriptChanges() throws {
-        try context.save()
+        do { try context.save() } catch { context.rollback(); throw error }
         onTranscriptChange?()
         NotificationCenter.default.post(name: Self.didChange, object: self)
     }
 
     func applySyncedNotule(_ note: SyncedNotule, preservingLocalConflict: Bool) throws {
         if let snapshot = note.documentBrandingJSON { _ = try DocumentBranding.parse(snapshot) }
+        if let json = note.organizationJSON {
+            _ = try JSONDecoder().decode(NoteOrganization.self, from: Data(json.utf8))
+        }
         let existing = try recordsForSync().first { $0.id == note.id }
         do {
             if preservingLocalConflict, let existing, SyncedNotule(existing) != note {
@@ -260,6 +266,7 @@ final class LocalTranscriptStore {
         }
         context.insert(record)
         do { try saveTranscriptChanges() } catch { context.delete(record); throw error }
+        scheduleAutoLabels(record)
     }
 
     func applyBranding(taskId: String, snapshot: String?) throws {
@@ -304,9 +311,20 @@ final class LocalTranscriptStore {
 
     func updateTags(taskId: String, tags: [String]) throws {
         guard let record = record(forTaskId: taskId) else { throw LocalStoreError.recordNotFound }
-        let original = record.tags
+        let original = (record.tags, record.organizationJSON)
+        var organization = record.organization
+        for label in library.labels {
+            if record.tags.contains(label.name) && !tags.contains(label.name) && organization.automaticLabelIDs.contains(label.id) {
+                if !organization.suppressedLabelIDs.contains(label.id) { organization.suppressedLabelIDs.append(label.id) }
+            }
+            if tags.contains(label.name) && !record.tags.contains(label.name) {
+                organization.suppressedLabelIDs.removeAll { $0 == label.id }
+                organization.automaticLabelIDs.removeAll { $0 == label.id }
+            }
+        }
+        record.organization = organization
         record.tags = tags
-        do { try saveTranscriptChanges() } catch { record.tags = original; throw error }
+        do { try saveTranscriptChanges() } catch { (record.tags, record.organizationJSON) = original; throw error }
     }
 
     func updateNotule(taskId: String, html: String) throws {
@@ -370,6 +388,45 @@ final class LocalTranscriptStore {
             (record.notuleUsageJSON, record.detailLevel) = originalUsage
             throw error
         }
+        scheduleAutoLabels(record)
+    }
+
+    func move(taskIDs: [String], to folderID: String?) throws {
+        if let folderID, !library.folders.contains(where: { $0.id == folderID }) { throw LocalStoreError.recordNotFound }
+        let records = try taskIDs.map { id in
+            guard let record = record(forTaskId: id) else { throw LocalStoreError.recordNotFound }
+            return record
+        }
+        for record in records { var metadata = record.organization; metadata.folderID = folderID; record.organization = metadata }
+        try saveTranscriptChanges()
+    }
+
+    private func scheduleAutoLabels(_ record: TranscriptRecord) {
+        guard !AppEnvironment.isRunningTests, !record.notuleHtml.isEmpty, record.notuleDraftHtml == nil else { return }
+        let taskID = record.taskId
+        Task { await AutomaticLabels.shared.run(taskIDs: [taskID]) }
+    }
+
+    func saveAutomaticLabels(taskId: String, chosen: [LibraryEntry], eligible: [LibraryEntry]) throws {
+        guard let record = record(forTaskId: taskId) else { return }
+        var metadata = record.organization
+        let active = library.labels.filter { $0.automatic && eligible.contains($0) }
+        let automaticNames = active.filter { metadata.automaticLabelIDs.contains($0.id) }.map(\.name)
+        var tags = record.tags.filter { !automaticNames.contains($0) }
+        metadata.automaticLabelIDs.removeAll { id in active.contains { $0.id == id } }
+        for label in chosen where active.contains(label) && !metadata.suppressedLabelIDs.contains(label.id) {
+            if !tags.contains(label.name) { tags.append(label.name); metadata.automaticLabelIDs.append(label.id) }
+        }
+        record.tags = tags
+        record.organization = metadata
+        record.autoLabelError = nil
+        try saveTranscriptChanges()
+    }
+
+    func setAutoLabelError(taskId: String, message: String) throws {
+        guard let record = record(forTaskId: taskId) else { return }
+        record.autoLabelError = message
+        try saveTranscriptChanges()
     }
 
     /// Keeps a notule that failed the audit apart for review; the approved `notuleHtml` is never touched.

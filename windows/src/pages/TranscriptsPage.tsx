@@ -44,6 +44,9 @@ import { DetailLevelPicker } from "../components/DetailLevelPicker";
 import { enrichProfile } from "../services/profileTemplates";
 import type { NotuleDetailLevel, Transcript } from "../types";
 
+import { LibraryNavigation } from "../components/transcripts/LibraryNavigation";
+import { matchesFolder } from "../services/libraryOrganization";
+
 interface ContextMenu {
   x: number;
   y: number;
@@ -51,6 +54,9 @@ interface ContextMenu {
 }
 
 export function TranscriptsPage() {
+  const [librarySelection, setLibrarySelection] = useState("all");
+  const localLibrary = useLocalTranscriptsStore(s => s.library);
+  const localItems = useLocalTranscriptsStore(s => s.items);
   const { confirm, confirmation } = useConfirmation();
   const {
     transcripts, selectedId, searchQuery, selectedTags,
@@ -108,6 +114,10 @@ export function TranscriptsPage() {
     document.addEventListener("click", () => setContextMenu(null));
     return () => document.removeEventListener("click", () => setContextMenu(null));
   }, []);
+
+  useEffect(() => {
+    setTranscripts([...localItems, ...useTranscriptsStore.getState().transcripts.filter(t => !isLocalId(t.id))]);
+  }, [localItems]);
 
   // Auto-refresh on focus (debounced)
   useEffect(() => {
@@ -572,7 +582,9 @@ export function TranscriptsPage() {
     <div className={`tp-root desktop-notulen${selectedId ? " has-detail" : ""}`}>
       {confirmation}
       <TranscriptsList
-        transcripts={transcripts}
+        key={librarySelection}
+        organization={ids => <LibraryNavigation selection={librarySelection} onSelect={id => { setLibrarySelection(id); setSelectedId(null); }} selectedIDs={ids} />}
+        transcripts={transcripts.filter(t => matchesFolder(t, librarySelection, localLibrary ?? []))}
         selectedId={selectedId}
         searchQuery={searchQuery}
         selectedTags={selectedTags}

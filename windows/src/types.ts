@@ -115,6 +115,8 @@ export interface MergeSource { id: string; title: string; date: string; }
 export interface Transcript {
   merge_sources?: MergeSource[];
   document_branding_json?: string | null;
+  organization?: import("./services/libraryOrganization").NoteOrganization;
+  auto_label_error?: string;
   notule_usage?: NotuleUsage;
   /** Detail level the notule was (or will be) generated with; regenerate and retry start from it. */
   detail_level?: NotuleDetailLevel;

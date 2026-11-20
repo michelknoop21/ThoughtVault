@@ -715,3 +715,5 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-primary)
 .merge-notulen-profile p { margin:4px 0 0; font-size:12px; line-height:1.5; color:var(--text-secondary); }
 .merge-notulen-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; padding:16px 24px; border-top:1px solid var(--border-secondary); flex-shrink:0; }
 @media (prefers-reduced-motion:no-preference) { .merge-notulen-dialog { transition:opacity 180ms var(--ease-out),transform 180ms var(--ease-out); } @starting-style { .merge-notulen-dialog { opacity:0; transform:scale(.97); } } }
+.library-navigation { padding: 12px 16px; display: grid; gap: 8px; border-bottom: 1px solid var(--stroke-default); }
+.library-navigation [aria-pressed="true"] { color: var(--fill-accent); font-weight: 600; }

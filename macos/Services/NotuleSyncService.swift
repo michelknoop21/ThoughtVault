@@ -24,6 +24,7 @@ final class NotuleSyncService: CKSyncEngineDelegate {
     @ObservationIgnored private var state = NotuleSyncState()
     @ObservationIgnored private var starting = false
     @ObservationIgnored private var generation = 0
+    @ObservationIgnored private var libraryObserver: Task<Void, Never>?
     @ObservationIgnored private var accountObserver: Task<Void, Never>?
     @ObservationIgnored private var assetFiles: [URL] = []
     private var folder: URL { AppEnvironment.supportDirectory.appending(path: "ThoughtVault/iCloud") }
@@ -90,6 +91,13 @@ final class NotuleSyncService: CKSyncEngineDelegate {
             #else
             UIApplication.shared.registerForRemoteNotifications()
             #endif
+            if libraryObserver == nil {
+                libraryObserver = Task { [weak self] in
+                    for await _ in NotificationCenter.default.notifications(named: LibraryOrganization.didChange) {
+                        self?.localChanged()
+                    }
+                }
+            }
             store.onTranscriptChange = { [weak self] in self?.localChanged() }
         } catch {
             errorMessage = error.localizedDescription
@@ -113,8 +121,21 @@ final class NotuleSyncService: CKSyncEngineDelegate {
         busy = false
     }
 
+    private func syncRecords() throws -> [SyncedNotule] {
+        guard LibraryOrganization.shared.error == nil else { throw NotuleSyncError.invalidData }
+        let local = try store.recordsForSync()
+        for record in local {
+            if let json = record.organizationJSON { _ = try JSONDecoder().decode(NoteOrganization.self, from: Data(json.utf8)) }
+        }
+        var records = local.map(SyncedNotule.init)
+        if !LibraryOrganization.shared.entries.isEmpty {
+            records.append(.library(LibraryOrganization.shared.entries))
+        }
+        return records
+    }
+
     private func reconcile() throws {
-        let records = try store.recordsForSync().map(SyncedNotule.init)
+        let records = try syncRecords()
         try state.reconcile(records)
         try persist()
     }
@@ -193,14 +214,14 @@ final class NotuleSyncService: CKSyncEngineDelegate {
         // Assets also support long transcripts that exceed CloudKit's per-record field limit.
         record["content"] = CKAsset(fileURL: url)
         record["contentHash"] = try note.digest() as CKRecordValue
-        record["schemaVersion"] = 1 as CKRecordValue
+        record["schemaVersion"] = (note.libraryEntries == nil ? 1 : 2) as CKRecordValue
         state.entries[note.id]?.uploadDigest = try note.digest()
         return record
     }
 
     private func decode(_ record: CKRecord) throws -> SyncedNotule {
         guard record.recordType == "Notule", record.recordID.zoneID == Self.zoneID,
-              record["schemaVersion"] as? Int == 1,
+              [1, 2].contains(record["schemaVersion"] as? Int ?? 0),
               let asset = record["content"] as? CKAsset, let url = asset.fileURL else { throw NotuleSyncError.invalidData }
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         guard size > 0, size <= 64 * 1024 * 1024 else { throw NotuleSyncError.invalidData }
@@ -225,6 +246,13 @@ final class NotuleSyncService: CKSyncEngineDelegate {
             state.entries[id]?.systemFields = fields(record)
             return
         }
+        if id == LibraryOrganization.syncID {
+            guard let entries = note.libraryEntries else { throw NotuleSyncError.invalidData }
+            try LibraryOrganization.shared.merge(entries)
+            state.entries[id] = .init(digest: digest, serverDigest: digest, systemFields: fields(record))
+            return
+        }
+        guard note.libraryEntries == nil else { throw NotuleSyncError.invalidData }
         let pending = state.entries[id]?.pending == true
         try store.applySyncedNotule(note, preservingLocalConflict: pending)
         state.entries[id] = .init(digest: digest, serverDigest: digest, systemFields: fields(record))
@@ -233,6 +261,10 @@ final class NotuleSyncService: CKSyncEngineDelegate {
 
     private func receiveDeletion(_ id: CKRecord.ID) throws {
         guard id.zoneID == Self.zoneID else { return }
+        if id.recordName == LibraryOrganization.syncID {
+            state.entries[id.recordName] = .init()
+            return
+        }
         try store.deleteSyncedNotule(id: id.recordName, preservingLocalConflict: state.entries[id.recordName]?.pending == true)
         state.entries[id.recordName] = .init()
         engine?.state.remove(pendingRecordZoneChanges: [.saveRecord(id), .deleteRecord(id)])
@@ -313,7 +345,7 @@ final class NotuleSyncService: CKSyncEngineDelegate {
         guard engine === syncEngine, enabled else { return nil }
         do {
             try reconcile()
-            let records = Dictionary(uniqueKeysWithValues: try store.recordsForSync().map { ($0.id, SyncedNotule($0)) })
+            let records = Dictionary(uniqueKeysWithValues: try syncRecords().map { ($0.id, $0) })
             var saves: [CKRecord] = []
             var deletes: [CKRecord.ID] = []
             for change in syncEngine.state.pendingRecordZoneChanges.filter({ context.options.scope.contains($0) }).prefix(50) {

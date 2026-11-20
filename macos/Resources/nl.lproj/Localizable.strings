@@ -726,3 +726,27 @@
 "%lld bronnotulen" = "%lld bronnotulen";
 
 "Originelen blijven bewaard." = "Originelen blijven bewaard.";
+
+/* Folders and automatic labels */
+"Alle notulen" = "Alle notulen";
+"Zonder map" = "Zonder map";
+"Mappen" = "Mappen";
+"Slimme mappen" = "Slimme mappen";
+"Nieuwe map…" = "Nieuwe map…";
+"Nieuwe slimme map…" = "Nieuwe slimme map…";
+"Labels beheren…" = "Labels beheren…";
+"Labels beheren" = "Labels beheren";
+"Nieuw label…" = "Nieuw label…";
+"Labelinstellingen" = "Labelinstellingen";
+"Map bewerken" = "Map bewerken";
+"Automatisch toekennen" = "Automatisch toekennen";
+"Verplaats naar…" = "Verplaats naar…";
+"Verplaatsen mislukt" = "Verplaatsen mislukt";
+"Bestaande notulen labelen…" = "Bestaande notulen labelen…";
+"Bestaande notulen labelen?" = "Bestaande notulen labelen?";
+"Toon notulen met minstens één van deze labels." = "Toon notulen met minstens één van deze labels.";
+"De ingestelde AI-provider gebruikt deze omschrijving. Labels blijven handmatig corrigeerbaar." = "De ingestelde AI-provider gebruikt deze omschrijving. Labels blijven handmatig corrigeerbaar.";
+"De ingestelde AI-provider verwerkt de titel en notuletekst. Handmatige labels blijven bewaard. Afgeronde resultaten blijven behouden bij annuleren." = "De ingestelde AI-provider verwerkt de titel en notuletekst. Handmatige labels blijven bewaard. Afgeronde resultaten blijven behouden bij annuleren.";
+"Automatisch labelen opnieuw proberen (%lld)" = "Automatisch labelen opnieuw proberen (%lld)";
+"Label %lld notulen" = "Label %lld notulen";
+"De huidige AI-aanvraag wordt afgerond. Het resultaat wordt niet opgeslagen." = "De huidige AI-aanvraag wordt afgerond. Het resultaat wordt niet opgeslagen.";

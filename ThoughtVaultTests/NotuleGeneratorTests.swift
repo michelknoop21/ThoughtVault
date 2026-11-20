@@ -689,6 +689,9 @@ extension NotuleMergeTests {
         XCTAssertEqual(record.notuleHtml, "<p>Mijn gewijzigde notule blijft bewaard.</p>")
         XCTAssertEqual(record.rawTranscription, "Originele transcriptie")
         XCTAssertNil(record.mergeSourcesJSON)
+    }
+}
+
 final class ProspectFlowCustomerSuggestionTests: XCTestCase {
     func testNameMustBeGroundedInTheNamedSource() {
         let sources = ProspectFlowService.customerSources(title: "Offerte Friese Installatietechniek", notes: "Sanne is contactpersoon bij Friese Installatietechniek.", transcript: "", meeting: "")

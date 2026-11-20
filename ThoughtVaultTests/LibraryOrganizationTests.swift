@@ -221,7 +221,7 @@ private actor LabelProvider: LLMService {
     var fail: Bool
     init(output: String, fail: Bool = false) { self.output = output; self.fail = fail }
     var isAvailable: Bool { true }
-    func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?, constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String { output }
+    func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?, constraints: [String], detailBlock: String, onProgress: @Sendable (String) -> Void) async throws -> String { output }
     func complete(system: String, user: String) async throws -> String {
         if fail { throw LLMError.providerUnavailable }
         return output
@@ -281,7 +281,7 @@ private actor PausingLabelProvider: LLMService {
     var response: CheckedContinuation<String, Never>?
     init(output: String) { self.output = output }
     var isAvailable: Bool { true }
-    func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?, constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String { output }
+    func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?, constraints: [String], detailBlock: String, onProgress: @Sendable (String) -> Void) async throws -> String { output }
     func complete(system: String, user: String) async throws -> String {
         calls += 1
         if calls == 1 { return output }

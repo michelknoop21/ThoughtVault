@@ -16,6 +16,8 @@ import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
 import { useTaskHistory } from "./taskHistory";
 import { mask } from "./appLog";
 import { runInBackground } from "./contextSuggestions";
+import { effectiveDetailLevel } from "./notuleDetailLevel";
+import { enrichProfile } from "./profileTemplates";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
 
@@ -52,6 +54,8 @@ export async function processLocally(
   const existingPartial = reused ?? (!optimizeAudio && retryTaskId
     ? useLocalTranscriptsStore.getState().items.find((item) => item.id === retryTaskId && !item.has_notes && hasUsableTranscription(item.raw_transcription ?? ""))
     : undefined);
+  // Stored on the partial record, so a retry starts from the same level.
+  const detailLevel = existingPartial?.detail_level ?? effectiveDetailLevel(enrichProfile(profile), settings.profile_detail_levels);
   const task: TranscriptTask = {
     task_id: taskId,
     status: "transcribing",
@@ -138,6 +142,7 @@ export async function processLocally(
         duration_seconds: durationSeconds,
         profile_name: profile?.name,
         profile_id: profile?.id,
+        detail_level: detailLevel,
         tags: [],
         has_transcription: true,
         has_notes: false,
@@ -174,6 +179,9 @@ export async function processLocally(
       "",
       step => updateBackgroundTask(taskId, { message: stepLabel(step) }),
       meter,
+      false,
+      undefined,
+      detailLevel,
     );
 
     const html = exportWithOwnNotes(generatedHTML, getQuickNote(filePath), true);
@@ -191,6 +199,7 @@ export async function processLocally(
       title,
       notule_html: html,
       notule_usage: meter.usageFor(transcription, html),
+      detail_level: detailLevel,
       has_notes: true,
       updated_at: new Date().toISOString(),
     };

@@ -4,14 +4,15 @@ import { enrichProfile } from "./profileTemplates";
 import { loadCredential } from "./tauriCommands";
 import { quickNotePrompt, ensureNotesSection } from "./quickNotes";
 import { DEFAULT_SETTINGS } from "../types";
-import type { Profile, NotulenProvider } from "../types";
+import type { Profile, NotulenProvider, NotuleDetailLevel } from "../types";
 import { isHostedURL, isOllamaCloudURL } from "./ollamaModels";
 import { modelRefusal, usableModel } from "./suggestedModels";
 
 import { loadCorrectionsOrEmpty, usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
+import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, essentialConstraints, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
+import { draftBlock } from "./notuleDetailLevel";
 import { UsageMeter, parseUsage, addToLedger } from "./usageMeter";
 import { logModelRequest, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, type ModelStep, type RequestTrace } from "./modelRequestLog";
 import { openRouterModel, openRouterRequestFields } from "./openRouterModels";
@@ -334,10 +335,12 @@ export class LLMService {
     meter?: UsageMeter,
     merging = false,
     signal?: AbortSignal,
+    /** Shortens the notule below volledig; volledig sends exactly the prompts of before. */
+    detailLevel: NotuleDetailLevel = "volledig",
   ): Promise<string> {
     let succeeded = false;
     try {
-      const html = await LLMService.generateWithFallback(transcription, profile, onProgress, participants, quickNote, onStep, meter, merging, signal);
+      const html = await LLMService.generateWithFallback(transcription, profile, onProgress, participants, quickNote, onStep, meter, merging, signal, detailLevel);
       succeeded = true;
       return html;
     } finally {
@@ -358,16 +361,18 @@ export class LLMService {
     meter?: UsageMeter,
     merging = false,
     signal?: AbortSignal,
+    /** Shortens the notule below volledig; volledig sends exactly the prompts of before. */
+    detailLevel: NotuleDetailLevel = "volledig",
   ): Promise<string> {
     try {
-      return await LLMService.generateOnce(undefined, transcription, profile, onProgress, participants, quickNote, onStep, meter, merging, signal);
+      return await LLMService.generateOnce(undefined, transcription, profile, onProgress, participants, quickNote, onStep, meter, merging, signal, detailLevel);
     } catch (error) {
       const fallback = useSettingsStore.getState().notulen_fallback_provider;
       const aborted = (error as { name?: string } | null)?.name === "AbortError";
       if (!fallback || aborted || signal?.aborted || fallback === getConfig().provider) throw error;
       onProgress?.(""); // drop anything streamed by the failed attempt
       try {
-        return await LLMService.generateOnce(fallback, transcription, profile, onProgress, participants, quickNote, onStep, meter, merging, signal);
+        return await LLMService.generateOnce(fallback, transcription, profile, onProgress, participants, quickNote, onStep, meter, merging, signal, detailLevel);
       } catch {
         throw error;
       }
@@ -385,6 +390,7 @@ export class LLMService {
     meter?: UsageMeter,
     merging = false,
     signal?: AbortSignal,
+    detailLevel: NotuleDetailLevel = "volledig",
   ): Promise<string> {
     checkModelCancellation(signal);
     const corrections = await loadCorrectionsOrEmpty();
@@ -407,6 +413,7 @@ export class LLMService {
       meter.model = config.provider === "openrouter" ? config.openRouterModel : config.provider === "openai" ? config.openAIModel
         : config.provider === "anthropic" ? config.anthropicModel : model;
       meter.contentCheckSkipped = false;
+      meter.detailLevel = detailLevel;
       meter.billing = config.provider === "openrouter" ? "metered" : config.provider === "openai" || config.provider === "anthropic" ? "unpriced"
         : compatibleKey ? "subscription" : isHostedURL(baseURL) ? "unpriced" : "free";
     }
@@ -453,13 +460,15 @@ export class LLMService {
       }
       throw new Error("Cloud provider moet via de server worden verwerkt");
     };
-    // Explicit constraints remain mandatory audit obligations (rules in constraintSentences).
-    const constraints = constraintSentences(correctText(transcription, corrections, profile.id));
+    // Explicit constraints remain mandatory audit obligations (rules in constraintSentences). Below volledig only
+    // the essential ones stay mandatory, for the draft and for the audit.
+    const source = correctText(transcription, corrections, profile.id);
+    const constraints = detailLevel === "volledig" ? constraintSentences(source) : essentialConstraints(source);
     const constraintPrompt = constraints.length
       ? `\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
     onStep?.({ kind: "draft" });
-    const draftRequest = generate(systemPrompt + mergeRules, userPrompt + constraintPrompt + mergeRules, { kind: "draft" });
+    const draftRequest = generate(systemPrompt + mergeRules, userPrompt + constraintPrompt + mergeRules + draftBlock(detailLevel, source.length), { kind: "draft" });
     // The source check never sees the notule (DEC-062), so it runs while the draft is written. Settled into a
     // value so it cannot become an unhandled rejection while the draft is still running.
     const sourceCheck = auditSource(correctText(transcription, corrections, profile.id), quickNote, generate)
@@ -481,7 +490,7 @@ export class LLMService {
       if ("error" in source) throw source.error;
       warning = source.warning;
       await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null,
-        auditNoteConcurrency(config.provider, baseURL), onStep);
+        auditNoteConcurrency(config.provider, baseURL), onStep, detailLevel);
       checkModelCancellation(signal);
       const approved = appendWarnings(warning ? [warning] : [], candidate);
       onProgress?.(approved);

@@ -33,8 +33,9 @@ enum DebugScreenshotSeed {
         guard LocalTranscriptStore.shared.allTranscripts().isEmpty else { return }
         seedPeople()
         seedGlossary()
+        // A "local-" task id like processLocally mints, so local-only actions (regenerate with a detail level) apply.
         let record = TranscriptRecord(
-            title: "Schadebezoek Keizersgracht", rawTranscription: "Jan de Vries neemt het rapport op zich.",
+            taskId: "local-debug-seed", title: "Schadebezoek Keizersgracht", rawTranscription: "Jan de Vries neemt het rapport op zich.",
             notuleHtml: "<h1>Schadebezoek Keizersgracht</h1><h2>Besluiten</h2><ul><li>Jan de Vries stelt het rapport op voor vrijdag.</li><li>Contra-expertise wordt ingepland door Jan Smit.</li></ul>",
             profileId: "meeting", profileName: "Meeting")
         try? LocalTranscriptStore.shared.save(record)

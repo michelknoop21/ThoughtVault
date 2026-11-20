@@ -34,12 +34,12 @@ extension RecordingViewModel {
     /// Generates with `provider`, and once with the configured fallback provider when that fails.
     /// The usage is that of the run that produced the notule.
     private static func generateNotule(provider: NotulenProvider, merging: Bool = false, transcription: String, profile: Profile, participants: [Participant],
-                                       quickNote: String?, createdAt: Date,
+                                       quickNote: String?, createdAt: Date, detailLevel: NotuleDetailLevel = .volledig,
                                        onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> (html: String, usage: NotuleUsage?) {
         let usage = OSAllocatedUnfairLock<NotuleUsage?>(initialState: nil)
         let once: @Sendable (NotulenProvider) async throws -> String = { p in
             try await generateNotuleOnce(provider: p, merging: merging, transcription: transcription, profile: profile, participants: participants,
-                                         quickNote: quickNote, createdAt: createdAt, onStep: onStep,
+                                         quickNote: quickNote, createdAt: createdAt, detailLevel: detailLevel, onStep: onStep,
                                          onUsage: { run in usage.withLock { $0 = run } })
         }
         let fallback = NotuleGenerator.fallbackProvider(for: provider).map { fb in
@@ -54,7 +54,7 @@ extension RecordingViewModel {
 
     /// Generates with the glossary and people context block for `provider`'s budget.
     private static func generateNotuleOnce(provider: NotulenProvider, merging: Bool = false, transcription: String, profile: Profile, participants: [Participant],
-                                           quickNote: String?, createdAt: Date,
+                                           quickNote: String?, createdAt: Date, detailLevel: NotuleDetailLevel = .volledig,
                                            onStep: @escaping @Sendable (ModelStep) -> Void,
                                            onUsage: @Sendable (NotuleUsage) -> Void) async throws -> String {
         let corrections = PersonalCorrections.loadOrEmpty()
@@ -66,7 +66,7 @@ extension RecordingViewModel {
             transcription: transcription, profile: profile, participants: participants, quickNote: RecordingFeatures.enabled ? nil : quickNote,
             createdAt: createdAt, corrections: corrections,
             context: PersonalCorrections.contextBlock(entries: fixedContext, transcript: transcription, profileId: profile.id, provider: provider),
-            onStep: onStep, onUsage: onUsage)
+            detailLevel: detailLevel, onStep: onStep, onUsage: onUsage)
     }
 
     /// Persist corrections before generation, including when generation subsequently fails.
@@ -109,18 +109,21 @@ extension RecordingViewModel {
         do {
             try Task.checkCancellation()
             let provider = Self.localNotuleProvider()
+            // processLocally stored the level on the partial record, so a retry starts from the same level.
+            let detailLevel = LocalTranscriptStore.shared.record(forTaskId: localId)?.detailLevel.flatMap(NotuleDetailLevel.init(rawValue:))
+                ?? NotuleDetailLevel.effective(for: profile)
             let transcription = try await Self.correctTranscription(transcription, profile: profile, taskId: localId, provider: provider)
             let (generatedHTML, usage) = try await Self.generateNotule(
                 provider: provider, transcription: transcription, profile: profile, participants: participants,
                 quickNote: QuickNoteStore.note(audioFilename: url.lastPathComponent), createdAt: createdAt,
-                onStep: showStep(taskId: localId))
+                detailLevel: detailLevel, onStep: showStep(taskId: localId))
             try Task.checkCancellation()
 
             let html = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(generatedHTML, note: QuickNoteStore.note(audioFilename: url.lastPathComponent), includeNotes: true) : generatedHTML
             let entry = TaskHistoryStore.shared.entry(localId)
             let chosenTitle = entry?.titleEdited == true ? entry?.title : RecordingIdentity.load(audioFilename: url.lastPathComponent)?.title
             let title = chosenTitle ?? NotuleTitleExtractor.extract(from: html) ?? fallbackTitle
-            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: html, title: title, usage: usage)
+            try LocalTranscriptStore.shared.finalizeNotule(taskId: localId, html: html, title: title, usage: usage, detailLevel: detailLevel)
             ContextSuggestions.runInBackground(taskId: localId, transcript: transcription, participants: participants, profileId: profile.id, profileName: profile.name, provider: provider)
 
             // Auto-export the finished notule to Obsidian (no-op when disabled).
@@ -174,7 +177,8 @@ extension RecordingViewModel {
     /// transcription and the given profile — entirely on-device. Returns the new
     /// HTML and title so the open detail view can stay in sync with SwiftData.
     /// A rejected draft is stored apart and the approved notule stays untouched.
-    func regenerateNotuleLocally(taskId: String, profileId: String) async throws -> (html: String, title: String) {
+    /// `detailLevel` nil: the level stored on the record when the profile stays the same, else the profile's effective level.
+    func regenerateNotuleLocally(taskId: String, profileId: String, detailLevel: NotuleDetailLevel? = nil) async throws -> (html: String, title: String) {
         guard !updateInstalling else { throw LLMError.generationFailed("De app wordt bijgewerkt. Probeer na de herstart opnieuw.") }
         pendingRegenerations += 1
         defer { pendingRegenerations -= 1 }
@@ -191,6 +195,8 @@ extension RecordingViewModel {
             ?? selectedProfile
             ?? Profile.defaults[0]
 
+        let level = detailLevel ?? Self.regenerateDetailLevel(record, profile: profile)
+
         do {
             let provider = Self.localNotuleProvider()
             let transcription = record.mergeSourcesJSON != nil ? record.rawTranscription
@@ -198,11 +204,11 @@ extension RecordingViewModel {
             let (generatedHTML, usage) = try await Self.generateNotule(
                 provider: provider, merging: record.mergeSourcesJSON != nil, transcription: transcription, profile: profile, participants: record.participants,
                 quickNote: QuickNoteStore.note(forTranscriptId: taskId), createdAt: record.createdAt,
-                onStep: showStep(taskId: regenerationId))
+                detailLevel: level, onStep: showStep(taskId: regenerationId))
             let html = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(generatedHTML, note: QuickNoteStore.note(forTranscriptId: taskId), includeNotes: true) : generatedHTML
             let title = RecordingIdentity.forTask(taskId)?.title != nil ? record.title : NotuleTitleExtractor.extract(from: html) ?? record.title
             try LocalTranscriptStore.shared.finalizeNotule(taskId: taskId, html: html, title: title, profileId: profile.id,
-                                                           profileName: profile.name, usage: usage)
+                                                           profileName: profile.name, usage: usage, detailLevel: level)
             ContextSuggestions.runInBackground(taskId: taskId, transcript: record.rawTranscription, participants: record.participants, profileId: profile.id, profileName: profile.name, provider: provider)
             updateTask(regenerationId, status: .completed, progress: 1)
             return (html, title)
@@ -214,6 +220,18 @@ extension RecordingViewModel {
             updateTask(regenerationId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error), failure: error)
             throw error
         }
+    }
+
+    /// The level regenerating `record` with `profile` starts from, and the one the regenerate sheet preselects:
+    /// the stored level when the profile stays the same, else the profile's effective level.
+    static func regenerateDetailLevel(_ record: TranscriptRecord?, profile: Profile, defaults: UserDefaults = .standard) -> NotuleDetailLevel {
+        record.flatMap { storedDetailLevel($0, profileId: profile.id) } ?? NotuleDetailLevel.effective(for: profile, defaults: defaults)
+    }
+
+    /// The level a record's notule was generated with, for the same profile only; nil for older records.
+    static func storedDetailLevel(_ record: TranscriptRecord, profileId: String) -> NotuleDetailLevel? {
+        guard record.profileId == profileId else { return nil }
+        return (record.detailLevel ?? record.notuleUsage?.detailLevel).flatMap(NotuleDetailLevel.init(rawValue:))
     }
 }
 

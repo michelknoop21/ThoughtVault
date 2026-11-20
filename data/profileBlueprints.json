@@ -3,6 +3,7 @@
   "profiles": [
     {
       "id": "standaard",
+      "detailLevel": "volledig",
       "name": "Standaard",
       "icon": "doc.text",
       "description": "Evenwichtige notulen met onderwerpen, besluiten en vervolgwerk",
@@ -21,6 +22,7 @@
     },
     {
       "id": "executive",
+      "detailLevel": "kort",
       "name": "Executive",
       "icon": "chart.bar",
       "description": "Compacte beslisnotitie voor leidinggevenden",
@@ -38,6 +40,7 @@
     },
     {
       "id": "projectoverleg",
+      "detailLevel": "volledig",
       "name": "Projectoverleg",
       "icon": "hammer",
       "description": "Voortgang, blokkades en opvolging per werkstroom",
@@ -56,6 +59,7 @@
     },
     {
       "id": "klantgesprek",
+      "detailLevel": "normaal",
       "name": "Klantgesprek",
       "icon": "person.2",
       "description": "Klantbehoefte, afspraken en terugkoppeling",
@@ -74,6 +78,7 @@
     },
     {
       "id": "een_op_een",
+      "detailLevel": "kort",
       "name": "1-op-1",
       "icon": "person.2.circle",
       "description": "Persoonlijk gesprek met aandacht voor context en opvolging",
@@ -92,6 +97,7 @@
     },
     {
       "id": "brainstorm",
+      "detailLevel": "normaal",
       "name": "Brainstorm",
       "icon": "lightbulb",
       "description": "Ideeën, afwegingen en kansen zonder schijnbesluiten",

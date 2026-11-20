@@ -8,6 +8,28 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-073: Detailniveau per notuleprofiel (Kort, Normaal, Volledig)
+
+**Date:** 2026-11-16
+**Status:** Implemented on `feat/notule-detailniveau`; not measured with a live model
+
+**Context:** Een notule van een gesprek van 45 minuten werd te lang voor wie alleen de afspraken wil teruglezen. De lengte kwam uit de opdracht zelf: de conceptstap en de controle eisten dat elke bronzin terugkwam, ook bijzaken. DEC-071 en DEC-072 zijn gereserveerd voor de videolink en de widget, daarom is dit DEC-073.
+
+**Decision:**
+- Elk profiel in `data/profileBlueprints.json` krijgt een `detailLevel`. Standaard en Projectoverleg: Volledig. Klantgesprek en Brainstorm: Normaal. Executive en 1-op-1: Kort. Promptnotitie heeft geen niveau.
+- Kort en Normaal voegen een blok toe aan de conceptopdracht, na "Verplicht te behouden bronzinnen". De doellengte L hangt af van de lengte T van de gecorrigeerde transcriptie: Kort clamp(0,06 x T, 1.500, 4.000) tekens, Normaal clamp(0,15 x T, 2.500, 8.000). Besluiten, acties met actiehouder en termijn, bedragen, ontkenningen en voorwaarden blijven verplicht.
+- De controle krijgt bij Kort en Normaal de status `minor`: een ontbrekende bronzin die alleen een bijzaak bevat. `minor` geldt nooit voor besluiten, acties, termijnen, bedragen, ontkenningen, voorwaarden, afwezigheid, open vragen of gebruikersnotities; bij twijfel blijft het `missing`.
+- Volledig levert byte-identiek dezelfde opdracht als voorheen. De M3-hashes zijn ongewijzigd.
+- Het gekozen niveau staat bij de notule (`detailLevel`, `detail_level`) en in de gebruiksregel. Opnieuw genereren met hetzelfde profiel gebruikt het opgeslagen niveau, met een ander profiel het niveau van dat profiel.
+- `NotuleDetailLevel.swift` is de bron van de teksten; `notuleDetailLevel.ts` volgt, en een pariteitstest op Windows leest de Swift-bron.
+
+**Consequences:**
+- Of een model met Kort en Normaal werkelijk kortere notules schrijft zonder besluiten te verliezen, is niet gemeten. De meting op het schadebezoek (18 feiten) en het thuisservergesprek (16 kernpunten) volgt met het evalscript op `feat/notule-eval`.
+- Een keuzeveld per profiel en in het venster Opnieuw genereren ontbreekt nog; tot dan geldt het niveau uit het profiel.
+- De kopie van de profielsjablonen in `transcript-studio-backend` heeft geen `detailLevel`. Die liep al achter en de notuleroute via de server is legacy (DEC-060).
+
+---
+
 ## DEC-070: Verwerking: Parakeet, OpenRouter als standaard en de iOS-pagina gelijk aan macOS
 
 **Date:** 2026-11-14

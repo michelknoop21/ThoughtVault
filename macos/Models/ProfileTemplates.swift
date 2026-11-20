@@ -18,6 +18,7 @@ enum ProfileTemplates {
         let systemPrompt: String?
         let notulePrompt: String?
         let template: String?
+        let detailLevel: String?
     }
 
     static let entries: [Entry] = {

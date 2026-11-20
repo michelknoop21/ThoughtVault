@@ -114,9 +114,11 @@ struct NotuleUsage: Codable, Sendable, Equatable {
     var contentCheckSkipped: Bool
     /// The audit's own message when the content check could not run; the audit has no reason codes.
     var contentCheckSkipReason: String?
+    /// `NotuleDetailLevel` raw value of the run; nil for notules generated before detail levels existed.
+    var detailLevel: String?
 
     init(provider: String, model: String, transcriptCharacters: Int, notuleHtml: String, notuleSentences: Int,
-         totals: UsageMeter.Totals, durationMs: Int, contentCheckSkipReason: String?) {
+         totals: UsageMeter.Totals, durationMs: Int, contentCheckSkipReason: String?, detailLevel: String? = nil) {
         let text = NotuleUsage.plainText(notuleHtml)
         self.provider = provider
         self.model = model
@@ -134,6 +136,7 @@ struct NotuleUsage: Codable, Sendable, Equatable {
         self.steps = totals.steps
         self.contentCheckSkipped = contentCheckSkipReason != nil
         self.contentCheckSkipReason = contentCheckSkipReason
+        self.detailLevel = detailLevel
     }
 
     static func plainText(_ html: String) -> String { HTMLPlainText.from(html) }

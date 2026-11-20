@@ -45,6 +45,7 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
         notulePrompt: String,
         outputTemplate: String?,
         constraints: [String],
+        detailBlock: String,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
@@ -76,7 +77,8 @@ final class AppleFoundationModelService: LLMService, @unchecked Sendable {
                 notulePrompt: notulePrompt,
                 transcription: processedTranscription,
                 outputTemplate: Self.compactTemplate,
-                constraints: constraints
+                constraints: constraints,
+                detailBlock: detailBlock
             )
             do {
                 return try await ModelRequestLog.run(provider: "apple-intelligence", model: "on-device", system: instructions, user: userContent) {

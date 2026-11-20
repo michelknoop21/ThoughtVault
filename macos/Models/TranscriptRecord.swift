@@ -44,6 +44,9 @@ final class TranscriptRecord {
     var notuleUsageJSON: String?
     /// Optional provenance; rawTranscription holds the immutable source snapshot.
     var mergeSourcesJSON: String?
+    /// `NotuleDetailLevel` raw value the notule was (or will be) generated with; regenerate and retry start
+    /// from it. Optional → lightweight-migration safe.
+    var detailLevel: String?
 
     init(
         id: String = UUID().uuidString,

@@ -351,6 +351,8 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
     var notulePrompt: String?
     var template: String?
     var isDefault: Bool?
+    /// Default `NotuleDetailLevel` raw value from the bundled templates; nil means volledig.
+    var detailLevel: String? = nil
 
     // MARK: Default profiles
 
@@ -427,7 +429,7 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
             Profile(id: entry.id, name: entry.name, description: entry.description,
                     icon: entry.icon, systemPrompt: entry.systemPrompt,
                     notulePrompt: entry.notulePrompt, template: entry.template,
-                    isDefault: true)
+                    isDefault: true, detailLevel: entry.detailLevel)
         }
     }
 

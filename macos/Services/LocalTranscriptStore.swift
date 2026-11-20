@@ -350,22 +350,24 @@ final class LocalTranscriptStore {
     /// Throwing so callers can surface persistence failures instead of silently
     /// reporting success.
     /// `usage` replaces the stored usage, so a regenerated notule never shows the numbers of the previous one.
+    /// `detailLevel` is stored when given, so a regeneration starts from the level of this notule.
     func finalizeNotule(taskId: String, html: String, title: String, profileId: String? = nil, profileName: String? = nil,
-                        usage: NotuleUsage? = nil) throws {
+                        usage: NotuleUsage? = nil, detailLevel: NotuleDetailLevel? = nil) throws {
         guard let record = record(forTaskId: taskId) else {
             throw LocalStoreError.recordNotFound
         }
         let original = (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason)
-        let originalUsage = record.notuleUsageJSON
+        let originalUsage = (record.notuleUsageJSON, record.detailLevel)
         record.notuleHtml = html
         record.title = title
         if let profileId { record.profileId = profileId; record.profileName = profileName }
         record.notuleDraftHtml = nil
         record.notuleReviewReason = nil
         record.notuleUsageJSON = usage?.json
+        if let detailLevel { record.detailLevel = detailLevel.rawValue }
         do { try saveTranscriptChanges() } catch {
             (record.notuleHtml, record.title, record.profileId, record.profileName, record.notuleDraftHtml, record.notuleReviewReason) = original
-            record.notuleUsageJSON = originalUsage
+            (record.notuleUsageJSON, record.detailLevel) = originalUsage
             throw error
         }
     }

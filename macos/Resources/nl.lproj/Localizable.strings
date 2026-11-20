@@ -742,3 +742,12 @@
 "Notule accorderen en naar Prospect Flow" = "Notule accorderen en naar Prospect Flow";
 "Geen klanten gevonden. Kies een nieuwe klant of zoek opnieuw." = "Geen klanten gevonden. Kies een nieuwe klant of zoek opnieuw.";
 "Zoeken mislukt. Probeer opnieuw of vul zelf een klant in." = "Zoeken mislukt. Probeer opnieuw of vul zelf een klant in.";
+/* Notule detail level (DEC-073) */
+"Detailniveau" = "Detailniveau";
+"Kort" = "Kort";
+"Normaal" = "Normaal";
+"Volledig" = "Volledig";
+"Genereer" = "Genereer";
+"Kort: besluiten, acties en bedragen; ongeveer 6% van het gesprek, 1.500 tot 4.000 tekens" = "Kort: besluiten, acties en bedragen; ongeveer 6% van het gesprek, 1.500 tot 4.000 tekens";
+"Normaal: ook één of twee zinnen context per onderwerp; ongeveer 15%, 2.500 tot 8.000 tekens" = "Normaal: ook één of twee zinnen context per onderwerp; ongeveer 15%, 2.500 tot 8.000 tekens";
+"Volledig: elke bronzin uit het gesprek komt terug, ook bijzaken" = "Volledig: elke bronzin uit het gesprek komt terug, ook bijzaken";

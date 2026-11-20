@@ -44,7 +44,7 @@ extension NotuleAudit {
     }
 
     static func auditLong(sourceUnits: [Unit], noteUnits: [Unit], request: @escaping AuditRequest,
-                          noteConcurrency: Int = auditConcurrency,
+                          noteConcurrency: Int = auditConcurrency, detailLevel: NotuleDetailLevel = .volledig,
                           onProgress: @escaping @Sendable (ModelStep) -> Void = { _ in }) async throws
         -> (source: [Verdict], notes: [Verdict]) {
         let transcript = sourceUnits.filter { $0.id.hasPrefix("T") }
@@ -60,11 +60,11 @@ extension NotuleAudit {
             try Task.checkCancellation()
             let units = parts[index] + quick
             let audit = try await ModelStep.$current.withValue(ModelStep(.coverage, index + 1, of: parts.count)) {
-                try await ask(request, coverageSystem,
+                try await ask(request, coverageSystem + detailLevel.auditSuffix,
                               "Inhoudsaudit deel \(index + 1) van \(parts.count) (geen generatie):\n{\"source\":\(json(units)),\"notes\":\(json(noteUnits))}")
             }
             let partChecks = try verdicts(audit["source"], expected: units, references: noteUnits,
-                                          statuses: ["covered", "non_factual", "missing", "uncertain"])
+                                          statuses: detailLevel.sourceStatuses)
             guard partChecks.allSatisfy({ $0.status == "covered" || $0.evidence.isEmpty }) else {
                 throw NotuleAuditError(message: "Ongeldig controlebewijs")
             }
@@ -132,7 +132,7 @@ extension NotuleAudit {
 
     /// The strictest step-1 verdict for a quick note that every part judges.
     private static func stricter(_ earlier: Verdict, _ next: Verdict) -> Verdict {
-        let status = ["uncertain", "missing", "covered", "non_factual"].first { $0 == earlier.status || $0 == next.status }!
+        let status = ["uncertain", "missing", "covered", "minor", "non_factual"].first { $0 == earlier.status || $0 == next.status }!
         return Verdict(id: earlier.id, status: status,
                        evidence: status == "covered" ? earlier.evidence + next.evidence.filter { !earlier.evidence.contains($0) } : [])
     }

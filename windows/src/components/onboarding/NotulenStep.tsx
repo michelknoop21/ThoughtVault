@@ -128,12 +128,12 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
   const name = keyed ? KEYED[keyed].name : "";
   const modelField = keyed ? MODEL_FIELD[keyed] : null;
   return <div className="onb-notulen">
-    <h1 className="onb-title">Wie schrijft je notulen?</h1>
+    <h1 className="onb-title" tabIndex={-1}>Wie schrijft je notulen?</h1>
     <p className="onb-lead">Opnemen en omzetten naar tekst gebeurt op je eigen pc. Voor de notule kies je een taalmodel.</p>
     <div className="onb-tiles" role="radiogroup" aria-label="Aanbieder voor notulen">
       {TILES.map(([id, title, subtitle]) => <button key={id} type="button" role="radio" aria-checked={choice === id}
         className="onb-tile" disabled={saving} onClick={() => setChoice(id)}>
-        <span className="onb-tile-head"><strong>{title}</strong>{id === "openrouter" && <span className="onb-badge">Aanbevolen</span>}</span>
+        <span className="onb-tile-head"><strong>{title}</strong><span className="onb-radio" aria-hidden="true" /></span>
         <span className="onb-muted">{subtitle}</span>
       </button>)}
     </div>
@@ -163,16 +163,15 @@ export function NotulenStep({ onBack, onDone }: { onBack: () => void; onDone: ()
 
     {modelField && <div className="onb-model">
       <h2>Kies een model</h2>
-      <p className="onb-muted">Het aanbevolen model staat al ingevuld. Later wisselen kan in Instellingen › Verwerking.</p>
       <CappedModelSelect provider={keyed!} label={`Model van ${name}`} value={settings[modelField]}
         onChange={model => settings.updateSettings({ [modelField]: model } as Partial<AppSettings>)} />
     </div>}
 
     <div className="onb-footer">
       <button type="button" className="onb-link onb-skip" disabled={saving} onClick={() => setAskSkip(true)}>Overslaan</button>
-      <span className="onb-muted onb-later">Je kunt dit later doen.</span>
+
       <span className="onb-spacer" />
-      <button type="button" className="btn btn-secondary" disabled={saving} onClick={onBack}>Terug</button>
+      <button type="button" className="btn btn-secondary" disabled={saving} onClick={onBack}>Vorige</button>
       <button type="button" className="btn btn-accent" disabled={saving} onClick={() => void handleNext()}>Volgende</button>
     </div>
 

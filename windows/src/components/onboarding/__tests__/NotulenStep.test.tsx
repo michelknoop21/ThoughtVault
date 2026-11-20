@@ -135,7 +135,7 @@ it("locks navigation while Volgende stores the key", async () => {
   mocks.storeCredential.mockImplementationOnce(() => new Promise<void>(resolve => { stored = resolve; }));
   await act(async () => type(host.querySelector<HTMLInputElement>("#onb-key-input")!, "sk-or-v1-voorbeeld"));
   await act(async () => button("Volgende").click());
-  expect(button("Terug").disabled).toBe(true);
+  expect(button("Vorige").disabled).toBe(true);
   expect(button("Volgende").disabled).toBe(true);
   await act(async () => button("Volgende").click());
   await act(async () => stored());

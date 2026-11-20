@@ -261,6 +261,8 @@ extension SettingsView {
                 Text("Model").font(.system(size: 14)).foregroundStyle(HomeColor.text2).frame(width: 96, alignment: .leading).padding(.top, 10)
                 ParakeetModelRows().frame(maxWidth: 560, alignment: .leading)
             }
+        } else if localTranscriber == LocalTranscriberEngine.cloudAPI.rawValue {
+            CloudSTTConfig()
         } else {
             Text("Apple Spraakherkenning werkt direct, zonder download.")
                 .font(.system(size: 13)).foregroundStyle(HomeColor.text3)

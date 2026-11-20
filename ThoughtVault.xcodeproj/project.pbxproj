@@ -276,6 +276,11 @@
 		AB0000T4 /* PreDraftFields.store in Resources */ = {isa = PBXBuildFile; fileRef = FB0000T4 /* PreDraftFields.store */; };
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		AA000090 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
+		AACS0001 /* CloudAPITranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACS0001 /* CloudAPITranscriber.swift */; };
+		ACCS0001 /* CloudAPITranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACS0001 /* CloudAPITranscriber.swift */; };
+		ACCS0002 /* CloudSTTConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACS0002 /* CloudSTTConfig.swift */; };
+		AACS0002 /* CloudSTTConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACS0002 /* CloudSTTConfig.swift */; };
+		ABCS0003 /* CloudAPITranscriberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCS0003 /* CloudAPITranscriberTests.swift */; };
 		AA000091 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
 		AA000064 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
 		AA000065 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = SD000001 /* WhisperKit */; };
@@ -683,6 +688,9 @@
 		FB0000T4 /* PreDraftFields.store */ = {isa = PBXFileReference; lastKnownFileType = file; path = PreDraftFields.store; sourceTree = "<group>"; };
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
 		FA000090 /* AudioChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioChunker.swift; sourceTree = "<group>"; };
+		FACS0001 /* CloudAPITranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAPITranscriber.swift; sourceTree = "<group>"; };
+		FACS0002 /* CloudSTTConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSTTConfig.swift; sourceTree = "<group>"; };
+		FBCS0003 /* CloudAPITranscriberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAPITranscriberTests.swift; sourceTree = "<group>"; };
 		FA000091 /* AudioEnvelopeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessor.swift; sourceTree = "<group>"; };
 		FA000064 /* NotuleTitleExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleTitleExtractor.swift; sourceTree = "<group>"; };
 		FA000066 /* ProfileTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplates.swift; sourceTree = "<group>"; };
@@ -850,6 +858,7 @@
 				FA00PM01 /* PersonMatcher.swift */,
 				FA00CH02 /* HistoryListView.swift */,
 				FA000090 /* AudioChunker.swift */,
+				FACS0001 /* CloudAPITranscriber.swift */,
 				CAFE0014 /* SettingsSyncService.swift */,
 				FA000091 /* AudioEnvelopeProcessor.swift */,
 				FA000064 /* NotuleTitleExtractor.swift */,
@@ -937,6 +946,7 @@
 				FA0000K6 /* SettingsView+Studio.swift */,
 				B90000000000000000000003 /* SettingsView+Support.swift */,
 				FA0000K5 /* HostedProviderConfig.swift */,
+				FACS0002 /* CloudSTTConfig.swift */,
 				FA0000CP1 /* CloudProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
@@ -1015,6 +1025,7 @@
 				1683B00205044715AFD0DC73 /* SuggestedModelsTests.swift */,
 				949A9793792E4C1DAC1BACCC /* TaskHistoryStoreTests.swift */,
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
+				FBCS0003 /* CloudAPITranscriberTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FC1C10000000000000000001 /* NotuleSyncTests.swift */,
 				B5B86927C2E244A784B3389E /* DocumentBrandingTests.swift */,
@@ -1280,6 +1291,8 @@
 				AA00PM01 /* PersonMatcher.swift in Sources */,
 				AA00CH02 /* HistoryListView.swift in Sources */,
 				AA000090 /* AudioChunker.swift in Sources */,
+				AACS0001 /* CloudAPITranscriber.swift in Sources */,
+				AACS0002 /* CloudSTTConfig.swift in Sources */,
 				AA000091 /* AudioEnvelopeProcessor.swift in Sources */,
 				AA000064 /* NotuleTitleExtractor.swift in Sources */,
 				AA000006 /* Analytics.swift in Sources */,
@@ -1420,6 +1433,7 @@
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
+				ABCS0003 /* CloudAPITranscriberTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AC1C10000000000000000001 /* NotuleSyncTests.swift in Sources */,
 				5233D10987424B2F95073DD7 /* DocumentBrandingTests.swift in Sources */,
@@ -1538,6 +1552,8 @@
 				8875D757BB161BCC147860C7 /* PersonalCorrections.swift in Sources */,
 				BB00GA01 /* GlossaryAutoMatch.swift in Sources */,
 				8FF27B6E18A90EF98DD80187 /* AudioChunker.swift in Sources */,
+				ACCS0001 /* CloudAPITranscriber.swift in Sources */,
+				ACCS0002 /* CloudSTTConfig.swift in Sources */,
 				1A418B953FAFCEFDCCFFA337 /* AudioEnvelopeProcessor.swift in Sources */,
 				6C2DFBE9B00BBB4840386CC9 /* NotuleTitleExtractor.swift in Sources */,
 				D723621ACD955DDDB101DBD8 /* Analytics.swift in Sources */,

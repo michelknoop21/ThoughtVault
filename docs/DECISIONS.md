@@ -8,6 +8,19 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-074: Optionele cloud-transcriptie met eigen API-sleutel
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context:** Lokale transcriptie (WhisperKit, Parakeet, Apple Speech, whisper.cpp) is traag op oudere hardware en de backend-route vraagt een account. Gebruikers met een eigen OpenAI- of Groq-sleutel willen transcriptie uitbesteden zonder onze server. DEC-005 belooft dat audio in lokale modus het apparaat niet verlaat.
+
+**Decision:** Een derde engine in lokale modus: `cloudAPI` (macOS/iOS, `CloudAPITranscriber`) en `cloud_api` (Windows, `transcribe_cloud` in `src-tauri/src/transcribe/cloud.rs`). Eén implementatie voor elk OpenAI-compatibel endpoint `POST {base}/v1/audio/transcriptions`, met presets voor OpenAI, Groq en OpenRouter en een vrij adres. De opname gaat in WAV-delen van 10 minuten (16 kHz mono, ongeveer 19 MB) om onder de uploadgrens van 25 MB te blijven; de teksten worden achter elkaar gezet. De sleutel staat in de Keychain of Windows Credential Manager. Op Windows leest Rust de sleutel zelf en accepteert alleen `openai_api_key`, `groq_api_key`, `openrouter_api_key` en `custom_stt_api_key`, zodat de frontend geen willekeurige opgeslagen sleutel naar een zelfgekozen adres kan sturen.
+
+**Consequences:** De privacybelofte van DEC-005 geldt niet meer zodra de gebruiker deze engine kiest; de instellingen tonen dan "Audio gaat naar {aanbieder} voor transcriptie." Er is geen stille terugval naar lokaal: een fout (401 wordt "API-sleutel ongeldig") komt in de taak terecht en de opname blijft beschikbaar voor een nieuwe poging. Android, streaming en aanbieders met een eigen API-formaat vallen erbuiten. De backend verandert niet. Net als bij lokale Whisper gaat de woordenlijst niet als prompt mee; namen worden daarna in de notulestap gecorrigeerd. Uitgewerkt op 9 november, geïntegreerd op 20 november 2026; DEC-060 en DEC-067 tot en met DEC-073 waren toen al vergeven.
+
+---
+
 ## DEC-070: Verwerking: Parakeet, OpenRouter als standaard en de iOS-pagina gelijk aan macOS
 
 **Date:** 2026-11-14

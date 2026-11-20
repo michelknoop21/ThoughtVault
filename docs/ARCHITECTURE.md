@@ -89,6 +89,8 @@ Client                    Backend                    n8n / Claude
 
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
 
+**Cloud-API engine (DEC-074).** In lokale modus kan de gebruiker in plaats van een on-device model een OpenAI-compatibel transcriptie-endpoint kiezen met een eigen sleutel. De app knipt de opname in WAV-delen van 10 minuten, stuurt ze een voor een naar `{base}/v1/audio/transcriptions` en plakt de teksten aan elkaar; daarna loopt de notulenstap zoals bij lokale transcriptie. Op macOS/iOS is dit een `LocalTranscriber` (`CloudAPITranscriber`), zodat de bestaande verwerkings- en retry-paden ongewijzigd blijven. Op Windows kiest `localPipeline.ts` tussen `transcribe_local` en `transcribe_cloud`; beide sturen `transcribe-progress`.
+
 ### Notulegeneratie (lokaal)
 
 De macOS-app maakt notulen zelf; de server ziet de transcriptie niet. `LLMServiceFactory` (`macos/Services/LLMService.swift`) kiest de service op basis van `notulenProvider`. De waarde `cloud` wordt in `RecordingViewModel` omgezet naar Ollama.

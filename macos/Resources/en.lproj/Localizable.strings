@@ -612,6 +612,7 @@
 "Whisper-model, eenmalig downloaden" = "Whisper model, one-time download";
 "Parakeet-model, eenmalig downloaden" = "Parakeet model, one-time download";
 "Werkt direct, zonder download" = "Works right away, without a download";
+"Audio gaat naar je eigen cloud-aanbieder" = "Audio goes to your own cloud provider";
 "Model verwijderen?" = "Remove model?";
 "Het model wordt van dit toestel verwijderd. Je kunt het later opnieuw downloaden." = "The model is removed from this device. You can download it again later.";
 "Gedownload, %@" = "Downloaded, %@";

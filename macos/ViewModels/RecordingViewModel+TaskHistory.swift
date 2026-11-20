@@ -41,9 +41,11 @@ extension RecordingViewModel {
         }
         let rawEngine = UserDefaults.standard.string(forKey: "localTranscriber") ?? LocalTranscriberEngine.whisperKit.rawValue
         let engine = LocalTranscriberEngine(rawValue: rawEngine) ?? .whisperKit
-        let engineLabel = engine == .whisperKit
-            ? "WhisperKit · \(UserDefaults.standard.string(forKey: "whisperModel") ?? LocalTranscriberFactory.defaultWhisperModel)"
-            : "Apple Spraakherkenning"
+        let engineLabel = switch engine {
+        case .whisperKit: "WhisperKit · \(UserDefaults.standard.string(forKey: "whisperModel") ?? LocalTranscriberFactory.defaultWhisperModel)"
+        case .cloudAPI: "Cloud-API · \(CloudAPITranscriber.fromDefaults().model)"
+        default: engine.displayName
+        }
         let provider = SuggestedModels.currentProvider
         let model = SuggestedModels.currentModel(for: provider)
         return TaskHistoryContext(transcriptionEngine: engineLabel, notuleProvider: provider.displayName,

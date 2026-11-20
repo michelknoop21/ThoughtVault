@@ -18,6 +18,7 @@ import { mask } from "./appLog";
 import { runInBackground } from "./contextSuggestions";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
+import { CLOUD_STT_PRESETS } from "../types";
 
 interface WhisperModelStatus {
   exists: boolean;
@@ -87,9 +88,10 @@ export async function processLocally(
       }
       updateBackgroundTask(taskId, { duration_seconds: durationSeconds });
       const model = settings.whisper_model || "medium";
+      const cloud = settings.transcription_engine === "cloud_api";
 
       // Model setup is explicit; leave the recording available for a deliberate retry.
-      const status = await invoke<WhisperModelStatus>("whisper_model_status", {
+      const status = cloud ? { exists: true } : await invoke<WhisperModelStatus>("whisper_model_status", {
         modelId: model,
       });
       if (!status.exists) {
@@ -110,12 +112,23 @@ export async function processLocally(
         checkCancelled();
         // No glossary as Whisper prompt: it silently drops speech. Names are
         // corrected afterwards in LLMService (correctText/correctHTML).
-        transcription = await invoke<string>("transcribe_local", {
-          filePath,
-          modelId: model,
-          requestId: taskId,
-          ...(optimizeAudio ? { optimizeAudio: true } : {}),
-        });
+        if (cloud) {
+          const preset = CLOUD_STT_PRESETS[settings.cloud_stt_provider] ?? CLOUD_STT_PRESETS.openai;
+          transcription = await invoke<string>("transcribe_cloud", {
+            filePath,
+            baseUrl: settings.cloud_stt_provider === "custom" ? settings.cloud_stt_base_url : preset.baseUrl,
+            model: settings.cloud_stt_model || preset.models[0] || "",
+            credentialKey: preset.credentialKey,
+            requestId: taskId,
+          });
+        } else {
+          transcription = await invoke<string>("transcribe_local", {
+            filePath,
+            modelId: model,
+            requestId: taskId,
+            ...(optimizeAudio ? { optimizeAudio: true } : {}),
+          });
+        }
         checkCancelled();
       } finally {
         unlistenTr();

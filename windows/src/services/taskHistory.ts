@@ -139,7 +139,7 @@ export function currentContext(profileId?: string): TaskHistoryContext {
   const model = settings[modelSettingKey(provider)];
   const names: Record<string, string> = { openrouter: "OpenRouter", openai: "OpenAI", anthropic: "Claude", ollama: "Ollama", "ollama-cloud": "Ollama Cloud", "lm-studio": "LM Studio" };
   return {
-    transcription_engine: `Whisper · ${settings.whisper_model || "medium"}`,
+    transcription_engine: settings.transcription_engine === "cloud_api" ? `Cloud-API · ${settings.cloud_stt_model}` : `Whisper · ${settings.whisper_model || "medium"}`,
     notule_provider: names[provider] ?? provider,
     notule_model: model ? usableModel(model, provider) : undefined,
     notule_notice: !model ? undefined : isMetered(provider) ? capNotice(model, provider) : modelRefusal(model),

@@ -322,6 +322,7 @@ enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
     case whisperKit
     case parakeet
     case appleSpeech
+    case cloudAPI
 
     var id: String { rawValue }
 
@@ -330,6 +331,7 @@ enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
         case .whisperKit:  return "WhisperKit"
         case .parakeet:    return "Parakeet"
         case .appleSpeech: return "Apple Spraakherkenning"
+        case .cloudAPI:    return "Cloud-API"
         }
     }
 }
@@ -339,6 +341,7 @@ enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
 enum LocalTranscriberError: LocalizedError {
     case engineUnavailable(String)
     case transcriptionFailed(String)
+    case cloudFailed(String)
     case emptyResult
     case modelNotInstalled(String)
     /// A step (`stage` is a fixed name such as "model-load") ran past its limit; same text as `transcriptionFailed`.
@@ -348,6 +351,7 @@ enum LocalTranscriberError: LocalizedError {
         switch self {
         case .engineUnavailable(let name): return "Transcriptie-engine '\(name)' is niet beschikbaar."
         case .transcriptionFailed(let msg), .timedOut(_, let msg): return "Lokale transcriptie mislukt: \(msg)"
+        case .cloudFailed(let msg): return "Cloud-transcriptie mislukt: \(msg)"
         case .emptyResult: return "De transcriptie was leeg."
         case .modelNotInstalled: return "Het spraakmodel is nog niet gedownload. Download het in Instellingen; de opname blijft bewaard."
         }
@@ -416,6 +420,8 @@ enum LocalTranscriberFactory {
             return ParakeetTranscriber(model: ParakeetCatalog.selectedID(defaults: defaults))
         case .appleSpeech:
             return AppleSpeechTranscriber()
+        case .cloudAPI:
+            return CloudAPITranscriber.fromDefaults()
         }
     }
 

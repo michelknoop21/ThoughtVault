@@ -43,6 +43,9 @@ enum DiagnosticLog {
         case .appleSpeech:
             model = "on-device"
             installed = true
+        case .cloudAPI:
+            model = CloudAPITranscriber.fromDefaults().model
+            installed = true
         }
         let provider = NotulenProvider.configured(defaults: defaults)
         let fallback = NotuleGenerator.fallbackProvider(for: provider)

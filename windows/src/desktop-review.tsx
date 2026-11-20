@@ -38,6 +38,7 @@ window.fetch = async () => { throw new Error("Review fixture blocks network acce
 useSettingsStore.setState({processing_mode:"local",has_completed_onboarding:true});
 useLocalTranscriptsStore.setState({items:Array.from({length:8}, (_, i) => ({id:`local-review-${i}`,title:["Projectoverleg","Idee voor volgende week","Voorbereiding klantgesprek"][i%3],duration_seconds:180,tags:[],created_at:new Date().toISOString(),updated_at:new Date().toISOString(),raw_transcription:"Jengo bespreekt de planning.",notule_html:"<h2>Besproken</h2><p>Jengo bespreekt de planning.</p>"}))});
 usePeopleDirectoryStore.setState({people: [usePeopleDirectoryStore.getState().createDefaultPerson({name:"Voorbeeld persoon",role:"Projectleider",organization:"Voorbeeldteam"})]});
+if (new URLSearchParams(location.search).get("scenario") === "cloud-stt") useSettingsStore.setState({transcription_engine:"cloud_api",cloud_stt_provider:"groq",cloud_stt_model:"whisper-large-v3-turbo"});
 if (new URLSearchParams(location.search).get("scenario") === "recording") useRecordingStore.setState({phase:"recording",recordingStartedAt:Date.now()});
 const pages = {"/onboarding":<OnboardingWizard/>,"/seed-review":<SeedReviewSheet candidates={["voorbeeld@example.test"]} onClose={() => history.back()}/>,"/":<HomePage/>,"/recording":<RecordingPage/>,"/tasks":<TasksPage/>,"/transcripts":<TranscriptsPage/>,"/profiles":<ProfilesPage/>,"/people":<PeoplePage/>,"/settings":<SettingsPage/>};
 if (new URLSearchParams(location.search).get("scenario") === "widget") {

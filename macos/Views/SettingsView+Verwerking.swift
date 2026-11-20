@@ -258,12 +258,12 @@ extension SettingsView {
             Text("Engine").font(.system(size: 14)).foregroundStyle(HomeColor.text2).frame(width: 96, alignment: .leading)
             Picker("Engine", selection: $localTranscriber) {
                 ForEach(LocalTranscriberEngine.allCases) { engine in
-                    Text(engine == .whisperKit ? "WhisperKit" : "Apple Spraakherkenning").tag(engine.rawValue)
+                    Text(engine.shortName).tag(engine.rawValue)
                 }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(maxWidth: 360)
+            .frame(maxWidth: 460)
         }
 
         if whisper {
@@ -283,6 +283,8 @@ extension SettingsView {
                     if !automatic { manualModelPicker }
                 }
             }
+        } else if localTranscriber == LocalTranscriberEngine.cloudAPI.rawValue {
+            CloudSTTConfig()
         } else {
             Text("Apple Spraakherkenning werkt direct, zonder download.")
                 .font(.system(size: 13)).foregroundStyle(HomeColor.text3)

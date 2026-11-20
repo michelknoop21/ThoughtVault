@@ -88,6 +88,8 @@ Client                    Backend                    n8n / Claude
 
 **Status pipeline:** `pending → uploading → converting → transcribing → transcribed → processingWebhook → completed`
 
+**Cloud-API engine (DEC-060).** In lokale modus kan de gebruiker in plaats van een on-device model een OpenAI-compatibel transcriptie-endpoint kiezen met een eigen sleutel. De app knipt de opname in WAV-delen van 10 minuten, stuurt ze een voor een naar `{base}/v1/audio/transcriptions` en plakt de teksten aan elkaar; daarna loopt de notulenstap zoals bij lokale transcriptie. Op macOS/iOS is dit een `LocalTranscriber` (`CloudAPITranscriber`), zodat de bestaande verwerkings- en retry-paden ongewijzigd blijven. Op Windows kiest `localPipeline.ts` tussen `transcribe_local` en `transcribe_cloud`; beide sturen `transcribe-progress`.
+
 ### n8n Notule Generation Flow
 
 **Workflow:** "Notule Generator - Compleet Met Guardrails" (`Iq3AAf8Vk8eQ9dcZ`)

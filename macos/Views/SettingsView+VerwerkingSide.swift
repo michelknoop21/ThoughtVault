@@ -12,7 +12,7 @@ extension SettingsView {
     func verwerkingSide(_ specs: SystemSpecs, _ advice: ProcessingAdvisor.TranscriptionAdvice) -> some View {
         VStack(spacing: 18) {
             macCard(specs)
-            modelCard(advice)
+            if localTranscriber != LocalTranscriberEngine.cloudAPI.rawValue { modelCard(advice) }
             privacyCard
         }
     }
@@ -174,8 +174,13 @@ extension SettingsView {
                 Text("Privacy & gegevens").font(.system(size: 17, weight: .semibold)).foregroundStyle(HomeColor.text)
             }
             if isLocalProcessing {
-                privacyRow(icon: "mic", tint: HomeColor.ready, title: "Transcriptie (lokaal)",
-                           text: "Audio en transcript blijven op deze Mac.")
+                if localTranscriber == LocalTranscriberEngine.cloudAPI.rawValue {
+                    privacyRow(icon: "cloud", tint: HomeColor.lavender, title: "Transcriptie (cloud-API)",
+                               text: "Audio gaat naar \(cloudSTTProviderName) voor transcriptie.")
+                } else {
+                    privacyRow(icon: "mic", tint: HomeColor.ready, title: "Transcriptie (lokaal)",
+                               text: "Audio en transcript blijven op deze Mac.")
+                }
                 privacyRow(icon: notuleLeavesDevice ? "cloud" : "doc.text", tint: notuleLeavesDevice ? HomeColor.lavender : HomeColor.ready,
                            title: "Notulen (\(activeLocalProvider.studioName))", text: notulePrivacyText)
             } else {
@@ -195,6 +200,11 @@ extension SettingsView {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var cloudSTTProviderName: String {
+        let provider = CloudSTTProvider(rawValue: UserDefaults.standard.string(forKey: CloudSTTProvider.providerDefaultsKey) ?? "") ?? .openai
+        return provider == .custom ? "het opgegeven adres" : provider.displayName
     }
 
     /// Ollama on an https endpoint is Ollama Cloud; hosted providers always leave the Mac.

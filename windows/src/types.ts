@@ -45,6 +45,17 @@ export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
   { id: "large-v3", label: "Large v3: beste kwaliteit, traag op CPU", size: "~3 GB" },
 ];
 
+// Opt-in cloud speech-to-text with the user's own key (DEC-060). Any
+// OpenAI-compatible /v1/audio/transcriptions endpoint; custom = own base URL.
+export type TranscriptionEngine = "whisper" | "cloud_api";
+export type CloudSttProvider = "openai" | "groq" | "openrouter" | "custom";
+export const CLOUD_STT_PRESETS: Record<CloudSttProvider, { label: string; baseUrl: string; models: string[]; credentialKey: string }> = {
+  openai: { label: "OpenAI", baseUrl: "https://api.openai.com", models: ["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1"], credentialKey: "openai_api_key" },
+  groq: { label: "Groq", baseUrl: "https://api.groq.com/openai", models: ["whisper-large-v3", "whisper-large-v3-turbo"], credentialKey: "groq_api_key" },
+  openrouter: { label: "OpenRouter", baseUrl: "https://openrouter.ai/api", models: ["openai/gpt-4o-transcribe", "openai/whisper-large-v3"], credentialKey: "openrouter_api_key" },
+  custom: { label: "Eigen adres", baseUrl: "", models: [], credentialKey: "custom_stt_api_key" },
+};
+
 // In-progress recording/processing task
 export interface TranscriptTask {
   task_id: string;
@@ -350,6 +361,10 @@ export interface AppSettings {
   server_url: string;
   processing_mode: ProcessingMode;
   whisper_model: string;
+  transcription_engine: TranscriptionEngine;
+  cloud_stt_provider: CloudSttProvider;
+  cloud_stt_model: string;
+  cloud_stt_base_url: string;
   notulen_provider: NotulenProvider;
   ollama_url: string;
   ollama_model: string;
@@ -373,6 +388,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   server_url: "https://n8n.prezent.nl/tstudio/api",
   processing_mode: "local",
   whisper_model: "medium",
+  transcription_engine: "whisper",
+  cloud_stt_provider: "openai",
+  cloud_stt_model: "gpt-4o-transcribe",
+  cloud_stt_base_url: "",
   notulen_provider: "ollama",
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",

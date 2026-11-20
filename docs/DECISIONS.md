@@ -6,6 +6,19 @@ _Decisions DEC-029 through DEC-038 archived to [archive/DECISIONS-DEC-029-to-DEC
 
 ---
 
+## DEC-060: Optionele cloud-transcriptie met eigen API-sleutel
+
+**Date:** 2026-11-09
+**Status:** Accepted
+
+**Context:** Lokale transcriptie (WhisperKit, Apple Speech, whisper.cpp) is traag op oudere hardware en de backend-route vraagt een account. Gebruikers met een eigen OpenAI- of Groq-sleutel willen transcriptie uitbesteden zonder onze server. DEC-005 belooft dat audio in lokale modus het apparaat niet verlaat.
+
+**Decision:** Een derde engine in lokale modus: `cloudAPI` (macOS/iOS, `CloudAPITranscriber`) en `cloud_api` (Windows, `transcribe_cloud` in `src-tauri/src/transcribe/cloud.rs`). Eén implementatie voor elk OpenAI-compatibel endpoint `POST {base}/v1/audio/transcriptions`, met presets voor OpenAI, Groq en OpenRouter en een vrij adres. De opname gaat in WAV-delen van 10 minuten (16 kHz mono, ongeveer 19 MB) om onder de uploadgrens van 25 MB te blijven; de teksten worden achter elkaar gezet. De sleutel staat in de Keychain of Windows Credential Manager. Op Windows leest Rust de sleutel zelf en accepteert alleen `openai_api_key`, `groq_api_key`, `openrouter_api_key` en `custom_stt_api_key`, zodat de frontend geen willekeurige opgeslagen sleutel naar een zelfgekozen adres kan sturen.
+
+**Consequences:** De privacybelofte van DEC-005 geldt niet meer zodra de gebruiker deze engine kiest; de instellingen tonen dan "Audio gaat naar {aanbieder} voor transcriptie." Er is geen stille terugval naar lokaal: een fout (401 wordt "API-sleutel ongeldig") komt in de taak terecht en de opname blijft beschikbaar voor een nieuwe poging. Android, streaming en aanbieders met een eigen API-formaat vallen erbuiten. De backend verandert niet.
+
+---
+
 ## DEC-059 — Hardened Windows Upload Pipeline na Empirische Weerlegging python-multipart Hypothese
 
 **Date:** 2026-05-06

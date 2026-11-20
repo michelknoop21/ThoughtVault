@@ -583,10 +583,14 @@ struct SettingsView: View {
         Section {
             Picker("Engine", selection: $localTranscriber) {
                 ForEach(LocalTranscriberEngine.allCases) { engine in
-                    Text(engine == .whisperKit ? "WhisperKit" : "Apple").tag(engine.rawValue)
+                    Text(engine == .appleSpeech ? "Apple" : engine.shortName).tag(engine.rawValue)
                 }
             }
             .pickerStyle(.segmented)
+
+            if localTranscriber == LocalTranscriberEngine.cloudAPI.rawValue {
+                CloudSTTConfig()
+            }
 
             if localTranscriber == LocalTranscriberEngine.whisperKit.rawValue {
                 SettingFieldRow("Model") {
@@ -641,6 +645,8 @@ struct SettingsView: View {
         } footer: {
             Text((localTranscriber == LocalTranscriberEngine.whisperKit.rawValue
                 ? "WhisperKit downloadt het gekozen model bij eerste gebruik. Klik het refresh-icoon om alle beschikbare modellen te laden. "
+                : localTranscriber == LocalTranscriberEngine.cloudAPI.rawValue
+                ? "De cloud-API transcribeert met je eigen sleutel; de audio verlaat dan je apparaat. "
                 : "Apple Spraakherkenning werkt direct, zonder download. ")
                 + "Eigen termen (komma-gescheiden) en personen uit de app sturen de herkenning van namen zoals \"Michel\".")
                 .font(TS.Font.caption)

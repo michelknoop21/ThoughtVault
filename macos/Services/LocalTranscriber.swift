@@ -209,6 +209,7 @@ enum AudioPreConverter {
 enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
     case whisperKit
     case appleSpeech
+    case cloudAPI
 
     var id: String { rawValue }
 
@@ -216,6 +217,16 @@ enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .whisperKit:  return "WhisperKit (aanbevolen)"
         case .appleSpeech: return "Apple Spraakherkenning"
+        case .cloudAPI:    return "Cloud-API (eigen sleutel)"
+        }
+    }
+
+    /// Label for the segmented engine pickers.
+    var shortName: String {
+        switch self {
+        case .whisperKit:  return "WhisperKit"
+        case .appleSpeech: return "Apple Spraakherkenning"
+        case .cloudAPI:    return "Cloud-API"
         }
     }
 }
@@ -225,12 +236,14 @@ enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
 enum LocalTranscriberError: LocalizedError {
     case engineUnavailable(String)
     case transcriptionFailed(String)
+    case cloudFailed(String)
     case emptyResult
 
     var errorDescription: String? {
         switch self {
         case .engineUnavailable(let name): return "Transcriptie-engine '\(name)' is niet beschikbaar."
         case .transcriptionFailed(let msg): return "Lokale transcriptie mislukt: \(msg)"
+        case .cloudFailed(let msg): return "Cloud-transcriptie mislukt: \(msg)"
         case .emptyResult: return "De transcriptie was leeg."
         }
     }
@@ -268,6 +281,8 @@ enum LocalTranscriberFactory {
             #endif
         case .appleSpeech:
             return AppleSpeechTranscriber()
+        case .cloudAPI:
+            return CloudAPITranscriber.fromDefaults()
         }
     }
 

@@ -14,6 +14,7 @@ import { usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore"
 import { activeCorrections } from "./personalCorrections";
 import type { Participant } from "./participants";
 import type { RecordingMode, Transcript, TranscriptTask } from "../types";
+import { CLOUD_STT_PRESETS } from "../types";
 
 interface WhisperModelStatus {
   exists: boolean;
@@ -61,9 +62,10 @@ export async function processLocally(
     let transcription = existingPartial?.raw_transcription;
     if (!transcription) {
       const model = settings.whisper_model || "medium";
+      const cloud = settings.transcription_engine === "cloud_api";
 
       // 1. Ensure the Whisper model is present (download on first use).
-      const status = await invoke<WhisperModelStatus>("whisper_model_status", {
+      const status = cloud ? { exists: true } : await invoke<WhisperModelStatus>("whisper_model_status", {
         modelId: model,
       });
       if (!status.exists) {
@@ -88,11 +90,22 @@ export async function processLocally(
       try {
         await usePersonalCorrectionsStore.getState().hydrate();
         const vocabulary = activeCorrections(usePersonalCorrectionsStore.getState().entries, profile.id).slice(0,30).map(e => e.canonical).join(", ");
-        transcription = await invoke<string>("transcribe_local", {
-          filePath,
-          modelId: model,
-          vocabulary,
-        });
+        if (cloud) {
+          const preset = CLOUD_STT_PRESETS[settings.cloud_stt_provider] ?? CLOUD_STT_PRESETS.openai;
+          transcription = await invoke<string>("transcribe_cloud", {
+            filePath,
+            baseUrl: settings.cloud_stt_provider === "custom" ? settings.cloud_stt_base_url : preset.baseUrl,
+            model: settings.cloud_stt_model || preset.models[0] || "",
+            credentialKey: preset.credentialKey,
+            vocabulary,
+          });
+        } else {
+          transcription = await invoke<string>("transcribe_local", {
+            filePath,
+            modelId: model,
+            vocabulary,
+          });
+        }
       } finally {
         unlistenTr();
       }

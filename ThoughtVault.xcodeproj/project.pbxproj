@@ -125,6 +125,9 @@
 		AB000006 /* GraphCalendarViewResponse.json in Resources */ = {isa = PBXBuildFile; fileRef = FB000006 /* GraphCalendarViewResponse.json */; };
 		AA000063 /* LocalTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000063 /* LocalTranscriber.swift */; };
 		AA000090 /* AudioChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000090 /* AudioChunker.swift */; };
+		AA0000C1 /* CloudAPITranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000C1 /* CloudAPITranscriber.swift */; };
+		AA0000C2 /* CloudSTTConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000C2 /* CloudSTTConfig.swift */; };
+		AB0000C3 /* CloudAPITranscriberTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000C3 /* CloudAPITranscriberTests.swift */; };
 		AA000091 /* AudioEnvelopeProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000091 /* AudioEnvelopeProcessor.swift */; };
 		AA000064 /* NotuleTitleExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000064 /* NotuleTitleExtractor.swift */; };
 		AA000065 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = SD000001 /* WhisperKit */; };
@@ -267,6 +270,9 @@
 		FB000006 /* GraphCalendarViewResponse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = GraphCalendarViewResponse.json; sourceTree = "<group>"; };
 		FA000063 /* LocalTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTranscriber.swift; sourceTree = "<group>"; };
 		FA000090 /* AudioChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioChunker.swift; sourceTree = "<group>"; };
+		FA0000C1 /* CloudAPITranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAPITranscriber.swift; sourceTree = "<group>"; };
+		FA0000C2 /* CloudSTTConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSTTConfig.swift; sourceTree = "<group>"; };
+		FB0000C3 /* CloudAPITranscriberTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudAPITranscriberTests.swift; sourceTree = "<group>"; };
 		FA000091 /* AudioEnvelopeProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioEnvelopeProcessor.swift; sourceTree = "<group>"; };
 		FA000064 /* NotuleTitleExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleTitleExtractor.swift; sourceTree = "<group>"; };
 		FA000066 /* ProfileTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileTemplates.swift; sourceTree = "<group>"; };
@@ -382,6 +388,7 @@
 				FA00PC02 /* PersonalCorrectionsView.swift */,
 				FA00PC01 /* PersonalCorrections.swift */,
 				FA000090 /* AudioChunker.swift */,
+				FA0000C1 /* CloudAPITranscriber.swift */,
 				CAFE0014 /* SettingsSyncService.swift */,
 				FA000091 /* AudioEnvelopeProcessor.swift */,
 				FA000064 /* NotuleTitleExtractor.swift */,
@@ -445,6 +452,7 @@
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
 				FA0000K5 /* HostedProviderConfig.swift */,
+				FA0000C2 /* CloudSTTConfig.swift */,
 				FA0000CP1 /* CloudProviderConfig.swift */,
 				FA000070 /* ProfileSettingsView.swift */,
 				FA000072 /* PeopleDirectoryView.swift */,
@@ -509,6 +517,7 @@
 				FB000001 /* ThoughtVaultTests.swift */,
 				FB0000S5 /* QuickNoteStoreTests.swift */,
 				FB9E5A02 /* VaultFolderStoreTests.swift */,
+				FB0000C3 /* CloudAPITranscriberTests.swift */,
 				FB000002 /* MigrationTests.swift */,
 				FB000003 /* PersonProfileTests.swift */,
 				FB000004 /* PersonDirectoryServiceTests.swift */,
@@ -655,6 +664,8 @@
 				AA00PC02 /* PersonalCorrectionsView.swift in Sources */,
 				AA00PC01 /* PersonalCorrections.swift in Sources */,
 				AA000090 /* AudioChunker.swift in Sources */,
+				AA0000C1 /* CloudAPITranscriber.swift in Sources */,
+				AA0000C2 /* CloudSTTConfig.swift in Sources */,
 				AA000091 /* AudioEnvelopeProcessor.swift in Sources */,
 				AA000064 /* NotuleTitleExtractor.swift in Sources */,
 				AA000006 /* Analytics.swift in Sources */,
@@ -751,6 +762,7 @@
 				AB000001 /* ThoughtVaultTests.swift in Sources */,
 				AB0000S5 /* QuickNoteStoreTests.swift in Sources */,
 				AB9E5A02 /* VaultFolderStoreTests.swift in Sources */,
+				AB0000C3 /* CloudAPITranscriberTests.swift in Sources */,
 				AB000002 /* MigrationTests.swift in Sources */,
 				AB000003 /* PersonProfileTests.swift in Sources */,
 				AB000004 /* PersonDirectoryServiceTests.swift in Sources */,

@@ -133,6 +133,7 @@ if (handleiding) {
  reviewMessages[0].body = reviewTicket.description;
  reviewMessages[1].body = "Dank voor je melding. Welke microfoon gebruik je, en gebeurt het ook bij een opname van alleen de microfoon?";
 }
+if (new URLSearchParams(location.search).get("scenario") === "cloud-stt") useSettingsStore.setState({transcription_engine:"cloud_api",cloud_stt_provider:"groq",cloud_stt_model:"whisper-large-v3-turbo"});
 if (new URLSearchParams(location.search).get("scenario") === "recording") useRecordingStore.setState({phase:"recording",recordingStartedAt:Date.now()});
 function IdentityReview() {
  const [ready, setReady] = useState(false);

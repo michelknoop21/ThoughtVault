@@ -242,6 +242,8 @@ extension SettingsView {
             case .appleSpeech:
                 Text("Apple Spraakherkenning werkt direct, zonder download.")
                     .font(.system(size: 13)).foregroundStyle(HomeColor.text3)
+            case .cloudAPI:
+                CloudSTTConfig()
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: localTranscriber)
@@ -305,6 +307,7 @@ private extension LocalTranscriberEngine {
         case .whisperKit:  String(localized: "Whisper-model, eenmalig downloaden")
         case .parakeet:    String(localized: "Parakeet-model, eenmalig downloaden")
         case .appleSpeech: String(localized: "Werkt direct, zonder download")
+        case .cloudAPI:    String(localized: "Audio gaat naar je eigen cloud-aanbieder")
         }
     }
 }

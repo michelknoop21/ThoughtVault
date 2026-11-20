@@ -4,6 +4,8 @@
 // transcribed fully on-device, no server. GGML models are downloaded on first
 // use from the official whisper.cpp model repo into the app data dir.
 
+pub mod cloud;
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tokio::sync::watch;

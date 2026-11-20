@@ -160,7 +160,7 @@ export function ProcessingTab() {
 
             {settings.processing_mode === "local" && (
               <div className="action-row" role="group" aria-label="Transcriptie-engine" style={{ margin: "0 20px 12px" }}>
-                {([["whisper", "Whisper op apparaat"], ["cloud_api", "Cloud-API"]] as const).map(([engine, name]) =>
+                {([["whisper", "Op deze pc"], ["cloud_api", "Cloud-API"]] as const).map(([engine, name]) =>
                   <button key={engine} aria-pressed={settings.transcription_engine === engine}
                     className={`btn btn-sm ${settings.transcription_engine === engine ? "btn-accent" : "btn-secondary"}`}
                     onClick={() => settings.updateSettings({ transcription_engine: engine })}>{name}</button>)}

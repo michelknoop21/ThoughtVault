@@ -256,6 +256,7 @@ extension LocalTranscriberError: LogCoded {
         switch self {
         case .engineUnavailable: return "engineUnavailable"
         case .transcriptionFailed: return "transcriptionFailed"
+        case .cloudFailed: return "cloudFailed"
         case .emptyResult: return "emptyResult"
         case .modelNotInstalled: return "modelNotInstalled"
         case .timedOut(let stage, _): return "timedOut stage=\(stage) reason=timeout"

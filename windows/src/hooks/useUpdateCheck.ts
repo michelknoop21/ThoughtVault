@@ -15,6 +15,19 @@ function isNewer(remote: string, local: string): boolean {
   return r[2] > l[2];
 }
 
+// The Windows updater exits via process::exit, skipping RunEvent::Exit and its session_end.
+// Close the session first so the next start does not report a crash; restore it if install fails.
+async function installClosingSession(update: Update): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("session_end").catch(() => {});
+  try {
+    await update.install();
+  } catch (error) {
+    await invoke("session_stage", { stage: null }).catch(() => {});
+    throw error;
+  }
+}
+
 export const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 export const CHECK_UPDATES_EVENT = "tv-check-updates";
 
@@ -137,7 +150,7 @@ export function useUpdateCheck() {
     if (unmountedRef.current || updateRef.current !== update || keepBeforeInstall || hasMainWork()) return;
     if (installingRef.current) return installingRef.current;
     if (!downloadedRef.current) throw new Error("Update download failed");
-    const installation = update.install();
+    const installation = installClosingSession(update);
     installingRef.current = installation;
     try {
       await installation;
@@ -187,7 +200,7 @@ export function useUpdateCheck() {
           }
           try {
             if (!installation) {
-              installation = update!.install();
+              installation = installClosingSession(update!);
               installingRef.current = installation;
             }
             await installation;

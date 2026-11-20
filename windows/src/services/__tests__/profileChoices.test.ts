@@ -4,14 +4,14 @@ import { useProfilesStore } from "../../stores/profilesStore";
 import { saveProfileForMode } from "../profileActions";
 import { shouldBlockForLocalNotes } from "../routeAccess";
 
-beforeEach(() => useProfilesStore.setState({ profiles: DEFAULT_PROFILES, localProfiles: [] }));
+beforeEach(() => useProfilesStore.setState({ profiles: DEFAULT_PROFILES.filter(p => p.id !== "prospectflow_offerte"), prospectFlowEnabled: false, localProfiles: [] }));
 
 it("saves and selects a custom profile in local mode without a server", async () => {
   const profile = { id: "local-test", name: "Eigen", notule_prompt: "Vat samen", is_default: false };
   await saveProfileForMode("local", profile);
   expect(useProfilesStore.getState().getProfile("local-test")?.name).toBe("Eigen");
   expect(useProfilesStore.getState().profiles.map((p) => p.id).slice(0, 7))
-    .toEqual(DEFAULT_PROFILES.map((p) => p.id));
+    .toEqual(DEFAULT_PROFILES.filter(p => p.id !== "prospectflow_offerte").map((p) => p.id));
 });
 
 it("hides legacy built-ins from new recording choices but keeps custom profiles", async () => {

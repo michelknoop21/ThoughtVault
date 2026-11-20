@@ -348,7 +348,7 @@ export function TranscriptDetail({
                       <Document24Regular style={{ fontSize: 15 }} /> Open offerte {pfRef.number}
                     </button>
                   )}
-                  <button className="td-export-item" onClick={() => { setPfDialog(true); setExportOpen(false); }}>
+                  <button className="td-export-item" disabled={isEditingNotule || isSaving} onClick={() => { setPfDialog(true); setExportOpen(false); }}>
                     <Document24Regular style={{ fontSize: 15 }} /> {pfRef?.number ? "Nieuwe conceptofferte maken" : "Maak offerte in Prospect Flow"}
                   </button>
                 </>
@@ -439,6 +439,13 @@ export function TranscriptDetail({
               onAddTerm={(entry, done) => { suggestionDone.current = done; setCorrection(entry); setRememberCorrection(true); setCorrectionError(""); }}
               onCorrect={(entry) => applyCorrection(entry, false)} />
           )}
+
+          {detailTab === "notule" && transcript.notule_html && pfConfigured &&
+            (transcript.profile_id === "prospectflow_offerte" || transcript.profile_name === "Prospectflow offerte") &&
+            <section className="context-bar" aria-label="Offerte voorbereiden">
+              <p>Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig.</p>
+              <button className="btn btn-accent" disabled={isEditingNotule || isSaving} onClick={() => setPfDialog(true)}>Notule accorderen en naar Prospect Flow</button>
+            </section>}
 
           {/* Content */}
           {detailTab === "notule" ? (

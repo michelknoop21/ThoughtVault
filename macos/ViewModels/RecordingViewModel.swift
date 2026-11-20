@@ -265,10 +265,15 @@ final class RecordingViewModel {
 
     /// Reload profiles from API. Call after login to fetch user-specific profiles.
     func reloadProfiles() async {
+        if !ProspectFlowService.hasVerifiedKey {
+            availableProfiles.removeAll { $0.id == "prospectflow_offerte" }
+            if selectedProfile?.id == "prospectflow_offerte" { selectedProfile = availableProfiles.first ?? Profile.defaults.first }
+        }
         await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "defaultProfile") ?? "")
     }
 
     private func loadDefaultProfile(savedId: String) async {
+        await ProspectFlowService.validateKey()
         var profiles: [Profile]
         if isLocalMode {
             // Fully offline: use the built-in profiles, no server call.

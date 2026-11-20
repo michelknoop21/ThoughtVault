@@ -119,6 +119,27 @@
       "detail": "Zo kort mogelijk zonder betekenisverlies.",
       "style": "Directe instructie in de tweede persoon; geen vergadernotulen.",
       "emoji": "📋"
+    },
+    {
+      "id": "prospectflow_offerte",
+      "name": "Prospectflow offerte",
+      "icon": "eurosign.square",
+      "description": "Offertevoorbereiding: controleer en accordeer de notule voor Prospect Flow",
+      "goal": "Maak een volledige, controleerbare offertebriefing voor Prospect Flow, die de gebruiker eerst bewerkt en accordeert.",
+      "sections": [
+        "Opdrachtgever en contactpersoon",
+        "Klantvraag en gewenste uitkomst",
+        "Werkzaamheden en leveringen",
+        "Aantallen en specificaties",
+        "Prijsafspraken en voorwaarden",
+        "Planning",
+        "Uitgesloten werkzaamheden",
+        "Openstaande vragen en vervolg"
+      ],
+      "focus": "Onderscheid de opdrachtgevende organisatie van contactpersonen, onze eigen organisatie en leveranciers. Noem de opdrachtgever expliciet wanneer die bekend is. Bewaar iedere besproken levering, productnaam, aantal, eenheid, bedrag, btw-afspraak, frequentie, looptijd, afhankelijkheid en beperking. Onderscheid wensen, opties en definitieve afspraken. Gebruik woordenboek en deelnemerscontext om namen te corrigeren. Verzin geen prijzen, klantgegevens of ontbrekende aantallen. Benoem ontbrekende informatie als open vraag; vul die niet zelf in.",
+      "detail": "Volledig: behoud alle concrete offertedetails, zonder smalltalk.",
+      "style": "Zakelijk, concreet en geschikt voor controle door de gebruiker.",
+      "emoji": "🧾"
     }
   ]
 }

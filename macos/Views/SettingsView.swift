@@ -1342,6 +1342,7 @@ struct SettingsView: View {
     // MARK: - Helpers
 
     private func loadProfiles() async {
+        await ProspectFlowService.validateKey()
         isLoadingProfiles = true
         defer { isLoadingProfiles = false }
         if isLocalProcessing {

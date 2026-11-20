@@ -1,3 +1,4 @@
+import { useProfilesStore } from "../stores/profilesStore";
 import { invoke } from "@tauri-apps/api/core";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useSupportStore } from "../stores/supportStore";
@@ -106,7 +107,18 @@ async function request<T>(path: string, method: "GET" | "POST", body?: unknown, 
 
 /** Cheap authenticated call; throws a Dutch message when URL, key or permissions are wrong. */
 export async function testConnection(): Promise<void> {
-  await request("/api/customers?search=", "GET");
+  const instance = baseUrl();
+  const key = await loadCredential(PROSPECTFLOW_KEY);
+  useProfilesStore.getState().setProspectFlowEnabled(false);
+  await request("/api/ai/offers/from-conversation/match", "POST", { text: "" });
+  if (instance === baseUrl() && key === await loadCredential(PROSPECTFLOW_KEY)) {
+    useProfilesStore.getState().setProspectFlowEnabled(true);
+  }
+}
+
+export async function refreshProfileAccess(): Promise<void> {
+  try { await testConnection(); }
+  catch { useProfilesStore.getState().setProspectFlowEnabled(false); }
 }
 
 export async function match(text: string): Promise<Candidate[]> {

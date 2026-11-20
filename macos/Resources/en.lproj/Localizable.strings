@@ -679,3 +679,19 @@
 "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "Sync data could not be read safely. Your local minutes are preserved.";
 "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "Local storage needs recovery first. iCloud sync is paused to protect your minutes.";
 "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "Minutes storage was removed from iCloud. Sync is paused; your local minutes are preserved.";
+
+// Prospect Flow customer review
+"Controleer de definitieve notule" = "Review the final minutes";
+"Beoordeel eerst de woordenboekvoorstellen en sla eventuele wijzigingen op in de notule." = "Review glossary suggestions and save any changes to the minutes first.";
+"Ik accordeer deze notule voor Prospect Flow" = "I approve these minutes for Prospect Flow";
+"Voorgestelde opdrachtgever" = "Suggested customer";
+"Bron: notule" = "Source: minutes";
+"Bron: transcriptie" = "Source: transcript";
+"Bron: agenda-afspraak" = "Source: calendar event";
+"Bron: titel" = "Source: title";
+"Geen eenduidige klantnaam gevonden. Kies of vul een klant in." = "No unambiguous customer found. Choose or enter a customer.";
+"Klantvoorstel niet beschikbaar. Kies of vul zelf een klant in." = "Customer suggestion unavailable. Choose or enter a customer.";
+"Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig." = "Review glossary suggestions and edit the minutes where needed.";
+"Notule accorderen en naar Prospect Flow" = "Approve minutes and continue to Prospect Flow";
+"Geen klanten gevonden. Kies een nieuwe klant of zoek opnieuw." = "No customers found. Choose a new customer or search again.";
+"Zoeken mislukt. Probeer opnieuw of vul zelf een klant in." = "Search failed. Try again or enter a customer.";

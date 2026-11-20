@@ -962,6 +962,7 @@ final class RecordingViewModel {
         )
         record.participants = participants
         record.durationSeconds = audioSeconds
+        record.detailLevel = NotuleDetailLevel.effective(for: profile).rawValue
         do {
             try LocalTranscriptStore.shared.save(record)
         } catch {

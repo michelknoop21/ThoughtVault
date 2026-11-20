@@ -39,7 +39,10 @@ import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
 import { TranscriptDetail } from "../components/transcripts/TranscriptDetail";
 import { runInBackground } from "../services/contextSuggestions";
-import type { Transcript } from "../types";
+import { regenerateDetailLevel } from "../services/notuleDetailLevel";
+import { DetailLevelPicker } from "../components/DetailLevelPicker";
+import { enrichProfile } from "../services/profileTemplates";
+import type { NotuleDetailLevel, Transcript } from "../types";
 
 interface ContextMenu {
   x: number;
@@ -64,6 +67,7 @@ export function TranscriptsPage() {
   const [regenerateProfileId, setRegenerateProfileId] = useState("");
   const [retranscribe, setRetranscribe] = useState(false);
   const [optimizeAudio, setOptimizeAudio] = useState(false);
+  const [regenerateLevel, setRegenerateLevel] = useState<NotuleDetailLevel>("volledig");
   const [tagsDialogId, setTagsDialogId] = useState<string | null>(null);
   const [newTagInput, setNewTagInput] = useState("");
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -227,16 +231,29 @@ export function TranscriptsPage() {
   }
 
   // --- Regenerate ---
+  // DEC-073: local transcripts get a detail level, preselected by the regenerate rule; the server takes none.
+  function regenerateLevelFor(transcript: Transcript, profileId: string): NotuleDetailLevel {
+    const profile = useProfilesStore.getState().profiles.find((p) => p.id === profileId);
+    return profile ? regenerateDetailLevel(transcript, enrichProfile(profile), useSettingsStore.getState().profile_detail_levels) : "volledig";
+  }
+  function showRegenerateLevel(transcript: Transcript, profileId: string): boolean {
+    const profile = useProfilesStore.getState().profiles.find((p) => p.id === profileId);
+    return isLocalId(transcript.id) && !!profile && !!enrichProfile(profile).detail_level;
+  }
   function requestRegenerate(transcript: Transcript) {
     const profiles = useProfilesStore.getState().profiles;
-    const current = profiles.find((p) => p.name === transcript.profile_name || p.id === transcript.profile_name);
-    setRegenerateProfileId(current?.id ?? profiles[0]?.id ?? "");
+    const current = profiles.find((p) => p.id === transcript.profile_id)
+      ?? profiles.find((p) => p.name === transcript.profile_name || p.id === transcript.profile_name);
+    const profileId = current?.id ?? profiles[0]?.id ?? "";
+    setRegenerateProfileId(profileId);
+    setRegenerateLevel(regenerateLevelFor(transcript, profileId));
     setRetranscribe(false);
     setOptimizeAudio(false);
     setRegenerateTarget(transcript);
   }
 
-  async function handleRegenerate(transcript: Transcript, profileId: string) {
+  /** `chosenLevel`: the level picked in the dialog; undefined applies the regenerate rule (DEC-073). */
+  async function handleRegenerate(transcript: Transcript, profileId: string, chosenLevel?: NotuleDetailLevel) {
     if (regeneratingId === transcript.id) return;
     const profile = useProfilesStore.getState().profiles.find((p) => p.id === profileId);
     if (!profile) { toast.show("Kies een notulentemplate", "error"); return; }
@@ -263,6 +280,8 @@ export function TranscriptsPage() {
         return;
       }
       setRegeneratingId(transcript.id);
+      const detailLevel = chosenLevel
+        ?? regenerateDetailLevel(transcript, enrichProfile(profile), useSettingsStore.getState().profile_detail_levels);
       try {
         if (!transcript.merge_sources) transcription = await LLMService.correctTranscription(transcription, profile.id, transcript.id);
         if (transcription !== transcript.raw_transcription) {
@@ -272,11 +291,11 @@ export function TranscriptsPage() {
         const meter = new UsageMeter();
         const generatedHTML = await LLMService.generateNotulen(transcription, profile,
           () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], "",
-          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter, !!transcript.merge_sources);
+          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter, !!transcript.merge_sources, undefined, detailLevel);
         if (!hasUsableNotule(generatedHTML)) throw new Error("Geen bruikbare notule gegenereerd");
         const html = exportWithOwnNotes(generatedHTML, transcript.quick_note || getTranscriptQuickNote(transcript.id), true);
         const title = getTranscriptIdentity(transcript.id)?.title ? transcript.title : (extractTitle(html) || transcript.title);
-        const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
+        const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), detail_level: detailLevel, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
           notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
         await useLocalTranscriptsStore.getState().update(transcript.id, finished);
         updateTranscript(transcript.id, finished);
@@ -673,13 +692,15 @@ export function TranscriptsPage() {
           {retranscribe && <label><input type="checkbox" checked={optimizeAudio} onChange={e => setOptimizeAudio(e.target.checked)} /> Audio optimaliseren (tijdelijke kopie, origineel blijft bewaard)</label>}
           {getTranscriptIdentity(regenerateTarget.id)?.calendar && <p className="text-caption">Agenda-afspraak: {getTranscriptIdentity(regenerateTarget.id)?.calendar?.title}</p>}
           <select className="select" value={regenerateProfileId}
-            onChange={(e) => setRegenerateProfileId(e.target.value)}>
+            onChange={(e) => { setRegenerateProfileId(e.target.value); setRegenerateLevel(regenerateLevelFor(regenerateTarget, e.target.value)); }}>
             {useProfilesStore.getState().profiles.map((profile) =>
               <option key={profile.id} value={profile.id}>{profile.name}</option>)}
           </select>
+          {showRegenerateLevel(regenerateTarget, regenerateProfileId) && <DetailLevelPicker value={regenerateLevel} onChange={setRegenerateLevel} />}
           <div className="flex-row gap-8" style={{ justifyContent: "flex-end", marginTop: 16 }}>
             <button className="btn" onClick={() => setRegenerateTarget(null)}>Annuleren</button>
-            <button className="btn btn-accent" onClick={() => void handleRegenerate(regenerateTarget, regenerateProfileId)}>Regenereren</button>
+            <button className="btn btn-accent" onClick={() => void handleRegenerate(regenerateTarget, regenerateProfileId,
+              showRegenerateLevel(regenerateTarget, regenerateProfileId) ? regenerateLevel : undefined)}>Regenereren</button>
           </div>
         </div>
       </DesktopDialog>}

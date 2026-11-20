@@ -94,7 +94,12 @@ export interface NotuleUsage {
   duration_ms: number;
   steps: Record<string, { requests: number; input_tokens: number; output_tokens: number }>;
   content_check: "ran" | "skipped";
+  /** Detail level of the run; absent for notules generated before detail levels existed. */
+  detail_level?: NotuleDetailLevel;
 }
+
+/** How much detail a notule keeps; absent everywhere means volledig. */
+export type NotuleDetailLevel = "kort" | "normaal" | "volledig";
 
 /** Per-device totals for one month ("yyyy-MM"). */
 export interface MonthUsage {
@@ -111,6 +116,8 @@ export interface Transcript {
   merge_sources?: MergeSource[];
   document_branding_json?: string | null;
   notule_usage?: NotuleUsage;
+  /** Detail level the notule was (or will be) generated with; regenerate and retry start from it. */
+  detail_level?: NotuleDetailLevel;
   notule_draft_html?: string;
   notule_review_reason?: string;
   profile_id?: string;
@@ -159,6 +166,8 @@ export interface Profile {
   notule_prompt?: string;
   output_template?: string;  // Backend uses output_template
   notule_template?: string;  // Frontend alias for compatibility
+  /** Default detail level from the bundled templates (kort, normaal, volledig); absent means volledig. */
+  detail_level?: string;
   is_default?: boolean;
   isDefault?: boolean;
   is_public?: boolean;       // Backend uses is_public
@@ -179,6 +188,7 @@ export const DEFAULT_PROFILES: Profile[] = profileTemplates.map((entry) => ({
   system_prompt: entry.systemPrompt,
   notule_prompt: entry.notulePrompt,
   output_template: entry.template,
+  detail_level: entry.detailLevel,
   is_default: true,
 }));
 
@@ -399,6 +409,8 @@ export interface AppSettings {
   notulen_provider: NotulenProvider;
   /** Provider tried once when the main one fails; "" = no fallback. */
   notulen_fallback_provider: NotulenProvider | "";
+  /** The user's notule detail level per profile id; a profile without a choice uses its default. */
+  profile_detail_levels: Record<string, NotuleDetailLevel>;
   ollama_url: string;
   ollama_model: string;
   lm_studio_url: string;
@@ -427,6 +439,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   whisper_model: "medium",
   notulen_provider: "openrouter",
   notulen_fallback_provider: "",
+  profile_detail_levels: {},
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
   lm_studio_url: "http://localhost:1234",

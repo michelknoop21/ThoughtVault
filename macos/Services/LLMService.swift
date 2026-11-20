@@ -145,6 +145,7 @@ protocol LLMService: Sendable {
     ///   - notulePrompt: User-level instructions describing the desired output format.
     ///   - outputTemplate: Optional HTML/Markdown template to structure the output.
     ///   - constraints: Source sentences the notule must keep; appended as a numbered block.
+    ///   - detailBlock: `NotuleDetailLevel.draftBlock`, appended last; empty at volledig.
     ///   - onProgress: Called with each streamed text chunk as it arrives.
     /// - Returns: The complete generated notulen as a string.
     func generateNotulen(
@@ -153,11 +154,21 @@ protocol LLMService: Sendable {
         notulePrompt: String,
         outputTemplate: String?,
         constraints: [String],
+        detailBlock: String,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String
 
     /// Plain, non-streamed completion (used by the audit and chunk summaries).
     func complete(system: String, user: String) async throws -> String
+}
+
+extension LLMService {
+    /// Without a detail block: the notule at volledig, as before detail levels existed.
+    func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?,
+                         constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String {
+        try await generateNotulen(transcription: transcription, systemPrompt: systemPrompt, notulePrompt: notulePrompt,
+                                  outputTemplate: outputTemplate, constraints: constraints, detailBlock: "", onProgress: onProgress)
+    }
 }
 
 // MARK: - Prompt assembly
@@ -205,7 +216,8 @@ func buildNotuleUserContent(
     notulePrompt: String,
     transcription: String,
     outputTemplate: String?,
-    constraints: [String] = []
+    constraints: [String] = [],
+    detailBlock: String = ""
 ) -> String {
     let template = (outputTemplate ?? "").replacingOccurrences(
         of: "<style\\b[^>]*>[\\s\\S]*?</style>", with: "",
@@ -221,13 +233,13 @@ func buildNotuleUserContent(
         // transcription last so its content can never trigger a placeholder swap.
         return notulePrompt
             .replacingOccurrences(of: "{{OUTPUT_TEMPLATE}}", with: template)
-            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription) + contentRules + constraintBlock
+            .replacingOccurrences(of: "{{TRANSCRIPTION}}", with: transcription) + contentRules + constraintBlock + detailBlock
     }
     var content = "\(notulePrompt)\n\nTranscriptie:\n\(transcription)"
     if !template.isEmpty {
         content += "\n\nGebruik dit outputformaat:\n\(template)"
     }
-    return content + contentRules + constraintBlock
+    return content + contentRules + constraintBlock + detailBlock
 }
 
 // MARK: - LLMServiceFactory
@@ -324,6 +336,7 @@ private struct UnavailableLLMService: LLMService {
         notulePrompt: String,
         outputTemplate: String?,
         constraints: [String],
+        detailBlock: String,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         throw LLMError.generationFailed(message)
@@ -346,6 +359,7 @@ private struct CloudLLMServiceStub: LLMService {
         notulePrompt: String,
         outputTemplate: String?,
         constraints: [String],
+        detailBlock: String,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         throw LLMError.generationFailed("Cloud provider genereert notulen server-side via n8n.")
@@ -532,6 +546,7 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
         notulePrompt: String,
         outputTemplate: String?,
         constraints: [String],
+        detailBlock: String,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
 
@@ -549,7 +564,8 @@ final class OpenAICompatibleLLMService: LLMService, @unchecked Sendable {
             notulePrompt: notulePrompt,
             transcription: processedTranscription,
             outputTemplate: outputTemplate,
-            constraints: constraints
+            constraints: constraints,
+            detailBlock: detailBlock
         )
 
         return try await ModelRequestLog.run(provider: providerKind, model: model, system: systemPrompt, user: userContent) {

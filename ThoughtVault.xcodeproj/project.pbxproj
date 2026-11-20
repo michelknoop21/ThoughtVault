@@ -136,11 +136,22 @@
 		AA00ML01 /* ModelRequestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA00ML01 /* ModelRequestLog.swift */; };
 		AAUM0001 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
 		AAUM0002 /* UsageMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0001 /* UsageMeter.swift */; };
+		AADL0001 /* NotuleDetailLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADL0001 /* NotuleDetailLevel.swift */; };
+		AADL0002 /* NotuleDetailLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADL0001 /* NotuleDetailLevel.swift */; };
+		AADU0011 /* DetailLevelPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0001 /* DetailLevelPicker.swift */; };
+		AADU0012 /* DetailLevelPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0001 /* DetailLevelPicker.swift */; };
+		AADU0021 /* ProfileSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0002 /* ProfileSelectionSheet.swift */; };
+		AADU0022 /* ProfileSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0002 /* ProfileSelectionSheet.swift */; };
+		AADU0031 /* ProfileCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0003 /* ProfileCard.swift */; };
+		AADU0032 /* ProfileCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0003 /* ProfileCard.swift */; };
+		AADU0041 /* ProfileEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0004 /* ProfileEditSheet.swift */; };
+		AADU0042 /* ProfileEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADU0004 /* ProfileEditSheet.swift */; };
 		AAUM0003 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
 		AAUM0004 /* NotuleUsageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAUM0002 /* NotuleUsageViews.swift */; };
 		AAOB0001 /* ObsidianLinkBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAOB0001 /* ObsidianLinkBanner.swift */; };
 		AAOB0002 /* ObsidianLinkBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAOB0001 /* ObsidianLinkBanner.swift */; };
 		ABUM0001 /* UsageMeterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBUM0001 /* UsageMeterTests.swift */; };
+		ABDL0001 /* NotuleDetailLevelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBDL0001 /* NotuleDetailLevelTests.swift */; };
 		AA0000T1 /* NotuleGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0000T1 /* NotuleGenerator.swift */; };
 		AA000009 /* BiometricService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000009 /* BiometricService.swift */; };
 		AA000010 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA000010 /* CalendarService.swift */; };
@@ -535,9 +546,15 @@
 		FA00AL01 /* NotuleAuditLong.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleAuditLong.swift; sourceTree = "<group>"; };
 		FA00ML01 /* ModelRequestLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRequestLog.swift; sourceTree = "<group>"; };
 		FAUM0001 /* UsageMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeter.swift; sourceTree = "<group>"; };
+		FADL0001 /* NotuleDetailLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleDetailLevel.swift; sourceTree = "<group>"; };
+		FADU0001 /* DetailLevelPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailLevelPicker.swift; sourceTree = "<group>"; };
+		FADU0002 /* ProfileSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSelectionSheet.swift; sourceTree = "<group>"; };
+		FADU0003 /* ProfileCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCard.swift; sourceTree = "<group>"; };
+		FADU0004 /* ProfileEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileEditSheet.swift; sourceTree = "<group>"; };
 		FAUM0002 /* NotuleUsageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleUsageViews.swift; sourceTree = "<group>"; };
 		FAOB0001 /* ObsidianLinkBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObsidianLinkBanner.swift; sourceTree = "<group>"; };
 		FBUM0001 /* UsageMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageMeterTests.swift; sourceTree = "<group>"; };
+		FBDL0001 /* NotuleDetailLevelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleDetailLevelTests.swift; sourceTree = "<group>"; };
 		FA0000T1 /* NotuleGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotuleGenerator.swift; sourceTree = "<group>"; };
 		FA000009 /* BiometricService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricService.swift; sourceTree = "<group>"; };
 		FA000010 /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
@@ -815,6 +832,7 @@
 				FA00AL01 /* NotuleAuditLong.swift */,
 				FA00ML01 /* ModelRequestLog.swift */,
 				FAUM0001 /* UsageMeter.swift */,
+				FADL0001 /* NotuleDetailLevel.swift */,
 				FA0000T1 /* NotuleGenerator.swift */,
 				FA0000S4 /* QuickNoteStore.swift */,
 				FA000009 /* BiometricService.swift */,
@@ -901,6 +919,10 @@
 				FA0000W2 /* OnboardingView+NotulenIOS.swift */,
 				FA0000J1 /* AccountView+iOS.swift */,
 				FA0000I9 /* ProfilesView+iOS.swift */,
+				FADU0001 /* DetailLevelPicker.swift */,
+				FADU0002 /* ProfileSelectionSheet.swift */,
+				FADU0003 /* ProfileCard.swift */,
+				FADU0004 /* ProfileEditSheet.swift */,
 				FA0000I8 /* SettingsView+iOS.swift */,
 				FB0PF003 /* NotuleFallbackPicker.swift */,
 				FAUM0002 /* NotuleUsageViews.swift */,
@@ -1057,6 +1079,7 @@
 				FB00AP01 /* NotuleAuditPartsTests.swift */,
 				FB00ML01 /* ModelRequestLogTests.swift */,
 				FBUM0001 /* UsageMeterTests.swift */,
+				FBDL0001 /* NotuleDetailLevelTests.swift */,
 				FB0000NA /* NotulePromptTests.swift */,
 				FB0000G1 /* M3LiveContentGateTests.swift */,
 				FB0000G2 /* M3LiveContentGate.swift */,
@@ -1300,6 +1323,7 @@
 				AA00AL01 /* NotuleAuditLong.swift in Sources */,
 				AA00ML01 /* ModelRequestLog.swift in Sources */,
 				AAUM0001 /* UsageMeter.swift in Sources */,
+				AADL0001 /* NotuleDetailLevel.swift in Sources */,
 				AAUM0003 /* NotuleUsageViews.swift in Sources */,
 				AAOB0001 /* ObsidianLinkBanner.swift in Sources */,
 				AA0000T1 /* NotuleGenerator.swift in Sources */,
@@ -1355,6 +1379,10 @@
 				AA0000W2 /* OnboardingView+NotulenIOS.swift in Sources */,
 				AA0000J1 /* AccountView+iOS.swift in Sources */,
 				AA0000I9 /* ProfilesView+iOS.swift in Sources */,
+				AADU0011 /* DetailLevelPicker.swift in Sources */,
+				AADU0021 /* ProfileSelectionSheet.swift in Sources */,
+				AADU0031 /* ProfileCard.swift in Sources */,
+				AADU0041 /* ProfileEditSheet.swift in Sources */,
 				AA0000I8 /* SettingsView+iOS.swift in Sources */,
 				AB0PF005 /* NotuleFallbackPicker.swift in Sources */,
 				AB0PF003 /* ProspectFlowViews.swift in Sources */,
@@ -1457,6 +1485,7 @@
 				AB00AP01 /* NotuleAuditPartsTests.swift in Sources */,
 				AB00ML01 /* ModelRequestLogTests.swift in Sources */,
 				ABUM0001 /* UsageMeterTests.swift in Sources */,
+				ABDL0001 /* NotuleDetailLevelTests.swift in Sources */,
 				AB0000NA /* NotulePromptTests.swift in Sources */,
 				AB0000G1 /* M3LiveContentGateTests.swift in Sources */,
 				AB0000G2 /* M3LiveContentGate.swift in Sources */,
@@ -1558,6 +1587,7 @@
 				AA00AL02 /* NotuleAuditLong.swift in Sources */,
 				AA00ML02 /* ModelRequestLog.swift in Sources */,
 				AAUM0002 /* UsageMeter.swift in Sources */,
+				AADL0002 /* NotuleDetailLevel.swift in Sources */,
 				AAUM0004 /* NotuleUsageViews.swift in Sources */,
 				AAOB0002 /* ObsidianLinkBanner.swift in Sources */,
 				F2989054FE6E2130E893C3F6 /* NotuleGenerator.swift in Sources */,
@@ -1613,6 +1643,10 @@
 				AS0000W2 /* OnboardingView+NotulenIOS.swift in Sources */,
 				D2526AF56612BC8B19CD0AEA /* AccountView+iOS.swift in Sources */,
 				E79868E1879C0FD03B00A5E6 /* ProfilesView+iOS.swift in Sources */,
+				AADU0012 /* DetailLevelPicker.swift in Sources */,
+				AADU0022 /* ProfileSelectionSheet.swift in Sources */,
+				AADU0032 /* ProfileCard.swift in Sources */,
+				AADU0042 /* ProfileEditSheet.swift in Sources */,
 				ADF08833A647392A15993E47 /* SettingsView+iOS.swift in Sources */,
 				AB0PF006 /* NotuleFallbackPicker.swift in Sources */,
 				AB0PF004 /* ProspectFlowViews.swift in Sources */,

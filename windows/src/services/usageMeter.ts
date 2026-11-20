@@ -1,7 +1,7 @@
 import DOMPurify from "dompurify";
 import { htmlToPlainText } from "../utils/htmlToMarkdown";
 import { noteSentenceCount } from "./notuleAudit";
-import type { MonthUsage, NotuleBilling, NotuleUsage } from "../types";
+import type { MonthUsage, NotuleBilling, NotuleDetailLevel, NotuleUsage } from "../types";
 
 /** What a provider reported for one request. A field is unset when the provider did not send it. */
 export interface Usage { input?: number; output?: number; reasoning?: number; cost?: number }
@@ -30,6 +30,7 @@ export class UsageMeter {
   model = "";
   billing: NotuleBilling = "metered";
   contentCheckSkipped = false;
+  detailLevel?: NotuleDetailLevel;
   private requests = 0;
   private unknownRequests = 0;
   private input = 0;
@@ -74,6 +75,7 @@ export class UsageMeter {
       cost_usd: this.costUnknown ? null : this.cost,
       duration_ms: Date.now() - this.started, steps: this.steps,
       content_check: this.contentCheckSkipped ? "skipped" : "ran",
+      ...(this.detailLevel ? { detail_level: this.detailLevel } : {}),
     };
   }
 }

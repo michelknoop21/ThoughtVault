@@ -13,6 +13,7 @@ interface TemplateEntry {
   systemPrompt?: string;
   notulePrompt?: string;
   template?: string;
+  detailLevel?: string;
 }
 
 const ENTRIES = templates as TemplateEntry[];
@@ -29,5 +30,6 @@ export function enrichProfile(profile: Profile): Profile {
     system_prompt: entry.systemPrompt ?? profile.system_prompt,
     notule_prompt: entry.notulePrompt ?? profile.notule_prompt,
     output_template: entry.template ?? profile.output_template,
+    detail_level: entry.detailLevel ?? profile.detail_level,
   };
 }

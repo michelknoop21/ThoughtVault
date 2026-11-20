@@ -67,6 +67,7 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         notulePrompt: String,
         outputTemplate: String?,
         constraints: [String],
+        detailBlock: String,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         guard var request = request("/v1/messages") else {
@@ -79,7 +80,8 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
             complete: { try await self.complete(system: $0, user: $1) }
         )
         let userContent = buildNotuleUserContent(notulePrompt: notulePrompt, transcription: transcription,
-                                                 outputTemplate: outputTemplate, constraints: constraints)
+                                                 outputTemplate: outputTemplate, constraints: constraints,
+                                                 detailBlock: detailBlock)
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 16_000,

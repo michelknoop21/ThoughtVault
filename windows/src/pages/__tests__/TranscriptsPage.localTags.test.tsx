@@ -58,7 +58,7 @@ it.each([false, true])("asks for a template and regenerates the saved snapshot (
   await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-overlay button"))
     .find((button) => button.textContent === "Regenereren")!.click(); });
 
-  expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], "", expect.any(Function), expect.any(UsageMeter), merged);
+  expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], "", expect.any(Function), expect.any(UsageMeter), merged, undefined, "volledig");
   expect(useLocalTranscriptsStore.getState().items.find(item => item.id === note.id)?.raw_transcription).toBe(note.raw_transcription);
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
   expect(useLocalTranscriptsStore.getState().items.find((item) => item.id === note.id)).toMatchObject({ profile_name: "Besluiten", has_notes: true });

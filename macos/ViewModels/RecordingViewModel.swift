@@ -1008,6 +1008,8 @@ final class RecordingViewModel {
             updateTask(taskId, status: .error, errorMessage: message)
         }
         isGeneratingLocally = false
+        // The message points the user to "Opgeslagen opnames"; make sure the recording is listed there.
+        loadSavedRecordings()
     }
 
     nonisolated static func hasUsableTranscription(_ text: String) -> Bool {

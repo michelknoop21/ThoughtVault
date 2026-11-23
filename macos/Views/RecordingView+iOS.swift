@@ -87,6 +87,8 @@ extension RecordingView {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Gereed") { showSavedRecordings = false } } }
             }
+            // The list is a cached directory scan; read the Recordings folder again whenever it is shown.
+            .onAppear { recordingVM.loadSavedRecordings() }
             .sheet(item: $selectedReprocessRecording) { reprocessSheet(for: $0) }
         }
         .sheet(isPresented: $showYouTubeSection) {

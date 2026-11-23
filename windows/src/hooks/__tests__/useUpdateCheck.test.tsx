@@ -554,3 +554,37 @@ it("an in-flight fallback cannot overwrite a newly discovered native candidate",
   expect(lastResult.nativeUpdate).toBe(u);
   expect(lastResult.downloadUrl).toBeNull();
 });
+
+// TV-000019: the Windows updater exits without RunEvent::Exit, so JS must end the session first.
+function sessionCalls() {
+  return vi.mocked(invoke).mock.calls.filter(([command]) => command === "session_end" || command === "session_stage");
+}
+function endsSessionBeforeInstall(u: ReturnType<typeof fakeUpdate>) {
+  const end = vi.mocked(invoke).mock.calls.findIndex(([command]) => command === "session_end");
+  expect(end).toBeGreaterThanOrEqual(0);
+  expect(vi.mocked(invoke).mock.invocationCallOrder[end]).toBeLessThan(u.install.mock.invocationCallOrder[0]);
+}
+it("installNow ends the session before installing", async () => {
+  vi.mocked(invoke).mockClear();
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render();
+  await act(async () => { await lastResult.installNow(); });
+  endsSessionBeforeInstall(u);
+  expect(sessionCalls()).toEqual([["session_end"]]);
+});
+it("installing on close ends the session before installing", async () => {
+  vi.mocked(invoke).mockClear();
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render(); await close();
+  endsSessionBeforeInstall(u);
+  expect(sessionCalls()).toEqual([["session_end"]]);
+});
+it("restores the session marker when the install fails", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.mocked(invoke).mockClear();
+  const u = fakeUpdate("1.0.400"); u.install.mockRejectedValue(new Error("bad signature"));
+  checkMock.mockResolvedValue(u);
+  await render();
+  await expect(lastResult.installNow()).rejects.toThrow("bad signature");
+  expect(sessionCalls()).toEqual([["session_end"], ["session_stage", { stage: null }]]);
+});

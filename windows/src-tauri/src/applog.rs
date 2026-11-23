@@ -288,6 +288,9 @@ pub fn session_stage(stage: Option<String>) {
     }
 }
 
+/// Also invoked by JS right before an update install: the Windows updater ends the
+/// process with `process::exit`, which skips `RunEvent::Exit`.
+#[tauri::command]
 pub fn session_end() {
     // The crash marker is synchronous even when diagnostics remain queued.
     if let Some(dir) = LOG_DIR.get() {

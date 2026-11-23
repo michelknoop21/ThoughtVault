@@ -101,6 +101,7 @@ pub fn run() {
             applog::log_scrub,
             applog::session_begin,
             applog::session_stage,
+            applog::session_end,
             // Audio
             commands::audio::get_audio_devices,
             commands::audio::recording_active,

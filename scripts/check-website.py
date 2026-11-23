@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Live deployment check; reads the private capability from SSH without logging it."""
 import json
+import re
 import os
 import subprocess
 import urllib.error
@@ -58,5 +59,9 @@ for key in ['macos', 'windows_x64', 'windows_arm64']:
     assert 'noindex' in headers.get('X-Robots-Tag',''), key
     assert get('/'+filename)[0] == 404, key
     print('PASS private installer:', key, entry['version'])
+testflight = manifest.get('macos_testflight')
+if testflight:
+    assert re.fullmatch(r'https://testflight\.apple\.com/join/[A-Za-z0-9]+', testflight['url']), testflight
+    print('PASS macOS TestFlight link:', testflight['version'])
 assert get(private+'../releases.json')[0] == 404
 print('PASS public SEO, privacy page, private page/files, noindex, range downloads, and unlisted routes')

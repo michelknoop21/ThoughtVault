@@ -253,6 +253,13 @@ final class RecordingViewModel {
                 self.recordingState = .error(error.localizedDescription)
             }
         }
+        audioRecorder.onInterruption = { [weak self] paused in
+            guard let self else { return }
+            Task { @MainActor in
+                // The recorder already paused or resumed itself; this follows with the UI state.
+                if paused { self.pauseRecording(byUser: false) } else { self.resumeRecording(byUser: false) }
+            }
+        }
 
         loadSavedRecordings()
 
@@ -418,8 +425,8 @@ final class RecordingViewModel {
         }
     }
 
-    func pauseRecording() {
-        AppLog.clickPath.info("Opname pauzeren")
+    func pauseRecording(byUser: Bool = true) {
+        if byUser { AppLog.clickPath.info("Opname pauzeren") }
         guard case .recording = recordingState else { return }
 #if os(macOS)
         if selectedMode != .systemAudio {
@@ -439,8 +446,8 @@ final class RecordingViewModel {
         isLiveTranscribing = false
     }
 
-    func resumeRecording() {
-        AppLog.clickPath.info("Opname hervatten")
+    func resumeRecording(byUser: Bool = true) {
+        if byUser { AppLog.clickPath.info("Opname hervatten") }
         guard case .paused = recordingState else { return }
 #if os(macOS)
         if selectedMode != .systemAudio {

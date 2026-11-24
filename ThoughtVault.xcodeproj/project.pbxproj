@@ -271,6 +271,7 @@
 		AB0000M1 /* AudioMixerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000M1 /* AudioMixerTests.swift */; };
 		AB0000A1 /* SystemAudioStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A1 /* SystemAudioStorageTests.swift */; };
 		AB0000A2 /* CancelRecordingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A2 /* CancelRecordingTests.swift */; };
+		AB0000E22 /* RecordingInterruptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E22 /* RecordingInterruptionTests.swift */; };
 		AB0000A3 /* RecordingRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A3 /* RecordingRecoveryTests.swift */; };
 		AB0000E7 /* HTMLPlainTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E7 /* HTMLPlainTextTests.swift */; };
 		AB0000Q1 /* TranscriptSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000Q1 /* TranscriptSearchTests.swift */; };
@@ -693,6 +694,7 @@
 		FB0000M1 /* AudioMixerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMixerTests.swift; sourceTree = "<group>"; };
 		FB0000A1 /* SystemAudioStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioStorageTests.swift; sourceTree = "<group>"; };
 		FB0000A2 /* CancelRecordingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelRecordingTests.swift; sourceTree = "<group>"; };
+		FB0000E22 /* RecordingInterruptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingInterruptionTests.swift; sourceTree = "<group>"; };
 		FB0000A3 /* RecordingRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingRecoveryTests.swift; sourceTree = "<group>"; };
 		FB0000E7 /* HTMLPlainTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLPlainTextTests.swift; sourceTree = "<group>"; };
 		FB0000Q1 /* TranscriptSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptSearchTests.swift; sourceTree = "<group>"; };
@@ -1088,6 +1090,7 @@
 				FB0000M1 /* AudioMixerTests.swift */,
 				FB00T19A /* AudioExtractorTests.swift */,
 				FB0000A2 /* CancelRecordingTests.swift */,
+				FB0000E22 /* RecordingInterruptionTests.swift */,
 				FB0000A3 /* RecordingRecoveryTests.swift */,
 				FB0000E7 /* HTMLPlainTextTests.swift */,
 				FB0000Q1 /* TranscriptSearchTests.swift */,
@@ -1505,6 +1508,7 @@
 				AB0000M1 /* AudioMixerTests.swift in Sources */,
 				AB00T19A /* AudioExtractorTests.swift in Sources */,
 				AB0000A2 /* CancelRecordingTests.swift in Sources */,
+				AB0000E22 /* RecordingInterruptionTests.swift in Sources */,
 				AB0000A3 /* RecordingRecoveryTests.swift in Sources */,
 				AB0000E7 /* HTMLPlainTextTests.swift in Sources */,
 				AB0000Q1 /* TranscriptSearchTests.swift in Sources */,

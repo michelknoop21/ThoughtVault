@@ -7,6 +7,12 @@ Het bewezen buildproces gebruikt GitHub Actions in repository
 **Controle 28 oktober 2026:** GitHub API meldt `private:false`, `visibility:public`.
 Een bronpush daarheen maakt die bron openbaar en vereist afzonderlijk akkoord.
 `publish=false` voorkomt serverpublicatie, maar maakt de bronrepository niet privé.
+**Besluit 24 november 2026 (Michel Knoop):** `michelknoop21/ThoughtVault` blijft
+openbaar en dient alleen als buildrepository. Spiegelen via gh-mirror is gestopt,
+omdat gh-mirror alleen naar privérepository's synchroniseert en de sync weigerde.
+De lokale spiegel en de gh-mirror pre-push hook zijn verwijderd. De GitHub-`main`
+staat sinds 29 september 2026 op `91c4e010` en volgt Gitea niet meer; bouw dus
+altijd vanaf een expliciete, gecontroleerde bronref.
 RDP en een handmatige build op een Windows-pc zijn hiervoor niet nodig.
 
 ## Bewezen uitvoering

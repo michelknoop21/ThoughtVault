@@ -1,4 +1,6 @@
-versie: 1.0.339
+versie: 1.0.340
+Opgeslagen opnames (iPhone, eerst testen): maak een opname van een paar minuten, stop hem en zet de app tijdens het verwerken op de achtergrond. Veeg de melding "ThoughtVault verwerkt" weg, zodat de verwerking stopt. Open de app weer: de opname hoort meteen onder Opnemen > Opgeslagen opnames te staan, zonder dat je de app eerst helemaal afsluit. Verwerk hem daar opnieuw en controleer dat er een notule komt.
+
 Onderbreking tijdens opnemen (iPhone, eerst testen): start een opname en laat je bellen. Neem op, zeg iets en hang op. De opname hoort op pauze te gaan zonder foutmelding en na het gesprek vanzelf verder te lopen. Tik bij een tweede gesprek tijdens het bellen op Hervat: de opname moet dan op pauze blijven en na het ophangen verdergaan. Stop daarna en controleer dat er één opname is met geluid van voor en na het gesprek, en dat de opnameduur de belpauze niet meetelt. Probeer het ook met Siri of een wekker.
 
 Mappen: maak in Notulen een map, verplaats er twee notulen naartoe (ook via slepen op de Mac) en hernoem en verwijder de map. Bij verwijderen blijven de notulen bestaan. Maak een slimme map op basis van een label en controleer welke notulen erin verschijnen. Werk eerst Mac en iPhone allebei bij voordat je mappen gebruikt; controleer daarna of de mappen via iCloud op het andere apparaat verschijnen.

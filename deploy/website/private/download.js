@@ -32,7 +32,7 @@
         // macOS is distributed through TestFlight; a valid public join link wins over a DMG entry.
         const testflight = key === 'macos' && /^https:\/\/testflight\.apple\.com\/join\/[A-Za-z0-9]+$/.test(releases.macos_testflight?.url ?? '') ? releases.macos_testflight : null;
         const entry = testflight ?? releases[key] ?? (key === 'windows_x64' ? releases.windows : null);
-        if (!entry || (!testflight && !/^[A-Za-z0-9._-]+\.(dmg|msi)$/.test(entry.filename))) continue;
+        if (!entry || (!testflight && !/^ThoughtVault[A-Za-z0-9._-]*\.(dmg|msi)$/.test(entry.filename))) continue;
         const card = document.createElement('article');
         const preferred = key === recommended || (os === 'windows' && !windowsArch && key.startsWith('windows'));
         card.className = `download-card${preferred ? ' recommended' : ''}`;
@@ -53,6 +53,7 @@
         cards.push(card);
       }
       host.replaceChildren(...cards);
+      if (os === 'macos' && !cards.some(card => card.querySelector('h3').textContent === 'macOS')) note.textContent = 'Je gebruikt een Mac. De Mac-versie loopt via TestFlight: vraag een uitnodiging aan via "Hulp bij installeren".';
       status.textContent = cards.length ? 'De nieuwste beschikbare versie per platform.' : 'Er zijn nog geen installers beschikbaar. Probeer het later opnieuw of stel ons een vraag.';
     } catch {
       host.replaceChildren();

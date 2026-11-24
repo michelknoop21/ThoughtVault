@@ -49,6 +49,9 @@ assert b'noindex,nofollow,noarchive,nosnippet' in body
 status, headers, body = get(private+'releases.json')
 assert status == 200 and 'noindex' in headers.get('X-Robots-Tag','')
 manifest = json.loads(body)
+for key, entry in manifest.items():
+    if isinstance(entry, dict) and 'filename' in entry:
+        assert entry['filename'].startswith('ThoughtVault'), ('Pre-rename artifact in manifest', key, entry['filename'])
 for key in ['macos', 'windows_x64', 'windows_arm64']:
     entry = manifest.get(key)
     if not entry:

@@ -30,6 +30,21 @@ class PublicationTest(unittest.TestCase):
             with self.assertRaises(ValueError): publisher.publish(root,stage,"1.0.256","production")
             self.assertEqual((root/artifact.name).read_bytes(),b"installer")
 
+    def test_publication_drops_pre_rename_entries(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root,stage=Path(temp)/"releases",Path(temp)/"stage";stage.mkdir();root.mkdir()
+            old={"version":"1.0.242","filename":"TranscriptStudio-1.0.242.dmg"}
+            link={"version":"1.0.338","url":"https://testflight.apple.com/join/abc"}
+            (root/"releases.json").write_text(json.dumps({"latest_version":"1.0.242","macos":old,"android":dict(old,filename="TranscriptStudio-1.0.242.apk"),"macos_testflight":link}))
+            artifact=stage/"ThoughtVault_1.0.338_x64.msi";artifact.write_bytes(b"installer")
+            Path(str(artifact)+".sig").write_text(base64.b64encode(b"signed MSI").decode())
+            publisher.publish(root,stage,"1.0.338","production")
+            manifest=json.loads((root/"releases.json").read_text())
+            self.assertNotIn("macos",manifest);self.assertNotIn("android",manifest)
+            self.assertEqual(manifest["latest_version"],"1.0.242")
+            self.assertEqual(manifest["macos_testflight"],link)
+            self.assertEqual(manifest["windows_x64"]["filename"],artifact.name)
+
     def test_unnotarized_mac_cannot_be_published(self):
         with tempfile.TemporaryDirectory() as temp:
             root,stage=Path(temp)/"release",Path(temp)/"stage";stage.mkdir()

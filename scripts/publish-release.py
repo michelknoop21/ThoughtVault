@@ -98,6 +98,11 @@ def publish(directory, staging, version, channel):
                 atomic_write(directory / "macos" / f"{feed_name}.xml", ET.tostring(rss, encoding="utf-8", xml_declaration=True))
                 # Legacy Macs read this global field: it must track the macOS artifact.
                 data[key_prefix + "latest_version"] = version
+        # Drop pre-rename artifacts (TranscriptStudio-*) so the download page never offers them.
+        # latest_version is a plain string and stays: legacy Macs read it.
+        for key in [k for k, v in data.items() if isinstance(v, dict) and "filename" in v
+                    and not v["filename"].startswith("ThoughtVault")]:
+            del data[key]
         if any(p.startswith("windows") for p, _, _ in entries):
             atomic_write(windows_path, (json.dumps(windows, indent=2) + "\n").encode())
         atomic_write(manifest_path, (json.dumps(data, indent=2) + "\n").encode())

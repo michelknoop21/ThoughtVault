@@ -96,29 +96,39 @@ aanzienlijk langer en laat de app openstaan tot de taak klaar is.
 
 ## Eerste start en eerste notule
 
-Deze instructie hoort bij de MSI van 1.0.322. Installatie voor de hele pc vraagt
-Windows-beheerrechten; ontwikkeltools zijn niet nodig.
+Deze instructie hoort bij de MSI van 1.0.338. De schermteksten zijn op 24 november
+gecontroleerd tegen de broncode van die versie; de stappen zijn niet op een
+Windows-pc doorlopen. Installatie voor de hele pc vraagt Windows-beheerrechten;
+ontwikkeltools zijn niet nodig.
 
 1. Installeer de aangeleverde MSI en open ThoughtVault met je eigen Windowsaccount.
    Lokale verwerking vereist geen ThoughtVault-account.
 2. Bij de eerste start vraagt het scherm **Even voorstellen** om je naam en
    e-mailadres. Zonder die twee gaat de app niet verder. Ze dienen om je meldingen
    te beantwoorden en gaan mee met automatische foutrapporten; dat versturen zet
-   je uit bij **Instellingen → Account**. Gebruik je werkadres: de koppeling met
-   Prospect Flow zet conceptoffertes op de gebruiker met dat adres.
-3. Open **Instellingen → Verwerking**. Kies bij Transcriptie het model **Medium**,
-   klik op de downloadknop en wacht op de gereedmelding (ongeveer 1,5 GB). Een
-   ontbrekend model bewaart de opname met een herstelmelding.
-4. Kies bij Notulen generatie de tegel **Ollama** en vul in:
-   - Ollama URL: `https://openrouter.ai/api`
-   - Model: `mistralai/mistral-large-4-0`
-   - API-sleutel: de OpenRouter-sleutel die je van Michel hebt gekregen. Het veld
-     heet "API-sleutel (alleen Ollama Cloud)", maar de sleutel gaat mee naar elk
-     HTTPS-adres.
+   je uit bij **Instellingen → Account** met **Foutrapporten automatisch versturen**.
+   Gebruik je werkadres: de koppeling met Prospect Flow zet conceptoffertes op de
+   gebruiker met dat adres.
+3. Daarna volgt de introductie: welkom, microfoon, agenda, notulen, iets over
+   jezelf en afronding. De agenda kun je overslaan. Bij **Wie schrijft je
+   notulen?** kies je de tegel **OpenRouter**, plak je de OpenRouter-sleutel die je
+   van Michel hebt gekregen en klik je op **Testen**. Laat het model op
+   `mistralai/mistral-large-4-0` staan. **Volgende** bewaart de sleutel en laat
+   OpenRouter hem controleren. Alleen als OpenRouter de sleutel accepteert, wordt
+   OpenRouter ingesteld; anders kun je de stap overslaan en het later regelen.
+   Gebruik alleen je eigen sleutel en geef haar niet door. Ze wordt in Windows
+   Credential Manager bewaard.
+4. Open **Instellingen → Verwerking**. Kies bij Transcriptie **Lokaal** en **Op deze
+   pc**, kies als Transcriptiemodel **Medium**, klik op **Model downloaden** en wacht
+   tot er **Model gedownload en klaar voor gebruik** staat (ongeveer 1,5 GB). Een
+   ontbrekend model bewaart de opname met een herstelmelding. Controleer op
+   hetzelfde scherm bij **Notulen generatie** dat de tegel **OpenRouter** gekozen is,
+   met het model en de **OpenRouter API-sleutel**. Heb je de notulenstap in de
+   introductie overgeslagen, stel het dan hier in. Voor OpenRouter staat hier geen
+   knop **Test verbinding**; die hoort bij Ollama.
 
-   Gebruik alleen je eigen sleutel en geef haar niet door. Ze wordt in de
-   Windows-kluis opgeslagen. Klik daarna op **Test verbinding**: die moet
-   **Verbonden** melden.
+   Wie in 1.0.322 OpenRouter via de tegel **Ollama** instelde (adres
+   `https://openrouter.ai/api`), houdt die instelling na de update.
 5. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
    → Microfoon**, inclusief toegang voor bureaubladapps. Kies in ThoughtVault je
    bron en microfoon. Gebruik eerst een korte fictieve proefvergadering.

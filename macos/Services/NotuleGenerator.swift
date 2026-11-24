@@ -84,7 +84,8 @@ struct NotuleGenerator: Sendable {
                 transcription: source,
                 systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? "") + (merging ? "\n\n" + NotuleMerge.instructions : ""),
                 notulePrompt: QuickNoteStore.promptBlock(quickNote)
-                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
+                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants,
+                                               speakerLabels: SpeakerTranscript.hasLabels(source))
                     + context,
                 outputTemplate: profile.template,
                 constraints: constraints,
@@ -166,8 +167,8 @@ struct NotuleGenerator: Sendable {
     /// Substitutes a {{PARTICIPANTS}} placeholder when present, otherwise prepends
     /// the block. Mirrors what the cloud backend does server-side so both paths
     /// produce an attendee list + name attribution.
-    static func injectParticipants(into notulePrompt: String, participants: [Participant]) -> String {
-        let block = participants.notulePromptBlock
+    static func injectParticipants(into notulePrompt: String, participants: [Participant], speakerLabels: Bool = false) -> String {
+        let block = participants.notulePromptBlock(speakerLabels: speakerLabels)
         if notulePrompt.contains("{{PARTICIPANTS}}") {
             return notulePrompt.replacingOccurrences(of: "{{PARTICIPANTS}}", with: block)
         }

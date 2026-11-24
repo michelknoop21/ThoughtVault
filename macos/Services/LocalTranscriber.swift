@@ -364,6 +364,16 @@ protocol LocalTranscriber: Sendable {
     /// Transcribes an audio file fully locally and returns the text.
     /// - Parameter onProgress: coarse 0.0...1.0 progress (model download / transcription).
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String
+
+    /// The same transcription with timed pieces, for speaker labels. An engine without timings
+    /// returns the text with no pieces, and the transcript then stays plain.
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript
+}
+
+extension LocalTranscriber {
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript {
+        TimedTranscript(text: try await transcribe(url: url, profileId: profileId, onProgress: onProgress))
+    }
 }
 
 // MARK: - Stage log

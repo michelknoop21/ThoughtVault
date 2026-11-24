@@ -5,6 +5,7 @@
 // use from the official whisper.cpp model repo into the app data dir.
 
 pub mod cloud;
+pub mod segments;
 
 use std::path::PathBuf;
 use std::sync::Mutex;

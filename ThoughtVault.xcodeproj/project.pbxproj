@@ -56,7 +56,9 @@
 		ABPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
 		ABDG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
 		AAPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		AASP0001 /* SpeakerTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASP0001 /* SpeakerTranscript.swift */; };
 		ABPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		ABSP0001 /* SpeakerTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASP0001 /* SpeakerTranscript.swift */; };
 		ACPK0001 /* ParakeetCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0001 /* ParakeetCatalogTests.swift */; };
 		ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0002 /* NotulenDefaultMigrationTests.swift */; };
 		AFFA0001 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = SDFA0001 /* FluidAudio */; };
@@ -269,6 +271,7 @@
 		AB00T19B /* tone-1s.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = FB00T19B /* tone-1s.mp4 */; };
 		AB00T19C /* video-no-audio.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = FB00T19C /* video-no-audio.mp4 */; };
 		AB0000M1 /* AudioMixerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000M1 /* AudioMixerTests.swift */; };
+		ABSP00T1 /* SpeakerTranscriptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBSP00T1 /* SpeakerTranscriptTests.swift */; };
 		AB0000A1 /* SystemAudioStorageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A1 /* SystemAudioStorageTests.swift */; };
 		AB0000A2 /* CancelRecordingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000A2 /* CancelRecordingTests.swift */; };
 		AB0000E22 /* RecordingInterruptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0000E22 /* RecordingInterruptionTests.swift */; };
@@ -492,6 +495,7 @@
 		FBCP0001 /* ContinuedProcessingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuedProcessingTests.swift; sourceTree = "<group>"; };
 		FADG0001 /* DiagnosticLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLog.swift; sourceTree = "<group>"; };
 		FAPK0003 /* ParakeetTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetTranscriber.swift; sourceTree = "<group>"; };
+		FASP0001 /* SpeakerTranscript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerTranscript.swift; sourceTree = "<group>"; };
 		FBPK0001 /* ParakeetCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalogTests.swift; sourceTree = "<group>"; };
 		FBPK0002 /* NotulenDefaultMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulenDefaultMigrationTests.swift; sourceTree = "<group>"; };
 		FA0F0701 /* SupportIdentityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupportIdentityView.swift; sourceTree = "<group>"; };
@@ -692,6 +696,7 @@
 		FB00T19B /* tone-1s.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "tone-1s.mp4"; sourceTree = "<group>"; };
 		FB00T19C /* video-no-audio.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "video-no-audio.mp4"; sourceTree = "<group>"; };
 		FB0000M1 /* AudioMixerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioMixerTests.swift; sourceTree = "<group>"; };
+		FBSP00T1 /* SpeakerTranscriptTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerTranscriptTests.swift; sourceTree = "<group>"; };
 		FB0000A1 /* SystemAudioStorageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAudioStorageTests.swift; sourceTree = "<group>"; };
 		FB0000A2 /* CancelRecordingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CancelRecordingTests.swift; sourceTree = "<group>"; };
 		FB0000E22 /* RecordingInterruptionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingInterruptionTests.swift; sourceTree = "<group>"; };
@@ -870,6 +875,7 @@
 				FACP0001 /* ContinuedProcessing.swift */,
 				FADG0001 /* DiagnosticLog.swift */,
 				FAPK0003 /* ParakeetTranscriber.swift */,
+				FASP0001 /* SpeakerTranscript.swift */,
 				FA0000K2 /* AppleFoundationModelService.swift */,
 				FA0000K1 /* AnthropicLLMService.swift */,
 				FA0000OR /* OpenRouterModels.swift */,
@@ -1088,6 +1094,7 @@
 				FB000008 /* LLMChunkingTests.swift */,
 				FB0000A1 /* SystemAudioStorageTests.swift */,
 				FB0000M1 /* AudioMixerTests.swift */,
+				FBSP00T1 /* SpeakerTranscriptTests.swift */,
 				FB00T19A /* AudioExtractorTests.swift */,
 				FB0000A2 /* CancelRecordingTests.swift */,
 				FB0000E22 /* RecordingInterruptionTests.swift */,
@@ -1299,6 +1306,7 @@
 				AAPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
 				AAPK1000 /* ParakeetModelRows.swift in Sources */,
 				AAPK0003 /* ParakeetTranscriber.swift in Sources */,
+				AASP0001 /* SpeakerTranscript.swift in Sources */,
 				AA000001 /* ThoughtVaultApp.swift in Sources */,
 				AA0F0601 /* MenuBarViews.swift in Sources */,
 				AA000002 /* ContentView.swift in Sources */,
@@ -1506,6 +1514,7 @@
 				AB000008 /* LLMChunkingTests.swift in Sources */,
 				AB0000A1 /* SystemAudioStorageTests.swift in Sources */,
 				AB0000M1 /* AudioMixerTests.swift in Sources */,
+				ABSP00T1 /* SpeakerTranscriptTests.swift in Sources */,
 				AB00T19A /* AudioExtractorTests.swift in Sources */,
 				AB0000A2 /* CancelRecordingTests.swift in Sources */,
 				AB0000E22 /* RecordingInterruptionTests.swift in Sources */,
@@ -1571,6 +1580,7 @@
 				ABPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
 				ABPK1000 /* ParakeetModelRows.swift in Sources */,
 				ABPK0003 /* ParakeetTranscriber.swift in Sources */,
+				ABSP0001 /* SpeakerTranscript.swift in Sources */,
 				AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */,
 				AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */,
 				AB02FA00CH01 /* ContextHistory.swift in Sources */,

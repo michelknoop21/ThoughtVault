@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="nl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup: transcriptie als gesprek</title>
+<style>
+  /* Colours and sizes taken from the Windows app (globals.css dark theme, thoughtvault.css). */
+  :root {
+    --shell: #141628; --sidebar: #0b1125; --surface: #191b30; --surface-2: #20233c;
+    --border: #363452; --border-2: #2c2e40; --text: #edeaf6; --text-2: #b3aece; --text-3: #8587a8;
+    --brand: #9048f0; --brand-dark: #6b3bca; --tint: rgba(144, 72, 240, .15);
+    --s2: #5cb8e6; --s3: #e6a65c; --ok: #5cce8f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; color: var(--text); background: var(--shell); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .app { display: grid; grid-template-columns: 238px minmax(0, 1fr); min-height: 100vh; }
+  .sidebar { background: var(--sidebar); border-right: 1px solid #272444; padding: 22px 15px 12px; }
+  .logo { display: flex; align-items: center; gap: 13px; padding: 8px 13px 30px; font-size: 19px; font-weight: 650; }
+  .logo i { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(140deg, #b885ff, #6b3bca); }
+  .nav { display: flex; align-items: center; gap: 18px; min-height: 45px; padding: 10px 16px; border-radius: 9px; font-size: 15px; color: #e6e7f2; }
+  .nav.active { background: linear-gradient(110deg, #6b3bca, #4f269e); border: 1px solid #bf96ff47; box-shadow: 0 0 17px #743bd640; font-weight: 600; }
+  .main { min-width: 0; display: flex; flex-direction: column; }
+  .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 8px 16px; border-bottom: 1px solid var(--border-2); }
+  .tabs { display: inline-flex; background: var(--surface-2); border-radius: 7px; padding: 2px; margin-left: 12px; }
+  .tabs span { padding: 3px 10px; font-size: 11px; font-weight: 500; color: var(--text-2); border-radius: 5px; }
+  .tabs .active { background: var(--surface); color: var(--text); }
+  .tb { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 11px; color: var(--text-2); border-radius: 6px; }
+  .tb.new { color: #c8a8ff; }
+  .spacer { flex: 1; }
+  .doc { margin: 16px 20px 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .accent { height: 3px; background: linear-gradient(90deg, var(--brand), var(--brand-dark)); }
+  .head { padding: 16px 24px 12px; border-bottom: 1px solid var(--border-2); }
+  h1 { margin: 0; font-size: 17px; font-weight: 700; }
+  .meta { color: var(--text-2); font-size: 12px; margin-top: 4px; }
+  .meta b { color: #b98bff; font-weight: 500; }
+
+  /* Speaker strip */
+  .speakers { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; padding: 14px 24px; border-bottom: 1px solid var(--border-2); background: #16182b; }
+  .sp { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--surface); min-width: 0; }
+  .sp-top { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .sp-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sp-time { margin-left: auto; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+  .sp-note { color: var(--text-2); font-size: 12px; margin: 6px 0 8px; }
+  .sp-note q { color: var(--text); }
+  .sp-act { display: flex; flex-wrap: wrap; gap: 6px; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 99px; color: var(--text); background: var(--surface-2); }
+  .btn.primary { background: var(--brand-dark); border-color: #bf96ff47; }
+  .check { color: var(--ok); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+
+  /* Conversation */
+  .bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 24px; border-bottom: 1px solid var(--border-2); }
+  .search { flex: 1; min-width: 160px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--text-3); font-size: 13px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 12px; }
+  .seg span { padding: 5px 11px; color: var(--text-2); }
+  .seg .on { background: var(--tint); color: #c8a8ff; }
+  .chat { padding: 18px 24px 26px; max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .turn { max-width: min(78%, 620px); display: flex; flex-direction: column; gap: 4px; }
+  .turn.me { align-self: flex-end; align-items: flex-end; }
+  .who { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; }
+  .who time { color: var(--text-3); font-weight: 400; }
+  .bubble { padding: 9px 13px; border-radius: 14px; border-top-left-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); position: relative; }
+  .me .bubble { background: var(--tint); border-color: #bf96ff47; border-radius: 14px; border-top-right-radius: 4px; }
+  .bubble + .bubble { border-radius: 14px; }
+  .bubble mark { background: #f5c54233; color: inherit; border-bottom: 1px solid #f5c542; padding: 0 1px; }
+  .unknown .bubble { border-style: dashed; background: transparent; color: var(--text-2); }
+  .unknown .who { color: var(--text-2); }
+  .actions { display: flex; gap: 2px; margin-top: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--sidebar); align-self: flex-start; }
+  .actions span { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; font-size: 11.5px; color: var(--text-2); border-radius: 6px; white-space: nowrap; }
+  .actions span:first-child { color: #c8a8ff; }
+  .task { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #c8a8ff; background: var(--tint); border-radius: 99px; padding: 2px 9px; }
+  .divider { align-self: center; color: var(--text-3); font-size: 12px; }
+  .legend { padding: 0 24px 22px; max-width: 920px; margin: 0 auto; color: var(--text-3); font-size: 12px; }
+
+  @media (max-width: 1000px) { .app { grid-template-columns: 180px minmax(0, 1fr); } .sidebar { padding-inline: 8px; } .nav { gap: 10px; padding-inline: 10px; } }
+  @media (max-width: 640px) {
+    .app { grid-template-columns: minmax(0, 1fr); } .sidebar { display: none; }
+    .doc { margin: 10px; } .head, .speakers, .bar { padding-inline: 14px; } .chat { padding-inline: 14px; }
+    .turn { max-width: 92%; } .tb span { display: none; } .actions { flex-wrap: wrap; } .speakers { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo"><i></i>ThoughtVault</div>
+    <div class="nav"><svg viewBox="0 0 16 16"><path d="M2 7.5 8 2l6 5.5V14H2z"/></svg>Home</div>
+    <div class="nav"><svg viewBox="0 0 16 16"><rect x="6" y="1.5" width="4" height="8" rx="2"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.5"/></svg>Opnemen</div>
+    <div class="nav"><svg viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M6 6h4M6 9h4"/></svg>Taken</div>
+    <div class="nav active"><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z"/><path d="M6.5 8h3M6.5 11h3"/></svg>Notulen</div>
+    <div class="nav"><svg viewBox="0 0 16 16"><circle cx="6" cy="5" r="2.5"/><path d="M1.5 14a4.5 4.5 0 0 1 9 0M11 3a2.5 2.5 0 0 1 0 5M12 10.5a4.5 4.5 0 0 1 2.5 3.5"/></svg>Mensen</div>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <span class="tb"><svg viewBox="0 0 16 16"><path d="M13 8H3M7 4 3 8l4 4"/></svg></span>
+      <div class="tabs"><span>Notule</span><span class="active">Transcriptie</span></div>
+      <div class="spacer"></div>
+      <span class="tb"><span>Woord corrigeren</span></span>
+      <span class="tb"><svg viewBox="0 0 16 16"><path d="M13 3v4H9M3 13V9h4"/><path d="M12.5 7A5 5 0 0 0 4 4.5L3 6M3.5 9A5 5 0 0 0 12 11.5l1-1.5"/></svg><span>Regenereer</span></span>
+      <span class="tb"><svg viewBox="0 0 16 16"><path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9"/></svg><span>Export</span></span>
+    </div>
+
+    <article class="doc">
+      <div class="accent"></div>
+      <header class="head">
+        <h1>Schadebezoek Keizersgracht</h1>
+        <div class="meta">13 nov 2026 om 13:04 · 42m 0s · <b>Standaard</b> · 3 sprekers</div>
+      </header>
+
+      <section class="speakers" aria-label="Sprekers">
+        <div class="sp">
+          <div class="sp-top"><i class="dot" style="background:var(--brand)"></i><span class="sp-name">Jan de Vries</span><span class="sp-time">19 min</span></div>
+          <div class="sp-note">Dit ben jij: de enige stem op je microfoon.</div>
+          <div class="sp-act"><span class="check"><svg viewBox="0 0 16 16"><path d="m3 8.5 3.5 3.5L13 5"/></svg>Bevestigd</span><button class="btn">Wijzig</button></div>
+        </div>
+        <div class="sp">
+          <div class="sp-top"><i class="dot" style="background:var(--s2)"></i><span class="sp-name">Spreker 2 · Jan Smit?</span><span class="sp-time">17 min</span></div>
+          <div class="sp-note">Voorstel, omdat iemand zegt: <q>Jan, kun jij de contra-expertise inplannen?</q> en deze stem antwoordt.</div>
+          <div class="sp-act"><button class="btn"><svg viewBox="0 0 16 16"><path d="M5 3v10l8-5z"/></svg>Luister</button><button class="btn primary">Bevestig Jan Smit</button><button class="btn">Andere naam</button></div>
+        </div>
+        <div class="sp">
+          <div class="sp-top"><i class="dot" style="background:var(--s3)"></i><span class="sp-name">Spreker 3</span><span class="sp-time">6 min</span></div>
+          <div class="sp-note">Geen aanwijzing voor een naam gevonden.</div>
+          <div class="sp-act"><button class="btn"><svg viewBox="0 0 16 16"><path d="M5 3v10l8-5z"/></svg>Luister</button><button class="btn">Kies naam</button><button class="btn">Samenvoegen met...</button></div>
+        </div>
+      </section>
+
+      <div class="bar">
+        <div class="search"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></svg>Zoek in de transcriptie</div>
+        <div class="seg"><span class="on">Gesprek</span><span>Tekst</span></div>
+        <button class="btn"><svg viewBox="0 0 16 16"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M3 10.5V3h7.5"/></svg>Kopieer</button>
+      </div>
+
+      <section class="chat" aria-label="Transcriptie als gesprek">
+        <div class="turn">
+          <div class="who" style="color:var(--s2)"><i class="dot" style="background:var(--s2)"></i>Spreker 2 · Jan Smit? <time>12:04</time></div>
+          <div class="bubble">De vloer in de keuken is over ongeveer twaalf vierkante meter aangetast. Dat is meer dan we vorige week dachten.</div>
+          <div class="bubble">De bewoner heeft foto's van voor en na de lekkage aangeleverd.</div>
+        </div>
+
+        <div class="turn me">
+          <div class="who" style="color:#c8a8ff"><time>12:31</time>Jan de Vries<i class="dot" style="background:var(--brand)"></i></div>
+          <div class="bubble">Dan wil ik eerst een contra-expertise voordat het herstel start. Jan, kun jij de contra-expertise inplannen?</div>
+        </div>
+
+        <div class="turn">
+          <div class="who" style="color:var(--s2)"><i class="dot" style="background:var(--s2)"></i>Spreker 2 · Jan Smit? <time>12:38</time></div>
+          <div class="bubble"><mark>Ja, doe ik. Volgende week.</mark></div>
+          <span class="task"><svg viewBox="0 0 16 16"><path d="m3 8.5 3.5 3.5L13 5"/></svg>Actiepunt in de notule: Contra-expertise inplannen</span>
+          <div class="actions">
+            <span><svg viewBox="0 0 16 16"><path d="M5 3v10l8-5z"/></svg>Speel af vanaf hier</span>
+            <span>Andere spreker</span>
+            <span>Corrigeer tekst</span>
+            <span>Kopieer</span>
+          </div>
+        </div>
+
+        <div class="turn unknown">
+          <div class="who"><i class="dot" style="background:var(--text-3)"></i>Onbekend <time>12:41</time></div>
+          <div class="bubble">Ja, precies. Dat lijkt me goed.</div>
+        </div>
+
+        <div class="turn">
+          <div class="who" style="color:var(--s3)"><i class="dot" style="background:var(--s3)"></i>Spreker 3 <time>12:44</time></div>
+          <div class="bubble">Ik vraag de offerte voor het vloerherstel op, dan ligt die er dinsdag.</div>
+        </div>
+
+        <div class="divider">Opname gepauzeerd om 12:52, hervat om 12:55</div>
+
+        <div class="turn me">
+          <div class="who" style="color:#c8a8ff"><time>12:55</time>Jan de Vries<i class="dot" style="background:var(--brand)"></i></div>
+          <div class="bubble">Het rapport gaat uiterlijk vrijdag naar de verzekeraar. Dat pak ik zelf op.</div>
+        </div>
+      </section>
+      <p class="legend">Een ballon met stippelrand heeft geen spreker gekregen: de detectie was daar niet zeker genoeg. Die wijs je zelf toe of laat je zo.</p>
+    </article>
+  </main>
+</div>
+</html>

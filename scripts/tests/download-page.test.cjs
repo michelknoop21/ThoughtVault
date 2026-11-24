@@ -25,10 +25,9 @@ async function run(platform, architecture, releases, fail = false, touch = 0) {
   const helpHref = page.match(/<a href="([^"]+)">Hulp bij installeren/);
   assert.ok(helpHref, 'Installation help link must be present');
   const helpURL = new URL(helpHref[1], 'https://example.test/d-private/');
-  assert.equal(helpURL.protocol, 'mailto:', 'Installation help must use the existing support destination, not an undeployed private route');
-  assert.equal(helpURL.pathname, 'sales@yinga.nl');
-  assert.equal(helpURL.searchParams.get('subject'), 'Installatiehulp ThoughtVault');
-  const releases = Object.fromEntries(['macos','windows_x64','windows_arm64'].map(key => [key, {version:'1.2.3', filename: key + (key === 'macos' ? '.dmg' : '.msi')}]));
+  assert.equal(helpURL.href, 'https://example.test/d-private/help/', 'Installation help points to the help centre that deploy-website.sh builds');
+  assert.match(page, /<a href="mailto:sales@yinga.nl">Stel ons een vraag/);
+  const releases = Object.fromEntries(['macos','windows_x64','windows_arm64'].map(key => [key, {version:'1.2.3', filename: 'ThoughtVault_' + key + (key === 'macos' ? '.dmg' : '.msi')}]));
   for (const [platform, architecture, expected] of [['MacIntel',null,'macOS'],['Win32','arm','Windows ARM64'],['Win32','x86','Windows x64'],['Win32',null,'Windows x64']]) {
     const e = await run(platform, architecture, releases);
     assert.equal(e['#downloads'].children[0].querySelector('h3').textContent, expected);
@@ -38,6 +37,9 @@ async function run(platform, architecture, releases, fail = false, touch = 0) {
   }
   const invalid = await run('Linux', null, {macos: {filename:'../secret.dmg'}});
   assert.equal(invalid['#downloads'].children.length, 0);
+  const legacyMac = await run('MacIntel', null, {macos: {version:'1.0.242', filename:'TranscriptStudio-1.0.242.dmg'}, windows_x64: releases.windows_x64});
+  assert.deepEqual(legacyMac['#downloads'].children.map(c => c.querySelector('h3').textContent), ['Windows x64']);
+  assert.match(legacyMac['#device-note'].textContent, /TestFlight/);
   const error = await run('Linux', null, {}, true);
   assert.equal(error['#retry'].hidden, false);
   const empty = await run('Linux', null, {});

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Live deployment check; reads the private capability from SSH without logging it."""
 import json
+import re
 import os
 import subprocess
 import urllib.error
@@ -48,6 +49,9 @@ assert b'noindex,nofollow,noarchive,nosnippet' in body
 status, headers, body = get(private+'releases.json')
 assert status == 200 and 'noindex' in headers.get('X-Robots-Tag','')
 manifest = json.loads(body)
+for key, entry in manifest.items():
+    if isinstance(entry, dict) and 'filename' in entry:
+        assert entry['filename'].startswith('ThoughtVault'), ('Pre-rename artifact in manifest', key, entry['filename'])
 for key in ['macos', 'windows_x64', 'windows_arm64']:
     entry = manifest.get(key)
     if not entry:
@@ -58,5 +62,9 @@ for key in ['macos', 'windows_x64', 'windows_arm64']:
     assert 'noindex' in headers.get('X-Robots-Tag',''), key
     assert get('/'+filename)[0] == 404, key
     print('PASS private installer:', key, entry['version'])
+testflight = manifest.get('macos_testflight')
+if testflight:
+    assert re.fullmatch(r'https://testflight\.apple\.com/join/[A-Za-z0-9]+', testflight['url']), testflight
+    print('PASS macOS TestFlight link:', testflight['version'])
 assert get(private+'../releases.json')[0] == 404
 print('PASS public SEO, privacy page, private page/files, noindex, range downloads, and unlisted routes')

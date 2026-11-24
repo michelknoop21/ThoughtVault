@@ -29,22 +29,31 @@
       const releases = await response.json();
       const cards = [];
       for (const [key, label, hint] of [...platforms].sort((a,b) => priority(b[0]) - priority(a[0]))) {
-        const entry = releases[key] ?? (key === 'windows_x64' ? releases.windows : null);
-        if (!entry || !/^[A-Za-z0-9._-]+\.(dmg|msi)$/.test(entry.filename)) continue;
+        // macOS is distributed through TestFlight; a valid public join link wins over a DMG entry.
+        const testflight = key === 'macos' && /^https:\/\/testflight\.apple\.com\/join\/[A-Za-z0-9]+$/.test(releases.macos_testflight?.url ?? '') ? releases.macos_testflight : null;
+        const entry = testflight ?? releases[key] ?? (key === 'windows_x64' ? releases.windows : null);
+        if (!entry || (!testflight && !/^ThoughtVault[A-Za-z0-9._-]*\.(dmg|msi)$/.test(entry.filename))) continue;
         const card = document.createElement('article');
         const preferred = key === recommended || (os === 'windows' && !windowsArch && key.startsWith('windows'));
         card.className = `download-card${preferred ? ' recommended' : ''}`;
         card.innerHTML = `${preferred ? `<span class="recommendation">${key === recommended ? 'Aanbevolen voor jou' : 'Voor jouw besturingssysteem'}</span>` : ''}<div class="card-top"><span class="platform-icon">${icon}</span><div><h3></h3><p class="version"></p></div></div><a class="button" rel="nofollow noreferrer"><span></span><span class="end" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg></span></a><p class="platform-hint"></p>`;
         card.querySelector('h3').textContent = label;
-        card.querySelector('.version').textContent = `Versie ${entry.version} · ${entry.filename.endsWith('.dmg') ? 'DMG' : 'MSI'}`;
-        card.querySelector('.platform-hint').textContent = hint;
+        card.querySelector('.version').textContent = `Versie ${entry.version} · ${testflight ? 'TestFlight' : entry.filename.endsWith('.dmg') ? 'DMG' : 'MSI'}`;
+        card.querySelector('.platform-hint').textContent = testflight ? 'Installeer eerst TestFlight uit de Mac App Store' : hint;
         const link = card.querySelector('a');
-        link.href = new URL(encodeURIComponent(entry.filename), location.href).href;
-        link.download = entry.filename;
-        link.querySelector('span').textContent = `Download voor ${label}`;
+        if (testflight) {
+          link.href = testflight.url;
+          link.target = '_blank';
+          link.querySelector('span').textContent = 'Installeer via TestFlight';
+        } else {
+          link.href = new URL(encodeURIComponent(entry.filename), location.href).href;
+          link.download = entry.filename;
+          link.querySelector('span').textContent = `Download voor ${label}`;
+        }
         cards.push(card);
       }
       host.replaceChildren(...cards);
+      if (os === 'macos' && !cards.some(card => card.querySelector('h3').textContent === 'macOS')) note.textContent = 'Je gebruikt een Mac. De Mac-versie loopt via TestFlight: vraag een uitnodiging aan via "Stel ons een vraag".';
       status.textContent = cards.length ? 'De nieuwste beschikbare versie per platform.' : 'Er zijn nog geen installers beschikbaar. Probeer het later opnieuw of stel ons een vraag.';
     } catch {
       host.replaceChildren();

@@ -53,7 +53,7 @@
         cards.push(card);
       }
       host.replaceChildren(...cards);
-      if (os === 'macos' && !cards.some(card => card.querySelector('h3').textContent === 'macOS')) note.textContent = 'Je gebruikt een Mac. De Mac-versie loopt via TestFlight: vraag een uitnodiging aan via "Hulp bij installeren".';
+      if (os === 'macos' && !cards.some(card => card.querySelector('h3').textContent === 'macOS')) note.textContent = 'Je gebruikt een Mac. De Mac-versie loopt via TestFlight: vraag een uitnodiging aan via "Stel ons een vraag".';
       status.textContent = cards.length ? 'De nieuwste beschikbare versie per platform.' : 'Er zijn nog geen installers beschikbaar. Probeer het later opnieuw of stel ons een vraag.';
     } catch {
       host.replaceChildren();

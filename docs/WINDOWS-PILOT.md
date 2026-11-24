@@ -1,13 +1,41 @@
 # ThoughtVault Windows: installatie en gebruik voor de interne pilot
 
-Status 13 november 2026: **1.0.322 is de versie voor collega's**. Hij bevat alles
-uit 1.0.320 (de vrijgave volgens de [Besluiten van 13 november](#besluiten-van-13-november)),
-de nieuwe opmaak uit 1.0.321, de koppeling met Prospect Flow en een werkende knop
-**Test verbinding** bij OpenRouter. Bestaande installaties met automatisch bijwerken
-krijgen hem vanzelf. Oudere versies verderop in dit document zijn uitsluitend
+Status 24 november 2026: **1.0.338 staat in de updatefeed** en is de actuele
+Windows-versie. Bestaande installaties met automatisch bijwerken krijgen hem vanzelf.
+1.0.322 was de eerste versie voor collega's; die stand staat hieronder als
+vorige versie. Oudere versies verderop in dit document zijn uitsluitend
 herstelreferenties.
 
-## Stand van 1.0.322
+## Stand van 1.0.338
+
+| Onderdeel | Gemeten op 23 en 24 november |
+|---|---|
+| Bron | `main` op `9fdcd53a`, tag `v1.0.338`, branch `release/1.0.338`. Ten opzichte van 1.0.336 komt alleen de fix voor TV-000019 erbij (merge `990072d0`, PR #8) |
+| Windows-build | GitHub Actions-run 45240248936 op `build/1.0.338-20261123`, `headSha` `9fdcd53a`, geslaagd. De buildbranch is daarna verwijderd |
+| Download | `ThoughtVault_1.0.338_x64.msi` op de downloadpagina uit [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md); `releases.json` in die map noemt dezelfde versie en hash |
+| SHA-256 MSI | `4cd609d6d19052e50e694848f2705662cbbe261dcc41d8236f3b230402f31b60`, gelijk aan het CI-artifact |
+| Updatefeed | `/releases/windows/stable.json` meldt 1.0.338, gepubliceerd 23 november 19:11 UTC. De signature is gelijk aan de `.sig` uit de CI |
+| Acceptatie op Windows | Niet uitgevoerd. Zie hieronder |
+
+Controleer de download vóór installatie:
+
+```powershell
+Get-FileHash .\ThoughtVault_1.0.338_x64.msi -Algorithm SHA256
+```
+
+**Valse crashmelding na een update (TV-000019).** Tot en met 1.0.336 meldde de app na
+een update-installatie bij de volgende start "gestopt zonder af te sluiten". De
+updater van Windows beëindigt het proces zonder de normale afsluitstap, waardoor de
+sessiemarkering bleef staan. Dat gebeurde ook bij sluiten van het venster terwijl er
+een update klaarstond. Vanaf 1.0.338 ruimt de app die markering op vlak vóór de
+installatie, en zet haar terug als de installatie mislukt.
+
+De update náár 1.0.338 loopt nog via de oude versie en kan de melding daarom één
+keer geven. Pas de eerstvolgende update vanaf 1.0.338 toont of de fix op Windows
+werkt. Een melding "gestopt zonder af te sluiten" direct na de overstap naar 1.0.338
+is dus verwacht en geen nieuwe fout.
+
+## Stand van 1.0.322 (vorige collegaversie)
 
 | Onderdeel | Gemeten op 13 november |
 |---|---|
@@ -17,12 +45,6 @@ herstelreferenties.
 | SHA-256 MSI | `a0ffa80e1f451c2c2cc0131525b2a4e9e6054eadab7d5a6198caedbfca512e03`, gelijk aan het CI-artifact |
 | Updatefeed | `/releases/windows/stable.json` meldt 1.0.322, gepubliceerd 13 november 16:34 UTC, met signature |
 | macOS en iOS | TestFlight staat op 1.0.321. De Prospect Flow-koppeling zit ook in de Mac-code van 1.0.322, maar die versie is niet naar TestFlight gestuurd |
-
-Controleer de download vóór installatie:
-
-```powershell
-Get-FileHash .\ThoughtVault_1.0.322_x64.msi -Algorithm SHA256
-```
 
 De downloadpagina biedt voor macOS nog `TranscriptStudio-1.0.242.dmg` aan. Stuur
 Mac-collega's daar niet heen: hun route is TestFlight.

@@ -1,4 +1,4 @@
-versie: 1.0.336
+versie: 1.0.338
 Mappen: maak in Notulen een map, verplaats er twee notulen naartoe (ook via slepen op de Mac) en hernoem en verwijder de map. Bij verwijderen blijven de notulen bestaan. Maak een slimme map op basis van een label en controleer welke notulen erin verschijnen. Werk eerst Mac en iPhone allebei bij voordat je mappen gebruikt; controleer daarna of de mappen via iCloud op het andere apparaat verschijnen.
 
 Automatisch labelen: geef een label een omschrijving, zet Automatisch toekennen aan en maak een nieuwe notule. Probeer ook bestaande notulen te labelen en annuleer halverwege. Handmatig toegevoegde labels moeten blijven staan.

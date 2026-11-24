@@ -1,7 +1,7 @@
 // Finds misheard spellings of glossary terms and directory names in a transcript, lets the
 // minutes model confirm each one in context, and replaces the confirmed occurrences.
 // Port of macos/Services/GlossaryAutoMatch.swift; tests/fixtures/glossary-automatch.json keeps both equal.
-import { activeCorrections, learnedKey, type PersonalCorrection } from "./personalCorrections";
+import { activeCorrections, isMisspelling, learnedKey, type PersonalCorrection } from "./personalCorrections";
 
 export interface MatchTarget {
   kind: "term" | "person";
@@ -94,7 +94,7 @@ export function findCandidates(transcript: string, targets: MatchTarget[], dismi
     const acronym = /^[A-Z]{2,4}$/.test(target.canonical);
     for (let n = Math.max(1, size - 1); n <= (acronym ? length : Math.min(3, size + 1)); n++) {
       for (const { start, end, heard, plain, spaced } of grams[n - 1]) {
-        if (heard.length > 120 || protectedRanges.some(([a, b]) => start < b && a < end) || /[^\p{L}\p{N}'’\s‐‑‒–—−-]/u.test(heard) || (plain.length < 4 && !acronym) || (acronym && (plain.length < 2 || plain.length > 4)) || correct.has(spaced) || fixed.has(spaced) || skip.has(learnedKey(target.canonical, heard))) continue;
+        if (heard.length > 120 || protectedRanges.some(([a, b]) => start < b && a < end) || /[^\p{L}\p{N}'’\s‐‑‒–—−-]/u.test(heard) || (plain.length < 4 && !acronym) || (acronym && (plain.length < 2 || plain.length > 4)) || correct.has(spaced) || fixed.has(spaced) || skip.has(learnedKey(target.canonical, heard)) || !isMisspelling(heard, target.canonical)) continue;
         const cacheKey = target.id + "\u0000" + spaced;
         let score = scores.get(cacheKey);
         if (score === undefined) {

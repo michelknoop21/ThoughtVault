@@ -154,7 +154,8 @@ enum GlossaryAutoMatch {
                     guard gram.range.length <= 120, !protectedRanges.contains(where: { NSIntersectionRange($0, gram.range).length > 0 }),
                           gram.heard.range(of: #"[^\p{L}\p{N}'’\s‐‑‒–—−-]"#, options: .regularExpression) == nil,
                           (gram.plain.count >= 4 || acronym), (!acronym || (2...4).contains(gram.plain.count)), !correct.contains(gram.spaced), !fixed.contains(gram.spaced),
-                          !skip.contains(PersonalCorrections.learnedKey(canonical: target.canonical, heard: gram.heard)) else { continue }
+                          !skip.contains(PersonalCorrections.learnedKey(canonical: target.canonical, heard: gram.heard)),
+                          PersonalCorrections.isMisspelling(gram.heard, of: target.canonical) else { continue }
                     let cacheKey = target.id + "\u{0}" + gram.spaced
                     let score: Double
                     if let cached = scores[cacheKey] { score = cached } else {

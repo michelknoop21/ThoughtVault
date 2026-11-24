@@ -1,12 +1,39 @@
 import { expect, it, vi } from "vitest";
 vi.mock("@tauri-apps/api/core", async () => (await import("./fakeAppData")).tauriCore);
 import { files } from "./fakeAppData";
-import { correctText, correctHTML, correctRecording, personCorrection, upsertCorrection, validateCorrections, contextBlock, type PersonalCorrection, type PersonContext } from "../personalCorrections";
+import { activeCorrections, heardAs, isMisspelling, correctText, correctHTML, correctRecording, personCorrection, upsertCorrection, validateCorrections, contextBlock, type PersonalCorrection, type PersonContext } from "../personalCorrections";
 const rule: PersonalCorrection = { id:"yinga",canonical:"Yinga",variants:["Jengo","Django"],scope:null,enabled:true };
 it("corrects exact Unicode words, loud/case variants and longest names without cascading", () => {
-  expect(correctText("DJANGO, Jengo en Djangoes https://x.nl/Django Django@x.nl `Django`",[rule])).toBe("Yinga, Yinga en Djangoes https://x.nl/Django Django@x.nl `Django`");
+  expect(correctText("DJANGO, Jengo en Djangoes https://x.nl/Django Django@x.nl `Django`",[rule])).toBe("Yinga, Yinga en Djangoes https://x.nl/yinga yinga@x.nl `Django`");
   expect(correctText("Jan de Vries en Jan",[{...rule,canonical:"Ján de Vries",variants:["Jan de Vries","Jan"]}])).toBe("Ján de Vries en Ján de Vries");
   expect(correctText("Jengo",[rule,{...rule,id:"2",canonical:"Other",variants:["Yinga"]}])).toBe("Yinga");
+});
+it("lets the newest entry win when two entries contradict", () => {
+  const old: PersonalCorrection = { id:"old",canonical:"A‑E",variants:["AI"],scope:null,enabled:true };
+  const fresh: PersonalCorrection = { id:"new",canonical:"AI",variants:["A‑E"],scope:null,enabled:true };
+  expect(correctText("AI-tools en A-E slop",[old,fresh])).toBe("AI-tools en AI slop");
+  expect(activeCorrections([old,fresh]).map(e => e.id)).toEqual(["new"]);
+  expect(contextBlock([old,fresh],[],"",undefined,6000)).not.toContain("- A‑E");
+  expect(correctText("AI-tools",[fresh,old])).toBe("A‑E-tools");
+});
+it("writes variants inside addresses as the lowercase term", () => {
+  const yinga: PersonalCorrection = { id:"y",canonical:"Yinga",variants:["Jinga"],scope:null,enabled:true };
+  expect(correctText("Mail analytics@jinga.nl of kijk op https://www.Jinga.nl/jinga.",[yinga])).toBe("Mail analytics@yinga.nl of kijk op https://www.yinga.nl/yinga.");
+  expect(correctText("Stuur naar info@jingle.nl",[{...yinga,canonical:"info@yinga.nl",variants:["info@jingle.nl"]}])).toBe("Stuur naar info@yinga.nl");
+  expect(correctText("sales@prospectflow.nl `prospectflow`",[{...yinga,canonical:"Prospect Flow",variants:["prospectflow"]}])).toBe("sales@prospectflow.nl `prospectflow`");
+  expect(correctHTML('<p>a@jinga.nl &amp; <a href="mailto:a@jinga.nl">a@jinga.nl</a></p>',[yinga])).toBe('<p>a@yinga.nl &amp; <a href="mailto:a@jinga.nl">a@jinga.nl</a></p>');
+});
+it("does not treat a spelling that holds the term, or a longer acronym, as misheard", () => {
+  expect(isMisspelling("de Prospectflow","Prospectflow")).toBe(false);
+  expect(isMisspelling("zo'n Prospectflow","Prospectflow")).toBe(false);
+  expect(isMisspelling("prospectsflow","Prospectflow")).toBe(true);
+  expect(isMisspelling("API","AI")).toBe(false);
+  expect(isMisspelling("ei","AI")).toBe(true);
+  expect(isMisspelling("A–E","AI")).toBe(true);
+  expect(isMisspelling("de antwoorden","AI Antwoorden")).toBe(false);
+  expect(isMisspelling("ei antwoorden","AI Antwoorden")).toBe(true);
+  expect(isMisspelling("Sanne Backer","Sanne Bakker")).toBe(true);
+  expect(heardAs({ id:"p",canonical:"Prospectflow",variants:["Prospect Flow"],scope:null,enabled:true,learned:["de Prospectflow","prospectsflow"] })).toEqual(["Prospect Flow","prospectsflow"]);
 });
 it("keeps markup, attributes, links, code, CSS and comments intact", () => {
   const input = '<style>.Django{}</style><!-- Django --><p title="Django > x">Django</p><a href="/Django">Django</a><pre><code>Django</code></pre><script>Django</script><p>Jengo</p>';

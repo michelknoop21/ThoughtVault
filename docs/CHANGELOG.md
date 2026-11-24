@@ -33,6 +33,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Windows: Test verbinding bij Ollama gebruikt dezelfde controle als de modellijst (`/v1/models`, daarna `/api/tags`). De Rust-opdracht `ollama_test` is weg.
 - CI: een Dev-build krijgt via `tauri build --config` echt de naam en ID van Dev; Tauri 2 leest `TAURI_CONFIG` niet als invoer. Een naamcontrole stopt een Dev-build die de productienaam draagt.
 
+## [2026-11-12]: Notuletitels afkappen op een woordgrens (1.0.319, 1.0.320)
+
+### Fixed
+- Een notuletitel langer dan 80 tekens werd midden in een woord afgekapt. `truncateTitle` (macOS en Windows) kapt nu af op de laatste spatie voor de grens en haalt een losse komma of dubbele punt aan het eind weg. Een titel zonder spatie houdt de harde afkap.
+
+### Changed
+- 1.0.320: de M3-fixture bevat nieuwe Windows-opnames van de drie fictieve vergaderingen, omdat de conceptprompt een regel voor de h1-titel kreeg en `testWindowsResponsesReplayToTheSameVerdicts` daardoor faalde. Geen wijziging in de app zelf.
+
+**Status:** Windows 1.0.320 gepubliceerd via GitHub Actions-run 43236189080; macOS en iOS als build 320 in TestFlight (intern). Stand en open punten: `WINDOWS-PILOT.md`.
+
 ## [2026-11-12]: Logregels en stapnaam bij het maken van de notule
 
 ### Added

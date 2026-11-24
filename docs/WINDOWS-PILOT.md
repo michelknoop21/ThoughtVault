@@ -1,42 +1,184 @@
-# ThoughtVault Windows — installatie en gebruik voor de interne pilot
+# ThoughtVault Windows: installatie en gebruik voor de interne pilot
 
-Status 9 november: **nog niet vrijgegeven voor collega’s**. Dalf38 heeft 1.0.305;
-1.0.306 wordt als ontwikkelkandidaat gebouwd. Er is nog geen goedgekeurde download.
-Het [actuele uitrolbewijs](qa/colleague-rollout-2026-11-09/STATUS.md) en de
-[inhoudsbeoordeling](qa/colleague-rollout-2026-11-09/CONTENT-REVIEW.md) bepalen de
-vrijgave. Oudere versies hieronder zijn uitsluitend herstelreferenties.
+Status 24 november 2026: **1.0.338 staat in de updatefeed** en is de actuele
+Windows-versie. Bestaande installaties met automatisch bijwerken krijgen hem vanzelf.
+1.0.322 was de eerste versie voor collega's; die stand staat hieronder als
+vorige versie. Oudere versies verderop in dit document zijn uitsluitend
+herstelreferenties.
+
+## Stand van 1.0.338
+
+| Onderdeel | Gemeten op 23 en 24 november |
+|---|---|
+| Bron | `main` op `9fdcd53a`, tag `v1.0.338`, branch `release/1.0.338`. Ten opzichte van 1.0.336 komt alleen de fix voor TV-000019 erbij (merge `990072d0`, PR #8) |
+| Windows-build | GitHub Actions-run 45240248936 op `build/1.0.338-20261123`, `headSha` `9fdcd53a`, geslaagd. De buildbranch is daarna verwijderd |
+| Download | `ThoughtVault_1.0.338_x64.msi` op de downloadpagina uit [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md); `releases.json` in die map noemt dezelfde versie en hash |
+| SHA-256 MSI | `4cd609d6d19052e50e694848f2705662cbbe261dcc41d8236f3b230402f31b60`, gelijk aan het CI-artifact |
+| Updatefeed | `/releases/windows/stable.json` meldt 1.0.338, gepubliceerd 23 november 19:11 UTC. De signature is gelijk aan de `.sig` uit de CI |
+| Acceptatie op Windows | Niet uitgevoerd. Zie hieronder |
+
+Controleer de download vóór installatie:
+
+```powershell
+Get-FileHash .\ThoughtVault_1.0.338_x64.msi -Algorithm SHA256
+```
+
+**Valse crashmelding na een update (TV-000019).** Tot en met 1.0.336 meldde de app na
+een update-installatie bij de volgende start "gestopt zonder af te sluiten". De
+updater van Windows beëindigt het proces zonder de normale afsluitstap, waardoor de
+sessiemarkering bleef staan. Dat gebeurde ook bij sluiten van het venster terwijl er
+een update klaarstond. Vanaf 1.0.338 ruimt de app die markering op vlak vóór de
+installatie, en zet haar terug als de installatie mislukt.
+
+De update náár 1.0.338 loopt nog via de oude versie en kan de melding daarom één
+keer geven. Pas de eerstvolgende update vanaf 1.0.338 toont of de fix op Windows
+werkt. Een melding "gestopt zonder af te sluiten" direct na de overstap naar 1.0.338
+is dus verwacht en geen nieuwe fout.
+
+## Stand van 1.0.322 (vorige collegaversie)
+
+| Onderdeel | Gemeten op 13 november |
+|---|---|
+| Bron | `main` op `2b128114`, tag `v1.0.322` (met `feat/prospectflow-koppeling` en `fix/ci-cargo-build-dir`) |
+| Windows-build | GitHub Actions-run 43459273421 op `build/1.0.322-20261113`, `headSha` `2b128114`, geslaagd |
+| Download | `ThoughtVault_1.0.322_x64.msi` op de downloadpagina uit [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md); `releases.json` in die map noemt dezelfde versie |
+| SHA-256 MSI | `a0ffa80e1f451c2c2cc0131525b2a4e9e6054eadab7d5a6198caedbfca512e03`, gelijk aan het CI-artifact |
+| Updatefeed | `/releases/windows/stable.json` meldt 1.0.322, gepubliceerd 13 november 16:34 UTC, met signature |
+| macOS en iOS | TestFlight staat op 1.0.321. De Prospect Flow-koppeling zit ook in de Mac-code van 1.0.322, maar die versie is niet naar TestFlight gestuurd |
+
+De downloadpagina biedt voor macOS nog `TranscriptStudio-1.0.242.dmg` aan. Stuur
+Mac-collega's daar niet heen: hun route is TestFlight.
+
+## Besluiten van 13 november
+
+Michel heeft de open punten uit de [blockerlijst van 9 november](qa/colleague-rollout-2026-11-09/STATUS.md)
+beslist:
+
+- Blocker 2 (volledige flow, tien stabiele runs), 3 (verse identiteit op een schone
+  installatie) en 5 (vijf werkdagen pilot) vervallen als poort. Ze zijn niet
+  alsnog uitgevoerd.
+- Notulen lopen via OpenRouter met `mistralai/mistral-large-4-0`. Dat model
+  haalde in de evaluatie van 9 november 17 van 18 feiten, tegen 9 van 18 voor
+  `gpt-oss:120b` (DEC-060). Die evaluatie liep via Ollama Cloud, niet via OpenRouter.
+- Transcriptie blijft lokaal met Whisper Medium (ongeveer 1,5 GB download).
+- Elke collega krijgt een eigen OpenRouter-sleutel van Michel. Yinga betaalt het gebruik.
+- Vragen en meldingen gaan via het Support-scherm in de app; op Windows is dat de
+  knop **Feedback**.
+
+Een rollback naar een eerdere versie is niet bewezen; de CI dekt installatie,
+signature en upgrade.
+
+## Proef met OpenRouter op Dalf38
+
+Op 13 november is 1.0.320 via de beheerlaag op Dalf38 geïnstalleerd (job
+`726ad82672a04b95aeca605aedc042d2`, back-up van de appdata vooraf). Daarna is de
+route via de instellingen van de app zelf ingericht en één fictieve proefopname
+van ongeveer een halve minuut tot notule gemaakt (scenario `tv320-openrouter-20261113`).
+
+- De notule kwam zonder reviewreden, met titel "Besluit interne proef Waddespoor met
+  voorwaarden en controles", en bevatte alle feiten uit het transcript.
+- Het logbestand toont vier modelverzoeken naar `mistralai/mistral-large-4-0`
+  (concept, broncontrole, inhoudscontrole, contextsuggesties), alle vier `outcome=ok`.
+- De app haalde zelf 470 modellen op bij OpenRouter; de sleutel is via het
+  sleutelveld en **Opslaan** gezet.
+
+**Test verbinding** meldde in 1.0.320 en 1.0.321 bij OpenRouter **Niet bereikbaar**,
+terwijl de notule wel lukte. De knop vroeg alleen het Ollama-eigen pad `/api/tags`
+op, dat OpenRouter niet kent. Vanaf 1.0.322 gebruikt de knop dezelfde controle als
+de modellijst (`98172df`). Op Dalf38 meldde hij daarna **Verbonden**.
+
+**Tijdsduur.** De proefopname van een halve minuut duurde op Dalf38 (Ryzen 7 5700X3D,
+48 GB) ruim negen minuten van **Stop en verwerk** tot notule. Ruim zes minuten
+gingen op aan de stap vóór het eerste modelverzoek (transcriptie met Whisper Medium
+op de processor), daarna ruim drie minuten aan het schrijven en controleren van de
+notule. Een vergadering van een uur is met deze route niet gemeten; reken op
+aanzienlijk langer en laat de app openstaan tot de taak klaar is.
 
 ## Eerste start en eerste notule
 
-Deze instructie wordt pas met de goedgekeurde MSI verstuurd. Installatie voor de
-hele pc vraagt Windows-beheerrechten; ontwikkeltools zijn niet nodig.
+Deze instructie hoort bij de MSI van 1.0.322. Installatie voor de hele pc vraagt
+Windows-beheerrechten; ontwikkeltools zijn niet nodig.
 
 1. Installeer de aangeleverde MSI en open ThoughtVault met je eigen Windowsaccount.
    Lokale verwerking vereist geen ThoughtVault-account.
-2. Open **Instellingen → Verwerking**. Kies de bij de pilot bevestigde
-   transcriptie- en notulenconfiguratie. De definitieve modelnamen worden na
-   praktijkacceptatie ingevuld; installeer niet op basis van een oude kandidaat.
-3. Download het gekozen transcriptiemodel bewust via de downloadknop en wacht op
-   de gereedmelding. Een ontbrekend model bewaart de opname met een herstelmelding.
-   Voor externe notulen gebruik je je eigen bevoegde providerautorisatie in het
-   API-sleutelveld; kopieer geen sleutel van een collega. De sleutel wordt in de
-   Windows-kluis opgeslagen. Het toegangsproces moet vóór uitnodiging zijn geregeld.
-4. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
+2. Bij de eerste start vraagt het scherm **Even voorstellen** om je naam en
+   e-mailadres. Zonder die twee gaat de app niet verder. Ze dienen om je meldingen
+   te beantwoorden en gaan mee met automatische foutrapporten; dat versturen zet
+   je uit bij **Instellingen → Account**. Gebruik je werkadres: de koppeling met
+   Prospect Flow zet conceptoffertes op de gebruiker met dat adres.
+3. Open **Instellingen → Verwerking**. Kies bij Transcriptie het model **Medium**,
+   klik op de downloadknop en wacht op de gereedmelding (ongeveer 1,5 GB). Een
+   ontbrekend model bewaart de opname met een herstelmelding.
+4. Kies bij Notulen generatie de tegel **Ollama** en vul in:
+   - Ollama URL: `https://openrouter.ai/api`
+   - Model: `mistralai/mistral-large-4-0`
+   - API-sleutel: de OpenRouter-sleutel die je van Michel hebt gekregen. Het veld
+     heet "API-sleutel (alleen Ollama Cloud)", maar de sleutel gaat mee naar elk
+     HTTPS-adres.
+
+   Gebruik alleen je eigen sleutel en geef haar niet door. Ze wordt in de
+   Windows-kluis opgeslagen. Klik daarna op **Test verbinding**: die moet
+   **Verbonden** melden.
+5. Controleer microfoontoegang bij **Windows-instellingen → Privacy en beveiliging
    → Microfoon**, inclusief toegang voor bureaubladapps. Kies in ThoughtVault je
    bron en microfoon. Gebruik eerst een korte fictieve proefvergadering.
-5. Neem op, pauzeer/hervat indien nodig en kies **Stop en verwerk**. De audio wordt
+6. Neem op, pauzeer/hervat indien nodig en kies **Stop en verwerk**. De audio wordt
    lokaal getranscribeerd. Bij een externe notulenprovider wordt het transcript
    naar die provider gestuurd. Gebruik uitsluitend gegevens die daarvoor zijn toegestaan.
-6. Controleer transcript en notulen tegen de opname: namen, bedragen, acties,
+   Een opname van een halve minuut duurde op een snelle desktop ruim negen minuten;
+   laat de app openstaan tot de taak klaar is.
+7. Controleer transcript en notulen tegen de opname: namen, bedragen, acties,
    termijnen, ontkenningen en voorwaarden. Een reviewconcept is nog geen
    goedgekeurde notule; verbeter de bron of beoordeel het concept vóór gebruik.
    Bij een fout blijven opname en beschikbare transcriptie behouden; hervat bewust.
-7. Bewerk en bewaar je notule, open haar opnieuw en gebruik TXT/PDF-export.
+8. Bewerk en bewaar je notule, open haar opnieuw en gebruik TXT/PDF-export.
    Controleer ook het geëxporteerde document voordat je het deelt.
 
 Agenda en Obsidian zijn optioneel. Voor de eerste notule zijn ze niet nodig.
-Het echte supportcontact, de beperkte download en het toegangsproces worden vóór
-uitnodiging ingevuld; deze voorbereiding is nog geen collega-uitnodiging.
+Loopt er iets mis, meld het dan via **Feedback** in de app. Daar kun je ook het
+logbestand tonen en meesturen.
+
+## Koppeling met Prospect Flow
+
+Vanaf 1.0.322 maak je van een notule een conceptofferte in Prospect Flow. Kies bij
+de notule **Export → Maak offerte in Prospect Flow**, kies een bestaande klant
+of **Nieuwe klant** en klik op **Maak conceptofferte**. Prospect Flow leidt de
+regels af. Dat duurde op Dalf38 35 seconden; de app wacht tot twee minuten. Naar
+de klant gaat niets.
+
+Instellen in ThoughtVault: **Instellingen → Prospect Flow**, met als adres
+`https://prospectflow.yinga.ai` en de API-sleutel die Michel geeft. **Verbinding
+testen** moet **Verbonden** melden.
+
+Prospect Flow zelf moet twee dingen aan hebben staan, anders weigert het met
+`403 "AI-hulpen staan uit"`:
+
+- de module **AI-hulp (Flow)** op `/beheer/modules`. Alleen het Yinga-supportaccount
+  kan die schakelen. De AI-kolom in de offertebouwer wordt dan zichtbaar voor alle
+  gebruikers van de instance;
+- een AI-provider onder de AI-instellingen. Op prospectflow.yinga.ai is dat sinds
+  13 november OpenRouter (`https://openrouter.ai/api/v1`, model
+  `mistralai/mistral-large-4-0`) met de sleutel van Yinga. Back-up van de
+  instellingen van vóór die wijziging: `~/prospectflow/backups/app_config-20261113-153129.json`
+  op n8n01.
+
+Wat er in Prospect Flow ontstaat:
+
+- een offerte met status concept en bron `thoughtvault`. Een prijs komt uit de
+  catalogus; een bedrag uit het gesprek wordt niet overgenomen maar als regel met
+  het label **Controleren** gemarkeerd;
+- bij **Nieuwe klant** een klantkaart met de notitie "Klantgesprek: <titel>" op de
+  tijdlijn;
+- de offerte in **Leads → Mijn inbox** van de collega van wie het e-mailadres uit
+  **Instellingen → Account** in ThoughtVault gelijk is aan de inlognaam in Prospect
+  Flow. Zonder overeenkomst valt de offerte op de gebruiker van de API-sleutel.
+
+**Proef op Dalf38** (13 november, Dev-build 1.0.321 van `feat/prospectflow-koppeling`,
+scenario `tv321-pf-offer-20261113f`): opname tot notule in 5 minuten met Whisper
+Base, daarna offerte `20261113-1` voor "Fictief Testbedrijf Waddenspoor BV". Die
+stond in Mijn inbox van yinga-support met teller 1 op **Leads**, met één regel
+**Controleren** voor het genoemde budget. De proefofferte staat in de prullenbak;
+de proefklant staat nog in Prospect Flow.
 
 ## Historische kandidaat 1.0.296
 

@@ -167,4 +167,45 @@ final class PersonalCorrectionsTests: XCTestCase {
         XCTAssertEqual(result.transcript, "Sanne zei tegen Sanne Bakker")
         XCTAssertNil(PersonalCorrections.personCorrection(name: "Sanne Bakker", heardAs: ["Sanne", "SANNE BAKKER", ""], scope: nil))
     }
+
+    func testNewestEntryWinsWhenTwoEntriesContradict() {
+        let old = PersonalCorrection(id: "old", canonical: "A‑E", variants: ["AI"], scope: nil)
+        let new = PersonalCorrection(id: "new", canonical: "AI", variants: ["A‑E"], scope: nil)
+        XCTAssertEqual(PersonalCorrections.text("AI-tools en A-E slop", entries: [old, new], profileId: nil), "AI-tools en AI slop")
+        XCTAssertEqual(PersonalCorrections.active([old, new], profileId: nil).map(\.id), ["new"])
+        XCTAssertFalse(PersonalCorrections.contextBlock(entries: [old, new], people: [], transcript: "", profileId: nil, maxCharacters: 6000).contains("- A‑E"))
+        // Saved the other way round, the other entry wins.
+        XCTAssertEqual(PersonalCorrections.text("AI-tools", entries: [new, old], profileId: nil), "A‑E-tools")
+        // A chain is no contradiction: the older entry keeps working and nothing cascades.
+        let chain = PersonalCorrection(id: "chain", canonical: "Other", variants: ["AI"], scope: nil)
+        XCTAssertEqual(PersonalCorrections.text("A-E", entries: [new, chain], profileId: nil), "AI")
+    }
+
+    func testVariantsInsideAddressesBecomeLowercaseTerm() {
+        let yinga = PersonalCorrection(canonical: "Yinga", variants: ["Jinga"], scope: nil)
+        XCTAssertEqual(PersonalCorrections.text("Mail analytics@jinga.nl of kijk op https://www.Jinga.nl/jinga.", entries: [yinga], profileId: nil),
+                       "Mail analytics@yinga.nl of kijk op https://www.yinga.nl/yinga.")
+        let mail = PersonalCorrection(canonical: "info@yinga.nl", variants: ["info@jingle.nl"], scope: nil)
+        XCTAssertEqual(PersonalCorrections.text("Stuur naar info@jingle.nl", entries: [mail], profileId: nil), "Stuur naar info@yinga.nl")
+        // A term with a space cannot be part of an address; code spans stay as they are.
+        let spaced = PersonalCorrection(canonical: "Prospect Flow", variants: ["prospectflow"], scope: nil)
+        XCTAssertEqual(PersonalCorrections.text("sales@prospectflow.nl `prospectflow`", entries: [spaced], profileId: nil), "sales@prospectflow.nl `prospectflow`")
+        XCTAssertEqual(PersonalCorrections.html("<p>a@jinga.nl &amp; <a href=\"mailto:a@jinga.nl\">a@jinga.nl</a></p>", entries: [yinga], profileId: nil),
+                       "<p>a@yinga.nl &amp; <a href=\"mailto:a@jinga.nl\">a@jinga.nl</a></p>")
+    }
+
+    func testLearnedSpellingHoldingTheTermIsNoMisspelling() {
+        XCTAssertFalse(PersonalCorrections.isMisspelling("de Prospectflow", of: "Prospectflow"))
+        XCTAssertFalse(PersonalCorrections.isMisspelling("zo'n Prospectflow", of: "Prospectflow"))
+        XCTAssertTrue(PersonalCorrections.isMisspelling("prospectsflow", of: "Prospectflow"))
+        XCTAssertFalse(PersonalCorrections.isMisspelling("API", of: "AI"))
+        XCTAssertTrue(PersonalCorrections.isMisspelling("ei", of: "AI"))
+        XCTAssertTrue(PersonalCorrections.isMisspelling("A–E", of: "AI"))
+        XCTAssertFalse(PersonalCorrections.isMisspelling("de antwoorden", of: "AI Antwoorden"))
+        XCTAssertTrue(PersonalCorrections.isMisspelling("ei antwoorden", of: "AI Antwoorden"))
+        XCTAssertTrue(PersonalCorrections.isMisspelling("Sanne Backer", of: "Sanne Bakker"))
+        var entry = PersonalCorrection(canonical: "Prospectflow", variants: ["Prospect Flow"], scope: nil)
+        entry.learned = ["de Prospectflow", "prospectsflow"]
+        XCTAssertEqual(entry.heardAs, ["Prospect Flow", "prospectsflow"])
+    }
 }

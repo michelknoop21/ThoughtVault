@@ -2,7 +2,7 @@ import Foundation
 @main struct Checks {
  static func main() throws {
   let rule = PersonalCorrection(id: "yinga", canonical: "Yinga", variants: ["Django", "Jengo"])
-  assert(PersonalCorrections.text("DJANGO, Jengo Djangoes https://x.nl/Django Django@x.nl `Django`", entries:[rule],profileId:nil) == "Yinga, Yinga Djangoes https://x.nl/Django Django@x.nl `Django`")
+  assert(PersonalCorrections.text("DJANGO, Jengo Djangoes https://x.nl/Django Django@x.nl `Django`", entries:[rule],profileId:nil) == "Yinga, Yinga Djangoes https://x.nl/yinga yinga@x.nl `Django`")
   let source = "<style>.Django{}</style><!-- Django --><p title=\"Django > x\">Django</p><a href=\"/Django\">Django</a><pre><code>Django</code></pre><script>Django</script><p>Jengo</p>"
   assert(PersonalCorrections.html(source, entries:[rule],profileId:nil) == source.replacingOccurrences(of:">Django</p>",with:">Yinga</p>").replacingOccurrences(of:">Jengo</p>",with:">Yinga</p>"))
   let scoped = PersonalCorrection(id:"profile",canonical:"Yinga",variants:["Django"],scope:"meeting")

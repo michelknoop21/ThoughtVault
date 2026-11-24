@@ -8,6 +8,39 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-076: Automatisch leren slaat woordgroepen met de term en langere afkortingen over
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+**Context:** De automatische herkenning uit DEC-062 had bij "Prospectflow" negen woordgroepen geleerd waar de juiste term al in zat ("de Prospectflow", "Prospectflow ook", "op Prospectflow"), bij "AI" de afkorting "API" en bij "AI Antwoorden" de woordgroep "de antwoorden". De kandidaatselectie sloot alleen de exacte term uit. Een woordgroep met de term scoort hoog op gelijkenis en het model zegt er vaak ja op, omdat de term er letterlijk in staat. Bij vervangen viel het buurwoord weg ("de Prospectflow" werd "Prospectflow"), en een bevestigde "API" werd "AI".
+
+**Decision:**
+1. `PersonalCorrections.isMisspelling(_:of:)` en `isMisspelling()` in TypeScript bepalen of een gehoorde vorm een verkeerde spelling kan zijn. Dat kan niet als de vorm de juiste term als los woord of woordgroep bevat. Bij een afkorting van 2 tot 4 hoofdletters moet de gehoorde vorm evenveel letters hebben: "AE", "A–E" en "ei" blijven kandidaat voor "AI", "API" niet. Bij een term van meerdere woorden met evenveel gehoorde woorden, waarvan er minstens één gelijk is, moet elk afwijkend woord lijken op het woord dat het vervangt (gelijkenis vanaf 0,5, de ondergrens uit DEC-062): "de antwoorden" telt niet voor "AI Antwoorden", "ei antwoorden" en "Sanne Backer" voor "Sanne Bakker" wel.
+2. `GlossaryAutoMatch.candidates()` en `findCandidates()` slaan zulke vormen over, ook als ze al geleerd zijn. Daardoor leert de app ze niet opnieuw en vervangt hij ze niet meer.
+3. `heardAs` laat geleerde spellingen weg die niet aan regel 1 voldoen, zodat ze niet meer als "ook gehoord als" in het contextblok staan. Vaste varianten blijven ongemoeid: die heeft de gebruiker zelf gekozen.
+
+**Consequences:** Bestaande geleerde spellingen blijven in `personal-corrections.json` en in de editor staan, maar doen niets meer. Opruimen kan met "Verwijderen" in de editor. Een spraakfout die een letter toevoegt aan een afkorting wordt niet meer automatisch gevonden; die kan de gebruiker als vaste variant invoeren. Het fixture-geval "learned word group holding the term and longer acronym are skipped" in `tests/fixtures/glossary-automatch.json` houdt beide platforms gelijk.
+
+---
+
+## DEC-075: Woordenlijst: nieuwste regel wint bij tegenspraak, varianten gelden ook in adressen
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+**Context:** Een notule van 24 november schreef overal "A‑E" waar "AI" bedoeld was en liet `analytics@jinga.nl` staan, terwijl "Jinga" een vaste variant van "Yinga" is. De woordenlijst bevatte twee regels die elkaar tegenspraken: `A‑E` met variant `AI` en, later opgeslagen, `AI` met variant `A‑E`. De vervanging loopt één keer over de tekst, dus elke "AI" van het model werd "A‑E". `validate()` kent alleen dubbele varianten en liet dit paar toe. E-mailadressen en URL's sloeg `PersonalCorrections.text()` altijd over, ook bij een variant die het hele adres was.
+
+**Decision:**
+1. **Nieuwste regel wint.** `PersonalCorrections.active()` en `activeCorrections()` lopen de regels van nieuw naar oud door (upsert zet de laatst opgeslagen regel achteraan). Een variant van een oudere regel die bij een nieuwere regel de correcte term is, telt niet mee. Een oudere regel die precies het omgekeerde zegt van een nieuwere valt helemaal weg, ook uit het contextblok en uit de automatische herkenning. Een keten (`Yinga` met variant `Jengo`, daarna `Other` met variant `Yinga`) is geen tegenspraak: beide regels blijven werken en er wordt niet doorvervangen.
+2. **Het bestand blijft ongewijzigd.** De oude regel staat nog in de editor. `validate()` weigert het paar niet, omdat een bestaande lijst met zo'n paar dan niet meer zou laden en de hele woordenlijst zou uitvallen.
+3. **Varianten in adressen.** Is een e-mailadres of URL zelf een variant, dan komt de correcte term ervoor in de plaats. Anders worden vaste varianten binnen het adres op woordgrens vervangen door de correcte term in kleine letters: `analytics@jinga.nl` wordt `analytics@yinga.nl`. Een term met een spatie wordt in een adres niet toegepast.
+4. **Wat beschermd blijft.** HTML-entiteiten, tekst tussen backticks en de inhoud van `<a>`, `<code>`, `<pre>`, `<script>` en `<style>`. `GlossaryAutoMatch` blijft adressen overslaan: geleerde en gegokte spellingen komen niet in een adres.
+
+**Consequences:** Een vaste variant verandert nu ook een echt adres waar hij in voorkomt: met "Nigel" als variant van "Naighel" wordt `nigel@bedrijf.nl` `naighel@bedrijf.nl`. Wie dat niet wil, beperkt de regel tot een opnameprofiel of haalt de variant weg. Een oude regel opnieuw opslaan maakt hem de nieuwste, en dan wint hij. Hoe de omgekeerde regel in de lijst kwam is niet achterhaald: `context-history.json` bevat er geen aanmaakregel van.
+
+---
+
 ## DEC-074: Optionele cloud-transcriptie met eigen API-sleutel
 
 **Date:** 2026-11-20

@@ -132,6 +132,20 @@
       "answer": "1 ja\n2 nee",
       "text": "AI modellen en AE als andere afkorting.",
       "learned": []
+    },
+    {
+      "name": "learned word group holding the term and longer acronym are skipped",
+      "transcript": "Ik heb zo'n Prospectflow gezien, de Prospectflow ook. Prospectsflow werkt. De API en de AE.",
+      "entries": [
+        { "id": "p", "canonical": "Prospectflow", "variants": [], "scope": null, "enabled": true, "learned": ["de Prospectflow", "Prospectflow ook"] },
+        { "id": "a", "canonical": "AI", "variants": [], "scope": null, "enabled": true, "learned": ["API"] }
+      ],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["Prospectsflow", "Prospectflow"], ["AE", "AI"]],
+      "answer": "1 ja\n2 ja",
+      "text": "Ik heb zo'n Prospectflow gezien, de Prospectflow ook. Prospectflow werkt. De API en de AI.",
+      "learned": [["Prospectflow", "Prospectsflow"], ["AI", "AE"]]
     }
   ],
   "recordings": [
@@ -142,7 +156,7 @@
       "transcript": "A-E-oplossingen. A–E modellen. AE blijft contextgevoelig. https://x/A-E `A-E`",
       "expectedTitle": "AI-oplossingen voor AI",
       "expectedNotule": "<h1>AI-oplossingen</h1><p>AI werkt.</p><p>AI systemen.</p><a href=\"/A-E\">A-E</a><code>A-E</code>",
-      "expectedTranscript": "AI-oplossingen. AI modellen. AE blijft contextgevoelig. https://x/A-E `A-E`"
+      "expectedTranscript": "AI-oplossingen. AI modellen. AE blijft contextgevoelig. https://x/ai `A-E`"
     }
   ]
 }

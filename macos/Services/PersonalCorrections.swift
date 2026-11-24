@@ -22,7 +22,10 @@ struct PersonalCorrection: Codable, Identifiable, Equatable, Sendable {
         try values.encodeIfPresent(learned, forKey: .learned)
     }
     /// Variants plus learned spellings, trimmed and non-empty: what the minutes AI may have heard.
-    var heardAs: [String] { (variants + (learned ?? [])).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty } }
+    var heardAs: [String] {
+        (variants + (learned ?? []).filter { PersonalCorrections.isMisspelling($0, of: canonical) })
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
 }
 struct CorrectionDocument: Codable, Sendable {
     var version = 2
@@ -72,6 +75,23 @@ enum PersonalCorrections {
     /// Rejected suggestion keys; empty when the file is missing or unreadable.
     static func dismissed(at path: URL = url) -> [String] {
         (try? JSONDecoder().decode(CorrectionDocument.self, from: Data(contentsOf: path)))?.dismissed ?? []
+    }
+    /// Whether `heard` can be a misheard form of `canonical` (DEC-076). Not when it holds the term as
+    /// a whole word ("de Prospectflow"), for an acronym not when the letter count differs ("API" for "AI"),
+    /// and for a term of several words not when it keeps a word and swaps another for an unlike one
+    /// ("de antwoorden" for "AI Antwoorden"; "Sanne Backer" for "Sanne Bakker" stays).
+    static func isMisspelling(_ heard: String, of canonical: String) -> Bool {
+        func words(_ text: String) -> String {
+            text.folding(options: .diacriticInsensitive, locale: nil).lowercased()
+                .replacingOccurrences(of: #"[^\p{L}\p{N}]+"#, with: " ", options: .regularExpression).trimmingCharacters(in: .whitespaces)
+        }
+        let term = canonical.trimmingCharacters(in: .whitespacesAndNewlines)
+        if (" " + words(heard) + " ").contains(" " + words(term) + " ") { return false }
+        let heardWords = words(heard).split(separator: " ").map(String.init), termWords = words(term).split(separator: " ").map(String.init)
+        if termWords.count > 1, heardWords.count == termWords.count, zip(heardWords, termWords).contains(where: ==),
+           zip(heardWords, termWords).contains(where: { $0 != $1 && GlossaryAutoMatch.similarity($0, $1) < 0.5 }) { return false }
+        guard term.range(of: #"^[A-Z]{2,4}$"#, options: .regularExpression) != nil else { return true }
+        return words(heard).replacingOccurrences(of: " ", with: "").count == term.count
     }
     /// Dismissed key for a learned spelling, so automatic matching does not learn it again.
     static func learnedKey(canonical: String, heard: String) -> String {
@@ -152,8 +172,20 @@ enum PersonalCorrections {
         updated.learned = learned.isEmpty ? nil : learned
         return entries.filter { $0.id != entry.id && $0.id != previous?.id } + [updated]
     }
+    /// Enabled entries for `profileId`. Entries are appended on upsert, so on a contradiction the
+    /// last one wins: an older variant that a newer entry names as the correct term is ignored, and
+    /// an older entry that says the reverse of a newer one ("A-E" for "AI" after "AI" for "A-E") is left out.
     static func active(_ entries: [PersonalCorrection], profileId: String?) -> [PersonalCorrection] {
-        entries.filter { $0.enabled && ($0.scope == nil || $0.scope == profileId) }
+        func key(_ text: String) -> String { spellingKey(text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+        var correct = Set<String>(), wrong = Set<String>(), kept: [PersonalCorrection] = []
+        for var entry in entries.reversed() where entry.enabled && (entry.scope == nil || entry.scope == profileId) {
+            let variants = entry.variants.filter { !correct.contains(key($0)) }
+            if variants.count != entry.variants.count, wrong.contains(key(entry.canonical)) { continue }
+            entry.variants = variants
+            correct.insert(key(entry.canonical)); wrong.formUnion(variants.map(key))
+            kept.append(entry)
+        }
+        return kept.reversed()
     }
     /// Case-insensitive whole-word match, same boundaries as text().
     static func containsWord(_ word: String, in text: String) -> Bool {
@@ -227,15 +259,29 @@ enum PersonalCorrections {
         }
         guard !replacements.isEmpty else { return text }
         let alternatives = replacements.keys.sorted { $0.count > $1.count }.map { NSRegularExpression.escapedPattern(for: $0).replacingOccurrences(of: "-", with: "[-‐‑‒–—−]") }.joined(separator: "|")
-        let pattern = #"&(?:#\d+|#x[\da-f]+|[a-z]+);|(?:https?://|www\.)[^\s<>]+|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}|`[^`]*`|(?<![\p{L}\p{N}_])(?:"# + alternatives + #")(?![\p{L}\p{N}_])"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return text }
+        let entity = #"&(?:#\d+|#x[\da-f]+|[a-z]+);"#
+        let word = #"(?<![\p{L}\p{N}_])(?:"# + alternatives + #")(?![\p{L}\p{N}_])"#
+        let pattern = entity + #"|(?:https?://|www\.)[^\s<>]+|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}|`[^`]*`|"# + word
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+              let inner = try? NSRegularExpression(pattern: entity + "|" + word, options: .caseInsensitive) else { return text }
         var result = text
         for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
-            guard let range = Range(match.range, in: text), let canonical = replacements[spellingKey(String(text[range]))], let outputRange = Range(match.range, in: result) else { continue }
+            guard let range = Range(match.range, in: text), let outputRange = Range(match.range, in: result) else { continue }
             let matched = String(text[range])
-            if matched.hasPrefix("&") || matched.hasPrefix("`") || matched.contains("@") || matched.lowercased().hasPrefix("http://") || matched.lowercased().hasPrefix("https://") || matched.lowercased().hasPrefix("www.") { continue }
-            let replacement = html ? escape(canonical) : canonical
-            result.replaceSubrange(outputRange, with: replacement)
+            if matched.hasPrefix("&") || matched.hasPrefix("`") { continue }
+            if let canonical = replacements[spellingKey(matched)] {
+                result.replaceSubrange(outputRange, with: html ? escape(canonical) : canonical)
+                continue
+            }
+            // An e-mail address or URL: variants inside it become the term in lowercase (DEC-075).
+            var address = matched
+            for part in inner.matches(in: matched, range: NSRange(matched.startIndex..., in: matched)).reversed() {
+                guard let partRange = Range(part.range, in: matched), let target = Range(part.range, in: address),
+                      let canonical = replacements[spellingKey(String(matched[partRange]))],
+                      canonical.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else { continue }
+                address.replaceSubrange(target, with: html ? escape(canonical.lowercased()) : canonical.lowercased())
+            }
+            result.replaceSubrange(outputRange, with: address)
         }
         return result
     }

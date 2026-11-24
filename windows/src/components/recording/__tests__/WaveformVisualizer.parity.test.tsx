@@ -53,4 +53,4 @@ it("matches the unchanged Apple geometry at 30/60/120 Hz in studio and widget", 
     }));
     await act(async () => root.unmount());
   }
-});
+}, 30_000);

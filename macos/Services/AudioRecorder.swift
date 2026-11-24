@@ -77,6 +77,8 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     private(set) var startedAt: Date?
     private var pausedAt: Date?
     private var accumulatedPauseDuration: TimeInterval = 0
+    /// The first metering sample of a recording is checked once for a silent (floor) input.
+    private var checkedFirstMeter = false
 
 #if os(iOS)
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
@@ -107,6 +109,18 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             name: AVAudioSession.interruptionNotification,
             object: AVAudioSession.sharedInstance()
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRouteChange(_:)),
+            name: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleMediaServicesReset(_:)),
+            name: AVAudioSession.mediaServicesWereResetNotification,
+            object: AVAudioSession.sharedInstance()
+        )
 #endif
     }
 
@@ -117,24 +131,36 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
               let type = AVAudioSession.InterruptionType(rawValue: typeValue)
         else { return }
 
+        let reason = AudioRouteLog.interruptionReason(userInfo)
         switch type {
         case .began:
+            log.warning("[AudioRecorder] Interruption began reason=\(reason) recording=\(isRecording) \(AudioRouteLog.session())"
+                        + (isRecording ? " action=pause+onSilentFailure(recordingInterrupted)" : " action=none"))
             if isRecording {
                 audioRecorder?.pause()
                 isPaused = true
                 onSilentFailure?(.recordingInterrupted)
             }
         case .ended:
-            if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
-                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-                if options.contains(.shouldResume) && isPaused {
-                    audioRecorder?.record()
-                    isPaused = false
-                }
+            let options = (userInfo[AVAudioSessionInterruptionOptionKey] as? UInt).map(AVAudioSession.InterruptionOptions.init(rawValue:))
+            let resumes = options?.contains(.shouldResume) == true && isPaused
+            log.info("[AudioRecorder] Interruption ended reason=\(reason) shouldResume=\(options?.contains(.shouldResume) == true) paused=\(isPaused) action=\(resumes ? "resume" : "none")")
+            if resumes {
+                audioRecorder?.record()
+                isPaused = false
             }
         @unknown default:
-            break
+            log.info("[AudioRecorder] Interruption type=\(typeValue) reason=\(reason) action=none")
         }
+    }
+
+    @objc private func handleRouteChange(_ notification: Notification) {
+        let raw = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
+        log.info("[AudioRecorder] Route change reason=\(AudioRouteLog.routeChangeReason(raw)) recording=\(isRecording) \(AudioRouteLog.route())")
+    }
+
+    @objc private func handleMediaServicesReset(_ notification: Notification) {
+        log.warning("[AudioRecorder] Media services were reset recording=\(isRecording)")
     }
 #endif
 
@@ -175,7 +201,10 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 
 #if os(iOS)
         try configureAudioSession()
+        log.info("[AudioRecorder] Audio session active \(AudioRouteLog.session())")
         await beginBackgroundTask()
+#else
+        log.info("[AudioRecorder] Input transport=\(AudioRouteLog.inputTransport())")
 #endif
 
         let url = makeRecordingURL()
@@ -216,12 +245,13 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
                 self.envelope.reset()
                 self.lastMeterDate = nil
+                self.checkedFirstMeter = false
                 self.errorMessage = nil
                 log.info("[AudioRecorder] Started recording to \(LogRedact.mask(url.lastPathComponent)) — 16kHz mono PCM")
             } catch let error as AudioRecorderError {
                 throw error
             } catch {
-                log.error("[AudioRecorder] Failed to create AVAudioRecorder: \(LogRedact.mask(error.localizedDescription))")
+                log.error("[AudioRecorder] Failed to create AVAudioRecorder: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                 throw AudioRecorderError.failedToStart
             }
         }
@@ -335,6 +365,16 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         // stay untouched (no second capture graph). Pipeline parity with
         // Windows is guaranteed at the envelope level via the shared fixture.
         let db = recorder.averagePower(forChannel: 0)
+        if !checkedFirstMeter {
+            checkedFirstMeter = true
+            if db <= -120 {
+#if os(iOS)
+                log.warning("[AudioRecorder] First metering sample at the floor dB=\(db) \(AudioRouteLog.route())")
+#else
+                log.warning("[AudioRecorder] First metering sample at the floor dB=\(db) transport=\(AudioRouteLog.inputTransport())")
+#endif
+            }
+        }
         let now = Date()
         let dt = lastMeterDate.map { now.timeIntervalSince($0) } ?? 1.0 / AudioEnvelopeConfig.publishRateHz
         lastMeterDate = now
@@ -484,7 +524,12 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         try session.setCategory(
             .playAndRecord,
             mode: .default,
-            options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP]
+            // mixWithOthers: a video or music playing in another app keeps playing and no
+            // longer interrupts the recording; the microphone records it through the speaker.
+            // No allowBluetoothHFP: with it, earbuds switch to call mode (mono, low quality) as
+            // soon as the microphone opens. With A2DP only, their sound stays as it was and the
+            // device microphone records.
+            options: [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP]
         )
         try session.setActive(true, options: .notifyOthersOnDeactivation)
     }
@@ -498,8 +543,10 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     // instead of assuming isolation (assumeIsolated traps off the main thread).
     private func beginBackgroundTask() async {
         backgroundTask = await MainActor.run {
-            UIApplication.shared.beginBackgroundTask(withName: "AudioRecording") {
+            log.info("[AudioRecorder] Background task begin remaining=\(DiagnosticLog.backgroundTimeRemaining)")
+            return UIApplication.shared.beginBackgroundTask(withName: "AudioRecording") {
                 [weak self] in
+                log.warning("[AudioRecorder] Background task expired")
                 self?.endBackgroundTask()
             }
         }
@@ -510,6 +557,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         let task = backgroundTask
         backgroundTask = .invalid
         Task { @MainActor in
+            log.info("[AudioRecorder] Background task end remaining=\(DiagnosticLog.backgroundTimeRemaining)")
             UIApplication.shared.endBackgroundTask(task)
         }
     }
@@ -522,6 +570,7 @@ extension AudioRecorder: AVAudioRecorderDelegate {
 
     func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
         if !flag {
+            log.error("[AudioRecorder] onSilentFailure(failedToStart) from audioRecorderDidFinishRecording successfully=false")
             Task { @MainActor in
                 self.isRecording = false
                 self.isPaused = false
@@ -533,6 +582,7 @@ extension AudioRecorder: AVAudioRecorderDelegate {
     }
 
     func audioRecorderEncodeErrorDidOccur(_ recorder: AVAudioRecorder, error: Error?) {
+        log.error("[AudioRecorder] onSilentFailure(failedToStart) from audioRecorderEncodeErrorDidOccur error=\(error.map(LogRedact.describe) ?? "none")")
         Task { @MainActor in
             self.isRecording = false
             self.isPaused = false

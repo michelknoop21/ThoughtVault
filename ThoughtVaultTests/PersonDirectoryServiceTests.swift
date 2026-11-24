@@ -14,7 +14,7 @@ import SwiftData
 /// Mirrors makeInMemoryContainer() from PersonProfileTests.swift.
 @MainActor
 private func makeDirectoryContainer() throws -> ModelContainer {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let config = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     return try ModelContainer(
         for: TranscriptRecord.self, PersonProfile.self,
         migrationPlan: AppMigrationPlan.self,

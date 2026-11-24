@@ -3,8 +3,9 @@
 // com.buildmind.ThoughtVault
 //
 // Abstraction over local (offline) speech-to-text engines so the app can transcribe
-// without the backend server. Two implementations:
+// without the backend server. Three implementations:
 //   - WhisperKitTranscriber: CoreML Whisper, high quality (default when available)
+//   - ParakeetTranscriber: CoreML Parakeet via FluidAudio (ParakeetTranscriber.swift)
 //   - AppleSpeechTranscriber: Apple's SFSpeechRecognizer (zero-dependency fallback)
 
 import Foundation
@@ -79,6 +80,69 @@ enum PersonalVocabulary {
 /// handles most reliably. Imported files (m4a, mp3, 44.1kHz stereo) can otherwise
 /// cause WhisperKit to silently hang during inference.
 enum AudioPreConverter {
+    @TaskLocal static var usesOptimizedAudio = false
+
+    /// Prepare an owned copy; ordinary transcription keeps its existing level handling.
+    static func transcriptionInput(_ source: URL, optimize: Bool, progress: @escaping @Sendable (Double) -> Void) async throws -> URL {
+        guard optimize else { return source }
+        try Task.checkCancellation()
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("optimized-\(UUID().uuidString).wav")
+        let job = Task.detached(priority: .userInitiated) {
+            do {
+                let input = try AVAudioFile(forReading: source, commonFormat: .pcmFormatFloat32, interleaved: false)
+                let format = input.processingFormat
+                guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_384),
+                      let channels = buffer.floatChannelData else { throw CocoaError(.fileReadCorruptFile) }
+                var peak: Float = 0
+                while input.framePosition < input.length {
+                    try Task.checkCancellation()
+                    try input.read(into: buffer)
+                    guard buffer.frameLength > 0 else { throw CocoaError(.fileReadCorruptFile) }
+                    for c in 0..<Int(format.channelCount) {
+                        for i in 0..<Int(buffer.frameLength) {
+                            guard channels[c][i].isFinite else { throw CocoaError(.fileReadCorruptFile) }
+                            peak = max(peak, abs(channels[c][i]))
+                        }
+                    }
+                    progress(Double(input.framePosition) / Double(input.length) / 2)
+                }
+                let gain: Float = peak > 0 ? min(pow(10, 12 / 20), pow(10, -1 / 20) / peak) : 1
+                input.framePosition = 0
+                var settings = format.settings
+                settings[AVLinearPCMIsNonInterleaved] = false
+                do {
+                    let file = try AVAudioFile(forWriting: output, settings: settings)
+                    while input.framePosition < input.length {
+                        try Task.checkCancellation()
+                        try input.read(into: buffer)
+                        guard buffer.frameLength > 0 else { throw CocoaError(.fileReadCorruptFile) }
+                        for c in 0..<Int(format.channelCount) {
+                            for i in 0..<Int(buffer.frameLength) { channels[c][i] *= gain }
+                        }
+                        try file.write(from: buffer)
+                        progress(0.5 + Double(input.framePosition) / Double(input.length) / 2)
+                    }
+                }
+                try Task.checkCancellation()
+                logger.info("Audio optimization complete gain=\(gain)")
+                return output
+            } catch {
+                try? FileManager.default.removeItem(at: output)
+                if error is CancellationError { throw error }
+                logger.warning("Audio optimization fallback code=\((error as NSError).code)")
+                return source
+            }
+        }
+        return try await withTaskCancellationHandler {
+            let result = try await job.value
+            if Task.isCancelled {
+                if result != source { try? FileManager.default.removeItem(at: result) }
+                throw CancellationError()
+            }
+            return result
+        } onCancel: { job.cancel() }
+    }
+
 
     /// Whole-file mean RMS that quiet recordings are boosted toward. Typical recordings
     /// sit around -26..-17 dBFS; a -41 dBFS meeting gave 3333 instead of 3260 words
@@ -88,7 +152,7 @@ enum AudioPreConverter {
     private static let maxGainDB: Float = 24
 
     static func convertToWav16k(_ url: URL) async throws -> URL {
-        let gain = try normalizationGain(for: url)
+        let gain = usesOptimizedAudio ? 1 : try normalizationGain(for: url)
         // ponytail: if already 16kHz mono WAV and loud enough, skip conversion
         if gain == 1, isAlreadyWav16kMono(url) { return url }
 
@@ -256,14 +320,18 @@ enum AudioPreConverter {
 
 enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
     case whisperKit
+    case parakeet
     case appleSpeech
+    case cloudAPI
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .whisperKit:  return "WhisperKit (aanbevolen)"
+        case .whisperKit:  return "WhisperKit"
+        case .parakeet:    return "Parakeet"
         case .appleSpeech: return "Apple Spraakherkenning"
+        case .cloudAPI:    return "Cloud-API"
         }
     }
 }
@@ -273,13 +341,17 @@ enum LocalTranscriberEngine: String, CaseIterable, Identifiable, Sendable {
 enum LocalTranscriberError: LocalizedError {
     case engineUnavailable(String)
     case transcriptionFailed(String)
+    case cloudFailed(String)
     case emptyResult
     case modelNotInstalled(String)
+    /// A step (`stage` is a fixed name such as "model-load") ran past its limit; same text as `transcriptionFailed`.
+    case timedOut(stage: String, message: String)
 
     var errorDescription: String? {
         switch self {
         case .engineUnavailable(let name): return "Transcriptie-engine '\(name)' is niet beschikbaar."
-        case .transcriptionFailed(let msg): return "Lokale transcriptie mislukt: \(msg)"
+        case .transcriptionFailed(let msg), .timedOut(_, let msg): return "Lokale transcriptie mislukt: \(msg)"
+        case .cloudFailed(let msg): return "Cloud-transcriptie mislukt: \(msg)"
         case .emptyResult: return "De transcriptie was leeg."
         case .modelNotInstalled: return "Het spraakmodel is nog niet gedownload. Download het in Instellingen; de opname blijft bewaard."
         }
@@ -294,6 +366,34 @@ protocol LocalTranscriber: Sendable {
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String
 }
 
+// MARK: - Stage log
+
+/// Start, duration and failure of each stage of one local transcription, with fixed stage names
+/// ("convert", "model-load", "transcribe") so a failure says where it happened.
+struct TranscriptionStageLog {
+    let engine: String
+    private(set) var stage = "start"
+    private var started = Date()
+
+    init(engine: String) { self.engine = engine }
+
+    mutating func begin(_ next: String, _ detail: String = "") {
+        stage = next
+        started = Date()
+        logger.info("\(engine) stage=\(next) start\(detail)")
+    }
+
+    func end(_ detail: String = "") {
+        logger.info("\(engine) stage=\(stage) done s=\(elapsed)\(detail)")
+    }
+
+    func failed(_ error: Error) {
+        logger.error("\(engine) failed: \(LogRedact.mask(error.localizedDescription)) stage=\(stage) after_s=\(elapsed) error=\(LogRedact.describe(error))")
+    }
+
+    private var elapsed: Int { Int(Date().timeIntervalSince(started).rounded()) }
+}
+
 // MARK: - Factory
 
 enum LocalTranscriberFactory {
@@ -303,21 +403,25 @@ enum LocalTranscriberFactory {
 
     /// Builds the transcriber for the user's selected engine, falling back to
     /// Apple Speech when WhisperKit is not compiled in.
-    static func make() -> any LocalTranscriber {
-        let raw = UserDefaults.standard.string(forKey: "localTranscriber") ?? LocalTranscriberEngine.whisperKit.rawValue
+    static func make(defaults: UserDefaults = .standard) -> any LocalTranscriber {
+        let raw = defaults.string(forKey: "localTranscriber") ?? LocalTranscriberEngine.whisperKit.rawValue
         let engine = LocalTranscriberEngine(rawValue: raw) ?? .whisperKit
 
         switch engine {
         case .whisperKit:
             #if canImport(WhisperKit)
-            let model = UserDefaults.standard.string(forKey: "whisperModel") ?? defaultWhisperModel
+            let model = defaults.string(forKey: "whisperModel") ?? defaultWhisperModel
             return WhisperKitTranscriber(model: model)
             #else
             logger.warning("WhisperKit not compiled in; falling back to Apple Speech")
             return AppleSpeechTranscriber()
             #endif
+        case .parakeet:
+            return ParakeetTranscriber(model: ParakeetCatalog.selectedID(defaults: defaults))
         case .appleSpeech:
             return AppleSpeechTranscriber()
+        case .cloudAPI:
+            return CloudAPITranscriber.fromDefaults()
         }
     }
 
@@ -387,6 +491,15 @@ import WhisperKit
 /// CoreML Whisper transcription via WhisperKit. Never downloads; the model must be installed (see WhisperModelStore).
 final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
+    /// Joins segments after dropping whitespace-separated tokens made only of `*` (WhisperKit emits `***`
+    /// on silence). Tokens that merely contain an asterisk inside other text are kept; other punctuation is untouched.
+    static func cleanedTranscript(_ segments: [String]) -> String {
+        segments
+            .map { $0.split(whereSeparator: \.isWhitespace).filter { !$0.allSatisfy { $0 == "*" } }.joined(separator: " ") }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
     private let model: String
     /// Injectable so tests need no model on disk.
     private let isInstalled: @Sendable (String) -> Bool
@@ -398,17 +511,31 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
 
     private struct UncheckedSendableBox<T>: @unchecked Sendable { let value: T }
 
+    /// iOS: the mel spectrogram on the CPU instead of WhisperKit's default CPU+GPU, so a run keeps working in the
+    /// background without the background-GPU entitlement. Encoder and decoder keep their Neural Engine defaults.
+    private static var computeOptions: ModelComputeOptions? {
+        #if os(iOS)
+        ModelComputeOptions(melCompute: .cpuOnly)
+        #else
+        nil
+        #endif
+    }
+
     /// Cancels the operation on timeout; Core ML may finish loading before observing cancellation.
     private static func withTimeout<T: Sendable>(
         seconds: TimeInterval,
+        stage: String,
         errorMessage: String,
         operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
         try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask { try await operation() }
             group.addTask {
-                try await Task.sleep(for: .seconds(seconds))
-                throw LocalTranscriberError.transcriptionFailed(errorMessage)
+                // One-second ticks: while iOS has the app suspended no tick runs, so only time
+                // the app was actually running counts. A single long sleep counted wall-clock
+                // time and fired as soon as the app came back from a long suspension.
+                for _ in 0..<Int(seconds) { try await Task.sleep(for: .seconds(1)) }
+                throw LocalTranscriberError.timedOut(stage: stage, message: errorMessage)
             }
             let result = try await group.next()!
             group.cancelAll()
@@ -419,8 +546,10 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
         // Never download implicitly mid-transcription; the user downloads in Settings.
         guard isInstalled(model) else { throw LocalTranscriberError.modelNotInstalled(model) }
+        var stages = TranscriptionStageLog(engine: "WhisperKit")
         do {
             onProgress(0.02)
+            stages.begin("convert")
 
             // Pre-convert to 16kHz mono WAV — imported files (m4a/mp3/44.1kHz) can
             // otherwise silently hang WhisperKit during inference.
@@ -429,7 +558,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                 wavURL = try await AudioPreConverter.convertToWav16k(url)
             } catch {
                 // If conversion fails, try the original file — WhisperKit may still handle it.
-                logger.warning("Pre-conversion failed (\(LogRedact.mask(error.localizedDescription))), trying original file")
+                logger.warning("Pre-conversion failed (\(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))), trying original file")
                 wavURL = url
             }
             // The converted copy is a temp file of ~170 MB per recorded hour;
@@ -437,19 +566,23 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             defer {
                 if wavURL != url { try? FileManager.default.removeItem(at: wavURL) }
             }
+            stages.end(" converted=\(wavURL != url)")
             onProgress(0.06)
 
             // Cached files can still require a slow first Core ML specialization.
             let modelName = model
             let initTimeout: TimeInterval = 300
+            stages.begin("model-load", " timeout=\(Int(initTimeout))s")
             let pipe = try await Self.withTimeout(
                 seconds: initTimeout,
+                stage: "model-load",
                 errorMessage: "Model gereedmaken duurde te lang (\(Int(initTimeout))s). Probeer opnieuw of kies een kleiner model."
             ) {
                 // WhisperKit isn't Sendable; box it to cross the task-group boundary.
                 // Load once before VAD workers can concurrently request the same models.
-                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName, modelFolder: WhisperModelStore.folder(for: modelName).path, load: true, download: false)))
+                UncheckedSendableBox(value: try await WhisperKit(WhisperKitConfig(model: modelName, modelFolder: WhisperModelStore.folder(for: modelName).path, computeOptions: Self.computeOptions, load: true, download: false)))
             }.value
+            stages.end()
 
             onProgress(0.15)
 
@@ -475,7 +608,9 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             let chunkLength: TimeInterval = 10 * 60
 
             var results: [TranscriptionResult] = []
-            if let duration = AudioChunker.duration(of: wavURL), duration > chunkThreshold {
+            let duration = AudioChunker.duration(of: wavURL)
+            stages.begin("transcribe", " chunked=\((duration ?? 0) > chunkThreshold)")
+            if let duration, duration > chunkThreshold {
                 let chunks = try await AudioChunker.chunk(url: wavURL, chunkDuration: chunkLength)
                 defer { chunks.forEach { try? FileManager.default.removeItem(at: $0) } }
                 for (index, chunkURL) in chunks.enumerated() {
@@ -503,17 +638,18 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             }
             onProgress(0.95)
 
-            let text = results.map(\.text).joined(separator: " ")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = Self.cleanedTranscript(results.map(\.text))
 
             guard !text.isEmpty else { throw LocalTranscriberError.emptyResult }
             onProgress(1.0)
+            stages.end()
             logger.info("WhisperKit transcription complete — \(text.count) characters")
             return text
         } catch let error as LocalTranscriberError {
+            stages.failed(error)
             throw error
         } catch {
-            logger.error("WhisperKit failed: \(LogRedact.mask(error.localizedDescription))")
+            stages.failed(error)
             throw LocalTranscriberError.transcriptionFailed(error.localizedDescription)
         }
     }

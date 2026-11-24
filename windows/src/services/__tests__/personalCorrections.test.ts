@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 vi.mock("@tauri-apps/api/core", async () => (await import("./fakeAppData")).tauriCore);
 import { files } from "./fakeAppData";
-import { correctText, correctHTML, upsertCorrection, validateCorrections, contextBlock, type PersonalCorrection, type PersonContext } from "../personalCorrections";
+import { correctText, correctHTML, correctRecording, personCorrection, upsertCorrection, validateCorrections, contextBlock, type PersonalCorrection, type PersonContext } from "../personalCorrections";
 const rule: PersonalCorrection = { id:"yinga",canonical:"Yinga",variants:["Jengo","Django"],scope:null,enabled:true };
 it("corrects exact Unicode words, loud/case variants and longest names without cascading", () => {
   expect(correctText("DJANGO, Jengo en Djangoes https://x.nl/Django Django@x.nl `Django`",[rule])).toBe("Yinga, Yinga en Djangoes https://x.nl/Django Django@x.nl `Django`");
@@ -125,4 +125,27 @@ it("unknownGlossaryVersionYieldsEmptyListForMinutes", async () => {
 it("contextBlockUsesTheMacHeader", () => {
   expect(contextBlock([term("Yinga", ["Jengo"], "Merk")], [], "", undefined, 6000)).toBe(
     "\n\nWoordenboek en personen (juiste spelling en betekenis; corrigeer verkeerd herkende varianten stil, voeg geen feiten toe; noem een functie of organisatie alleen als het transcript die noemt; koppel een actie alleen aan een persoon die het transcript noemt):\n- Yinga (ook gehoord als: Jengo): Merk");
+});
+
+it("corrects the notule and the transcript of a recording", () => {
+  const entry: PersonalCorrection = { id:"m",canonical:"Maikel",variants:["Michael"],scope:null,enabled:true };
+  expect(correctRecording(entry,"<p>Michael belt.</p>","Michael zegt: michael belt.")).toEqual({ title:"", notule:"<p>Maikel belt.</p>", transcript:"Maikel zegt: Maikel belt." });
+  expect(correctRecording(entry,"",undefined).transcript).toBeUndefined();
+});
+it("builds a person correction without spellings that are part of the name", () => {
+  const entry = personCorrection("Sanne Bakker",["Sanne"," ","sanne bakker","Sanne Backer","sanne backer","Bakker"],"p1");
+  expect(entry?.variants).toEqual(["Sanne Backer"]);
+  expect(entry?.scope).toBe("p1");
+  expect(correctRecording(entry!,"<p>Sanne Backer en Sanne</p>","Sanne zei tegen Sanne Backer")).toEqual({ title:"", notule:"<p>Sanne Bakker en Sanne</p>", transcript:"Sanne zei tegen Sanne Bakker" });
+  expect(personCorrection("Sanne Bakker",["Sanne","SANNE BAKKER",""],null)).toBeNull();
+});
+it("testLearnedNotReplacedButInContextBlock", () => {
+  const entry: PersonalCorrection = { ...rule, variants: ["Jengo"], learned: ["Django"] };
+  expect(correctText("Jengo en Django", [entry])).toBe("Yinga en Django");
+  expect(contextBlock([entry], [], "Django", undefined, 6000).endsWith("- Yinga (ook gehoord als: Jengo, Django)")).toBe(true);
+  const merged = upsertCorrection([entry], { ...entry, id: "other", variants: ["Django"], learned: undefined });
+  expect(merged).toHaveLength(1);
+  expect(merged[0].variants).toEqual(["Jengo", "Django"]);
+  expect(merged[0].learned).toBeUndefined();
+  expect(() => validateCorrections({ version: 2, entries: [{ ...entry, learned: ["a<b"] }] })).toThrow();
 });

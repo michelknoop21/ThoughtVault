@@ -84,7 +84,7 @@ actor SupportRelay {
             let url = try store(report)
             return await drain(target: url) ?? pendingOutcome(url)
         } catch {
-            logger.warning("Support report could not be queued")
+            logger.warning("Support report could not be queued error=\(LogRedact.describe(error))")
             return .failed
         }
     }
@@ -149,7 +149,7 @@ actor SupportRelay {
                 if url == target { targetOutcome = .failed }
                 cleanup(url)
             } catch {
-                logger.warning("Support queue paused; report retained")
+                logger.warning("Support queue paused; report retained error=\(LogRedact.describe(error))")
                 break
             }
         }
@@ -253,6 +253,11 @@ actor SupportRelay {
 
     func tickets() async throws -> [SupportTicket] { try await decoded([SupportTicket].self, path: ["tickets"]) }
     func unreadCount() async throws -> Int { try await decoded(UnreadCount.self, path: ["unread-count"]).count }
+
+    func markAllRead() async throws {
+        let (_, response) = try await authenticated(["tickets", "read-all"], body: Data("{}".utf8))
+        guard (200..<300).contains(response.statusCode) else { throw SupportRelayError.http(response.statusCode) }
+    }
 
     private func messagePath(_ ticketId: String) throws -> [String] {
         guard ticketId.range(of: #"^[A-Za-z0-9_-]{1,64}$"#, options: .regularExpression) != nil else {

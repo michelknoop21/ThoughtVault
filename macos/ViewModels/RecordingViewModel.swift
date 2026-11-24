@@ -18,8 +18,16 @@ final class RecordingViewModel {
     var recordingState: RecordingState = .idle { didSet { recordingStateDidChange(from: oldValue) } }
     @ObservationIgnored var onFailure: ((SupportStage, String) -> Void)?
     @ObservationIgnored var recordingFailureSupportMessage: String?
+    /// The error behind the next `.error` recording state, for the failure log line; cleared on use.
+    @ObservationIgnored var recordingFailureError: Error?
+    /// Diagnostic of the last failure shown, read by the `onFailure` hook for the automatic report.
+    @ObservationIgnored var lastFailureDiagnostic: FailureDiagnostic?
+    /// Highest 25% step of local transcription progress logged per task.
+    @ObservationIgnored var loggedTranscriptionQuarter: [String: Int] = [:]
     var updateInstalling = false
     var pendingRegenerations = 0
+    @ObservationIgnored var mergeTask: Task<Transcript, Error>?
+    var isMerging = false
     var updateIsBusy: Bool {
         switch recordingState {
         case .idle, .error: return activeTasks.contains { $0.status.isActive } || isProcessingQueue || !localProcessingTasks.isEmpty || pendingRegenerations > 0
@@ -54,7 +62,22 @@ final class RecordingViewModel {
 
     /// The calendar event linked to the current (or most recent) recording.
     /// Set at recording start sites in ContentView; cleared after attendees are captured.
-    var activeMeeting: CalendarEvent? = nil
+    var activeMeeting: CalendarEvent? = nil {
+        didSet {
+            if RecordingFeatures.enabled, let meeting = activeMeeting, oldValue?.id != meeting.id, recordingTitleMode == "automatic" { recordingTitleMode = "meeting" }
+        }
+    }
+    var recordingTitleMode = "automatic" { didSet { saveQuickNoteDraft() } }
+    var recordingTitle = "" { didSet { saveQuickNoteDraft() } }
+    var currentCalendarMeeting: CalendarEvent? {
+        activeMeeting ?? CalendarService.shared.upcomingMeetings.first { $0.date <= Date() && $0.endDate > Date() }
+    }
+    var recordingIdentity: RecordingIdentity {
+        let meeting = recordingTitleMode == "meeting" ? currentCalendarMeeting : nil
+        let manual = recordingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return RecordingIdentity(title: meeting?.title ?? (recordingTitleMode == "manual" && !manual.isEmpty ? manual : nil),
+                                 calendarID: meeting?.id, calendarTitle: meeting?.title, calendarStart: meeting?.date, calendarURL: nil)
+    }
 
     /// Attendee emails captured from activeMeeting when stopAndUpload completes.
     /// The View layer observes this to trigger SeedReviewSheet after recordingState settles.
@@ -78,7 +101,10 @@ final class RecordingViewModel {
         #else
         url = audioRecorder.currentRecordingURL
         #endif
-        if let url { QuickNoteStore.saveDraft(quickNote, audioFilename: url.lastPathComponent) }
+        if let url {
+            QuickNoteStore.saveDraft(quickNote, audioFilename: url.lastPathComponent)
+            if RecordingFeatures.enabled { recordingIdentity.save(audioFilename: url.lastPathComponent) }
+        }
     }
 
     // YouTube transcription
@@ -136,6 +162,8 @@ final class RecordingViewModel {
     /// Envelope pipeline diagnostics for the DEBUG waveform overlay.
     var meterDebugText: String {
 #if os(macOS)
+        // Manual screenshots (`-TVDebugSeed YES`) show the screen as a user sees it.
+        if DebugScreenshotSeed.isEnabled { return "" }
         let meters: String
         switch selectedMode {
         case .microphone: meters = audioRecorder.meterDebugText
@@ -221,6 +249,7 @@ final class RecordingViewModel {
         audioRecorder.onSilentFailure = { [weak self] error in
             guard let self else { return }
             Task { @MainActor in
+                self.recordingFailureError = error
                 self.recordingState = .error(error.localizedDescription)
             }
         }
@@ -239,6 +268,7 @@ final class RecordingViewModel {
     }
 
     deinit {
+        mergeTask?.cancel()
         liveTranscriptionTask?.cancel()
         for task in pendingRemovalTasks.values { task.cancel() }
         for task in localProcessingTasks.values { task.cancel() }
@@ -256,10 +286,15 @@ final class RecordingViewModel {
 
     /// Reload profiles from API. Call after login to fetch user-specific profiles.
     func reloadProfiles() async {
+        if !ProspectFlowService.hasVerifiedKey {
+            availableProfiles.removeAll { $0.id == "prospectflow_offerte" }
+            if selectedProfile?.id == "prospectflow_offerte" { selectedProfile = availableProfiles.first ?? Profile.defaults.first }
+        }
         await loadDefaultProfile(savedId: UserDefaults.standard.string(forKey: "defaultProfile") ?? "")
     }
 
     private func loadDefaultProfile(savedId: String) async {
+        await ProspectFlowService.validateKey()
         var profiles: [Profile]
         if isLocalMode {
             // Fully offline: use the built-in profiles, no server call.
@@ -269,7 +304,7 @@ final class RecordingViewModel {
                 let remote = try await APIService.shared.getProfiles()
                 profiles = Profile.currentChoices(remote)
             } catch {
-                log.error("[RecordingVM] Could not load profiles from API, using defaults: \(LogRedact.mask(error.localizedDescription))")
+                log.error("[RecordingVM] Could not load profiles from API, using defaults: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                 profiles = Profile.defaults
             }
         }
@@ -377,6 +412,7 @@ final class RecordingViewModel {
 #endif
             _ = await audioRecorder.stopRecording()
             await MainActor.run {
+                recordingFailureError = error
                 recordingState = .error(error.localizedDescription)
             }
         }
@@ -429,7 +465,8 @@ final class RecordingViewModel {
         // Capture attendees before clearing activeMeeting (D-07 / T-02-06).
         // Signal is set after recordingState settles to .idle so the View layer
         // presents the sheet only when the UI is ready (Pitfall 3 avoidance).
-        let capturedAttendees = activeMeeting?.attendees ?? []
+        let identity = RecordingFeatures.enabled ? recordingIdentity : RecordingIdentity(title: nil, calendarID: nil, calendarTitle: nil, calendarStart: nil, calendarURL: nil)
+        let capturedAttendees = (recordingTitleMode == "meeting" ? currentCalendarMeeting : activeMeeting)?.attendees ?? []
         activeMeeting = nil
 
         // Resolve the participant list (self + calendar attendees + manual picks)
@@ -460,6 +497,9 @@ final class RecordingViewModel {
             return
         }
 
+        identity.save(audioFilename: url.lastPathComponent)
+        recordingTitleMode = "automatic"
+        recordingTitle = ""
         QuickNoteStore.save(quickNote, audioFilename: url.lastPathComponent)
         quickNote = ""
 
@@ -555,8 +595,9 @@ final class RecordingViewModel {
                 try FileManager.default.copyItem(at: pickedURL, to: dest)
             }
         } catch {
-            log.error("[RecordingVM] importAudioFile: import failed: \(LogRedact.mask(error.localizedDescription))")
+            log.error("[RecordingVM] importAudioFile: import failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             await MainActor.run {
+                recordingFailureError = error
                 recordingState = .error(isVideo ? error.localizedDescription : "Kon het audiobestand niet importeren.")
             }
             return
@@ -593,14 +634,17 @@ final class RecordingViewModel {
         await MainActor.run {
             recordingState = .idle
             activeMeeting = nil
+            recordingTitleMode = "automatic"
+            recordingTitle = ""
             quickNote = ""
         }
     }
 
     // MARK: - Upload
 
-    func uploadFile(_ url: URL, profileId: String, participants: [Participant] = []) async {
+    func uploadFile(_ url: URL, profileId: String, participants: [Participant] = [], optimizeAudio: Bool = false) async {
         log.info("[RecordingVM] uploadFile: starting for \(LogRedact.mask(url.lastPathComponent))")
+        logSettings(trigger: "processing")
 
         // Create a temporary task so the upload is immediately visible in the task list
         let tempId = "upload-\(UUID().uuidString)"
@@ -622,8 +666,13 @@ final class RecordingViewModel {
             do {
                 try Task.checkCancellation()
 
+                let input = try await AudioPreConverter.transcriptionInput(url, optimize: optimizeAudio) { [weak self] progress in
+                    Task { @MainActor in self?.updateTask(tempId, status: .uploading, progress: progress * 0.1) }
+                }
+                defer { if input != url { try? FileManager.default.removeItem(at: input) } }
+                try Task.checkCancellation()
                 let task = try await APIService.shared.uploadAudio(
-                    fileURL: url,
+                    fileURL: input,
                     profileId: profileId,
                     usePremium: usePremium,
                     participants: participants
@@ -640,6 +689,7 @@ final class RecordingViewModel {
                 await MainActor.run {
                     // Replace temp task with real server task
                     self.activeTasks.removeAll { $0.id == tempId }
+                    self.saveLocalAudioPath(url: url, taskId: task.taskId)
                     self.addTask(task)
                 }
 
@@ -666,15 +716,15 @@ final class RecordingViewModel {
                 }
                 loadSavedRecordings()
                 await MainActor.run {
-                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
+                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error), failure: error)
                     self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
                 }
-                log.error("[RecordingVM] Upload failed: \(LogRedact.mask(Self.supportFailureMessage(error)))")
+                log.error("[RecordingVM] Upload failed: \(LogRedact.mask(Self.supportFailureMessage(error))) error=\(LogRedact.describe(error))")
             } catch {
-                log.error("[RecordingVM] Upload failed (non-API): \(LogRedact.mask(Self.supportFailureMessage(error)))")
+                log.error("[RecordingVM] Upload failed (non-API): \(LogRedact.mask(Self.supportFailureMessage(error))) error=\(LogRedact.describe(error))")
                 loadSavedRecordings()
                 await MainActor.run {
-                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error))
+                    self.updateTask(tempId, status: .error, errorMessage: error.localizedDescription, supportMessage: Self.supportFailureMessage(error), failure: error)
                     self.lastFailedRecording = self.savedRecordings.first { $0.filename == url.lastPathComponent }
                 }
             }
@@ -716,7 +766,8 @@ final class RecordingViewModel {
 
     // MARK: - On-Device Transcription
 
-    func transcribeOnDeviceThenUpload(url: URL, profileId: String, participants: [Participant] = []) async {
+    func transcribeOnDeviceThenUpload(url: URL, profileId: String, participants: [Participant] = [], optimizeAudio: Bool = false) async {
+        logSettings(trigger: "processing")
         await MainActor.run {
             isLiveTranscribing = true
             liveTranscriptText = ""
@@ -732,8 +783,12 @@ final class RecordingViewModel {
             let transcriber = onDeviceTranscriber
             let jobId = "ondevice-\(UUID().uuidString)"
             let job = Task {
-                try await LocalTranscriptionQueue.shared.run(id: jobId) {
-                    try await transcriber.transcribe(url: url, profileId: profileId)
+                let input = try await AudioPreConverter.transcriptionInput(url, optimize: optimizeAudio) { _ in }
+                defer { if input != url { try? FileManager.default.removeItem(at: input) } }
+                return try await AudioPreConverter.$usesOptimizedAudio.withValue(input != url) {
+                    try await LocalTranscriptionQueue.shared.run(id: jobId) {
+                        try await transcriber.transcribe(url: input, profileId: profileId)
+                    }
                 }
             }
             onDeviceJob = (jobId, job)
@@ -790,14 +845,16 @@ final class RecordingViewModel {
     /// Transcribes and generates notulen entirely on-device, then stores the result
     /// in the local SwiftData store. No backend server is contacted.
     /// Runs on a detached Task so the MainActor stays responsive and the user can cancel.
-    func processLocally(url: URL, profileId: String, participants: [Participant] = []) async {
+    func processLocally(url: URL, profileId: String, participants: [Participant] = [], optimizeAudio: Bool = false) async {
         guard !updateInstalling else { return }
+        logSettings(trigger: "processing")
         let profile = availableProfiles.first { $0.id == profileId }
             ?? Profile.defaults.first { $0.id == profileId }
             ?? selectedProfile
             ?? Profile.defaults[0]
 
         let localId = "local-\(UUID().uuidString)"
+        saveLocalAudioPath(url: url, taskId: localId)
         let task = TranscriptTask(
             id: localId,
             taskId: localId,
@@ -817,46 +874,69 @@ final class RecordingViewModel {
                 liveSystemText = ""
         }
 
+        // iOS: keep the run alive in the background; an expired or user-stopped task cancels it.
+        ContinuedProcessing.shared?.track(runId: localId) { [weak self] in
+            self?.cancelLocalProcessing(localId, message: "Verwerking gestopt op de achtergrond. De opname staat bij Opgeslagen opnames; verwerk hem daar opnieuw.")
+        }
+
         // Run on a detached Task so the MainActor stays responsive. The task
         // reference is stored for cancellation.
         localProcessingTasks[localId] = Task.detached(priority: .userInitiated) { [weak self] in
-            await self?.processLocallyWorker(url: url, localId: localId, profile: profile, participants: participants)
+            await self?.processLocallyWorker(url: url, localId: localId, profile: profile, participants: participants, optimizeAudio: optimizeAudio)
         }
+        await ContinuedProcessing.shared?.submit(runId: localId)
     }
 
     /// Worker that does the actual transcription + notule generation. Runs off the
     /// MainActor on a detached Task. All @MainActor state updates go through Task hops.
-    private func processLocallyWorker(url: URL, localId: String, profile: Profile, participants: [Participant]) async {
+    private func processLocallyWorker(url: URL, localId: String, profile: Profile, participants: [Participant], optimizeAudio: Bool) async {
         // 1. Local transcription
         let transcription: String
+        let audioSeconds = await Self.audioDuration(url)
+        let transcriptionStart = Date()
+        let size = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64) ?? -1
+        log.info("[RecordingVM] Local transcription start task=\(LogRedact.mask(localId)) audio_s=\(audioSeconds.map { String(Int($0.rounded())) } ?? "?") bytes=\(size)")
         do {
             try Task.checkCancellation()
             try LocalTranscriberFactory.validateAudioFile(at: url)
+            let inputURL = try await AudioPreConverter.transcriptionInput(url, optimize: optimizeAudio) { [weak self] fraction in
+                Task { @MainActor in self?.updateTask(localId, status: .transcribing, progress: fraction * 0.15, statusDetail: "Audio optimaliseren") }
+            }
+            defer { if inputURL != url { try? FileManager.default.removeItem(at: inputURL) } }
             let transcriber = LocalTranscriberFactory.make()
             transcription = try await LocalTranscriptionQueue.shared.run(id: localId, onWait: { [weak self] in
-                Task { @MainActor in self?.updateTask(localId, status: .transcribing, statusDetail: "Wacht op vorige transcriptie") }
+                Task { @MainActor in
+                    self?.updateTask(localId, status: .transcribing, statusDetail: "Wacht op vorige transcriptie")
+                    ContinuedProcessing.shared?.update(runId: localId, phase: .waiting)
+                }
             }) { [weak self] in
                 await self?.updateTask(localId, status: .transcribing)  // clears the waiting note
-                return try await transcriber.transcribe(url: url, profileId: profile.id) { [weak self] fraction in
+                return try await AudioPreConverter.$usesOptimizedAudio.withValue(inputURL != url) {
+                try await transcriber.transcribe(url: inputURL, profileId: profile.id) { [weak self] fraction in
                     Task { @MainActor in
                         guard let self else { return }
                         guard !Task.isCancelled else { return }
+                        self.logTranscriptionProgress(localId, fraction)
+                        ContinuedProcessing.shared?.update(runId: localId, phase: .transcribing(fraction))
                         self.updateTask(localId, status: .transcribing,
                                          progress: 0.15 + fraction * 0.35)
                     }
                 }
+                }
             }
+            log.info("[RecordingVM] Local transcription done task=\(LogRedact.mask(localId)) s=\(Int(Date().timeIntervalSince(transcriptionStart).rounded())) chars=\(transcription.count)")
             guard Self.hasUsableTranscription(transcription) else {
                 throw LLMError.generationFailed("Geen bruikbare spraak herkend. Controleer de opname en probeer opnieuw.")
             }
             try Task.checkCancellation()
         } catch is CancellationError {
+            log.info("[RecordingVM] Local transcription cancelled task=\(LogRedact.mask(localId))")
             await MainActor.run { self.cancelLocalTaskCleanup(localId) }
             return
         } catch {
-            log.error("[RecordingVM] processLocally transcription failed: \(LogRedact.mask(error.localizedDescription))")
+            log.error("[RecordingVM] processLocally transcription failed: \(LogRedact.mask(error.localizedDescription)) after_s=\(Int(Date().timeIntervalSince(transcriptionStart).rounded())) error=\(LogRedact.describe(error))")
             await MainActor.run {
-                self.updateTask(localId, status: .error, errorMessage: Self.transcriptionFailureMessage(error))
+                self.updateTask(localId, status: .error, errorMessage: Self.transcriptionFailureMessage(error), failure: error)
                 self.localProcessingTasks.removeValue(forKey: localId)
                 // The recording itself is safe in Documents/Recordings — offer it
                 // under "Opgeslagen opnames" so the user has a retry route.
@@ -886,13 +966,14 @@ final class RecordingViewModel {
             source: "local"
         )
         record.participants = participants
-        record.durationSeconds = await Self.audioDuration(url)
+        record.durationSeconds = audioSeconds
+        record.detailLevel = NotuleDetailLevel.effective(for: profile).rawValue
         do {
             try LocalTranscriptStore.shared.save(record)
         } catch {
-            log.error("[RecordingVM] processLocally save failed: \(LogRedact.mask(error.localizedDescription))")
+            log.error("[RecordingVM] processLocally save failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             await MainActor.run {
-                self.updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)")
+                self.updateTask(localId, status: .error, errorMessage: "Opslaan mislukt: \(error.localizedDescription)", failure: error)
                 self.localProcessingTasks.removeValue(forKey: localId)
             }
             return
@@ -913,15 +994,19 @@ final class RecordingViewModel {
     }
 
     /// Cancels an in-progress local processing task (transcription or notule generation).
-    func cancelLocalProcessing(_ taskId: String) {
+    func cancelLocalProcessing(_ taskId: String, message: String = "Geannuleerd door gebruiker.") {
+        if taskId.hasPrefix("local-merge-") { mergeTask?.cancel() }
         localProcessingTasks[taskId]?.cancel()
         localProcessingTasks.removeValue(forKey: taskId)
-        cancelLocalTaskCleanup(taskId)
+        cancelLocalTaskCleanup(taskId, message: message)
     }
 
-    /// Marks a cancelled task as error and cleans up.
-    func cancelLocalTaskCleanup(_ taskId: String) {
-        updateTask(taskId, status: .error, errorMessage: "Geannuleerd door gebruiker.")
+    /// Marks a cancelled task as error and cleans up. A task already marked as failed keeps its message,
+    /// so the worker's own cancellation catch does not overwrite why it was stopped.
+    func cancelLocalTaskCleanup(_ taskId: String, message: String = "Geannuleerd door gebruiker.") {
+        if activeTasks.first(where: { $0.id == taskId })?.status != .error {
+            updateTask(taskId, status: .error, errorMessage: message)
+        }
         isGeneratingLocally = false
     }
 
@@ -1036,7 +1121,7 @@ final class RecordingViewModel {
                     saveLocalAudioPath(url: url, taskId: task.taskId)
                     offlineQueue.removeItem(item)
                 } catch {
-                    log.error("[RecordingVM] Offline queue item upload failed, incrementing retry count: \(LogRedact.mask(error.localizedDescription))")
+                    log.error("[RecordingVM] Offline queue item upload failed, incrementing retry count: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                     await MainActor.run { self.activeTasks.removeAll { $0.id == tempId } }
                     let updated = item.incrementingRetryCount()
                     offlineQueue.replaceItem(item, with: updated)
@@ -1051,7 +1136,7 @@ final class RecordingViewModel {
                     await startSSEStream(for: task.taskId)
                     offlineQueue.removeItem(item)
                 } catch {
-                    log.error("[RecordingVM] Failed to process queued text item, incrementing retry: \(LogRedact.mask(error.localizedDescription))")
+                    log.error("[RecordingVM] Failed to process queued text item, incrementing retry: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                     let updated = item.incrementingRetryCount()
                     offlineQueue.replaceItem(item, with: updated)
                 }
@@ -1064,7 +1149,7 @@ final class RecordingViewModel {
 
     // MARK: - Reprocess Saved Recording
 
-    func reprocessRecording(_ recording: SavedRecording, profileId: String, useOnDevice: Bool) async {
+    func reprocessRecording(_ recording: SavedRecording, profileId: String, useOnDevice: Bool, optimizeAudio: Bool = false) async {
         log.info("[RecordingVM] reprocessRecording: \(LogRedact.mask(recording.filename)), onDevice=\(useOnDevice ? "true" : "false")")
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = docs.appendingPathComponent("Recordings").appendingPathComponent(recording.filename)
@@ -1077,11 +1162,11 @@ final class RecordingViewModel {
         }
 
         if isLocalMode {
-            await processLocally(url: url, profileId: profileId)
+            await processLocally(url: url, profileId: profileId, optimizeAudio: optimizeAudio)
         } else if useOnDevice && onDeviceTranscriptionAvailable {
-            await transcribeOnDeviceThenUpload(url: url, profileId: profileId)
+            await transcribeOnDeviceThenUpload(url: url, profileId: profileId, optimizeAudio: optimizeAudio)
         } else {
-            await uploadFile(url, profileId: profileId)
+            await uploadFile(url, profileId: profileId, optimizeAudio: optimizeAudio)
         }
     }
 
@@ -1132,13 +1217,17 @@ final class RecordingViewModel {
 
     func hasLocalAudio(for transcriptId: String) -> Bool {
         let key = "localAudio_\(transcriptId)"
-        guard let path = UserDefaults.standard.string(forKey: key) else { return false }
+        guard let path = UserDefaults.standard.string(forKey: key)
+            ?? LocalTranscriptStore.shared.record(forTaskId: transcriptId)?.localAudioPath else { return false }
         return FileManager.default.fileExists(atPath: path)
     }
 
     func saveLocalAudioPath(url: URL, taskId: String) {
         let key = "localAudio_\(taskId)"
         UserDefaults.standard.set(url.path, forKey: key)
+        if RecordingFeatures.enabled, TaskHistoryStore.shared.entry(taskId) == nil, let title = RecordingIdentity.load(audioFilename: url.lastPathComponent)?.title {
+            TaskHistoryStore.shared.carryTitle(title, to: taskId)
+        }
     }
 
     // MARK: - Live Transcription
@@ -1181,7 +1270,7 @@ final class RecordingViewModel {
                 self.liveTranscriptionError = nil
             } catch {
                 // Best-effort: the recording continues, but the screen says why there is no live text.
-                log.info("[RecordingVM] Live transcription ended: \(LogRedact.mask(error.localizedDescription))")
+                log.info("[RecordingVM] Live transcription ended: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                 self.liveTranscriptionError = error.localizedDescription
             }
 
@@ -1234,7 +1323,7 @@ final class RecordingViewModel {
                         self.sseClients.removeValue(forKey: taskId)
                     }
                 case .error(let error):
-                    log.error("[RecordingVM] SSE error for task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription))")
+                    log.error("[RecordingVM] SSE error for task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
                     Task { @MainActor in
                         self.sseClients.removeValue(forKey: taskId)
                         // SSE gave up (max reconnects) — fall back to polling so
@@ -1248,7 +1337,7 @@ final class RecordingViewModel {
             client.connect()
 
         } catch {
-            log.error("[RecordingVM] Could not start SSE stream for task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription))")
+            log.error("[RecordingVM] Could not start SSE stream for task \(LogRedact.mask(taskId)): \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
         }
     }
 
@@ -1282,8 +1371,10 @@ final class RecordingViewModel {
         if let index = activeTasks.firstIndex(where: { $0.taskId == updatedTask.taskId }) {
             let previous = activeTasks[index].status
             activeTasks[index] = updatedTask
+            taskHistoryDidChange(updatedTask)
             let failure = updatedTask.errorMessage ?? ""
-            taskDidChange(from: previous, to: updatedTask.status, message: SupportViewModel.shouldReport(failure) ? "Verwerking op de server mislukt." : failure)
+            taskDidChange(from: previous, to: updatedTask.status, message: SupportViewModel.shouldReport(failure) ? "Verwerking op de server mislukt." : failure,
+                          shown: failure)
         }
 
         // Reset recording state so user can start a new recording
@@ -1303,7 +1394,7 @@ final class RecordingViewModel {
             Task { @MainActor in
                 let correctedHTML: String
                 do { correctedHTML = try await self.addNotesSectionToCloudNotule(taskId: updatedTask.taskId, html: html, profileId: updatedTask.profileId) }
-                catch { self.updateTask(updatedTask.id, status: .error, errorMessage: "Woordenlijst toepassen mislukt: " + error.localizedDescription, supportMessage: Self.supportFailureMessage(error)); return }
+                catch { self.updateTask(updatedTask.id, status: .error, errorMessage: "Woordenlijst toepassen mislukt: " + error.localizedDescription, supportMessage: Self.supportFailureMessage(error), failure: error); return }
                 guard ObsidianService.isEnabled else { return }
                 let title = NotuleTitleExtractor.extract(from: correctedHTML)
                     ?? (updatedTask.filename as NSString).deletingPathExtension
@@ -1324,8 +1415,14 @@ final class RecordingViewModel {
     /// The server never sees the quick note: a finished cloud notule gets its Notities section
     /// on the client and is written back. Once per task, so repeated completion events stay quiet; a regenerate forces it because the server wiped the section.
     func addNotesSectionToCloudNotule(taskId: String, html: String, profileId: String? = nil, force: Bool = false) async throws -> String {
+        let titleKey = "recordingIdentityApplied_" + taskId
+        if RecordingFeatures.enabled, !UserDefaults.standard.bool(forKey: titleKey), let title = RecordingIdentity.forTask(taskId)?.title {
+            try await APIService.shared.updateTranscriptTitle(taskId: taskId, title: title)
+            UserDefaults.standard.set(true, forKey: titleKey)
+        }
         let entries = PersonalCorrections.loadOrEmpty()
-        let withNotes = QuickNoteStore.ensureNotesSection(html, note: QuickNoteStore.note(forTranscriptId: taskId))
+        let note = QuickNoteStore.note(forTranscriptId: taskId)
+        let withNotes = RecordingFeatures.enabled ? QuickNoteStore.exportHTML(html, note: note, includeNotes: true) : QuickNoteStore.ensureNotesSection(html, note: note)
         let fixed = PersonalCorrections.html(withNotes, entries: entries, profileId: profileId)
         guard fixed != html, force || notesSectionWritten.insert(taskId).inserted else { return fixed }
         do {
@@ -1334,7 +1431,7 @@ final class RecordingViewModel {
         } catch {
             notesSectionWritten.remove(taskId)
             if fixed != withNotes { throw error }
-            log.error("[RecordingVM] Notities-sectie terugschrijven mislukt voor \(LogRedact.mask(taskId)): \(LogRedact.mask(Self.supportFailureMessage(error)))")
+            log.error("[RecordingVM] Notities-sectie terugschrijven mislukt voor \(LogRedact.mask(taskId)): \(LogRedact.mask(Self.supportFailureMessage(error))) error=\(LogRedact.describe(error))")
         }
         return fixed
     }
@@ -1373,7 +1470,7 @@ final class RecordingViewModel {
                 log.info("[RecordingVM] Recovered \(active.count) pending task(s)")
             }
         } catch {
-            log.error("[RecordingVM] Could not check pending tasks: \(LogRedact.mask(error.localizedDescription))")
+            log.error("[RecordingVM] Could not check pending tasks: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
         }
     }
 
@@ -1394,11 +1491,14 @@ final class RecordingViewModel {
     func addTask(_ task: TranscriptTask) {
         // Avoid duplicates
         if !activeTasks.contains(where: { $0.taskId == task.taskId }) {
+            // A new run under a reused id (regeneration) must not be removed by the previous run's timer.
+            pendingRemovalTasks.removeValue(forKey: task.taskId)?.cancel()
             activeTasks.append(task)
+            taskHistoryDidChange(task)
         }
     }
 
-    func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil, statusDetail: String? = nil, supportMessage: String? = nil) {
+    func updateTask(_ id: String, status: TaskStatus, progress: Double? = nil, errorMessage: String? = nil, statusDetail: String? = nil, supportMessage: String? = nil, failure: Error? = nil) {
         guard let idx = activeTasks.firstIndex(where: { $0.id == id }) else { return }
         if !activeTasks[idx].status.isActive, activeTasks[idx].status != status {
             return
@@ -1408,7 +1508,13 @@ final class RecordingViewModel {
         if let progress { activeTasks[idx].progress = progress }
         if let errorMessage { activeTasks[idx].errorMessage = errorMessage }
         activeTasks[idx].statusDetail = statusDetail
-        taskDidChange(from: previous, to: status, message: supportMessage ?? activeTasks[idx].errorMessage)
+        taskHistoryDidChange(activeTasks[idx])
+        taskDidChange(from: previous, to: status, message: supportMessage ?? activeTasks[idx].errorMessage,
+                      shown: activeTasks[idx].errorMessage, failure: failure)
+        if !status.isActive {
+            loggedTranscriptionQuarter.removeValue(forKey: id)
+            ContinuedProcessing.shared?.finish(runId: id, success: status == .completed)
+        }
 
         // Local processing reports completion through updateTask (not SSE), so the
         // auto-removal must be scheduled here too. Failures are deliberately left
@@ -1436,7 +1542,7 @@ final class RecordingViewModel {
             // Check existing Google connection
             await checkGoogleConnection()
         } catch {
-            log.error("[RecordingVM] Could not load features: \(LogRedact.mask(error.localizedDescription))")
+            log.error("[RecordingVM] Could not load features: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
         }
     }
 
@@ -1537,7 +1643,7 @@ final class RecordingViewModel {
                 log.info(String(format: "[RecordingVM] Audio mix OK: %lld frames, offset %.3fs", frames, systemStartOffset))
                 return outputURL
             } catch {
-                log.error("[RecordingVM] Audio mix failed: \(LogRedact.mask(error.localizedDescription)), using mic only")
+                log.error("[RecordingVM] Audio mix failed: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error)), using mic only")
                 return micURL
             }
         }.value

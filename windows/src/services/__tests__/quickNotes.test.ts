@@ -66,3 +66,41 @@ it("asks for a rewritten Notities section in the prompt", () => {
   expect(quickNotePrompt("")).toBe("");
   expect(quickNotePrompt("Budget")).toContain("Herschrijf");
 });
+
+it("keeps checklist edits and completion status across serialization", async () => {
+  const { parseNotebook, serializeNotebook } = await import("../quickNotes");
+  const text = "Notitie\n\nContext\n- [ ] Alex belt de klant\n- [x] Toegang geregeld";
+  const document = parseNotebook(text);
+  expect(serializeNotebook(document)).toBe(text);
+  document.items[0] = { text: "Alex mailt de klant", done: true };
+  expect(parseNotebook(serializeNotebook(document)).items).toEqual([
+    { text: "Alex mailt de klant", done: true }, { text: "Toegang geregeld", done: true },
+  ]);
+});
+
+it("exports with or without own notes and retains ordinary meeting sections", async () => {
+  const { exportWithOwnNotes, withoutOwnNotes } = await import("../quickNotes");
+  const html = "<body><h2>Notities</h2><p>Vergaderinhoud</p></body>";
+  const note = "A & <script>\n- [ ] Open\n- [x] Afgerond";
+  const included = exportWithOwnNotes(html, note, true);
+  expect(included).toContain("Eigen notities");
+  expect(included).toContain("&lt;script&gt;");
+  expect(included).toContain("☑ Afgerond");
+  expect(exportWithOwnNotes(included, note, false)).toBe(html);
+  expect(exportWithOwnNotes(included, note, true)).toBe(included);
+  expect(exportWithOwnNotes(included, undefined, true)).toBe(included);
+  const edited = included.replace("Open", "Bewerkt");
+  expect(exportWithOwnNotes(edited, note, true)).toBe(edited);
+  expect(exportWithOwnNotes(included, undefined, false)).toBe(html);
+  expect(withoutOwnNotes(included.replaceAll(/<!--[\s\S]*?-->/g, ""))).toBe(html);
+});
+
+it("persists meeting identity independently per recording and links it to a result", async () => {
+  const { saveRecordingIdentity, getRecordingIdentity, linkRecordingIdentity, getTranscriptIdentity } = await import("../quickNotes");
+  const identity = { title: "Eigen titel", calendar: { id: "event-42", title: "Agenda-afspraak", start: "2026-11-17T10:30:00Z", end: "2026-11-17T11:00:00Z" } };
+  saveRecordingIdentity("current.wav", identity);
+  linkRecordingIdentity("task-42", "current.wav");
+  expect(getRecordingIdentity("current.wav")).toEqual(identity);
+  expect(getTranscriptIdentity("task-42")).toEqual(identity);
+  expect(getRecordingIdentity("other.wav")).toBeUndefined();
+});

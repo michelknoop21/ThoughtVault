@@ -10,13 +10,19 @@ struct PersonalCorrection: Codable, Identifiable, Equatable, Sendable {
     var enabled: Bool = true
     /// Short explanation for the minutes AI (max 200 characters). Absent in version 1 files.
     var note: String? = nil
-    enum CodingKeys: String, CodingKey { case id, canonical, variants, scope, enabled, note }
+    /// Spellings matched automatically from context. Unlike `variants` they are never replaced
+    /// blindly: they go along as known candidates and pass the context check per recording.
+    var learned: [String]? = nil
+    enum CodingKeys: String, CodingKey { case id, canonical, variants, scope, enabled, note, learned }
     func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
         try values.encode(id, forKey: .id); try values.encode(canonical, forKey: .canonical)
         try values.encode(variants, forKey: .variants); try values.encode(scope, forKey: .scope)
         try values.encode(enabled, forKey: .enabled); try values.encodeIfPresent(note, forKey: .note)
+        try values.encodeIfPresent(learned, forKey: .learned)
     }
+    /// Variants plus learned spellings, trimmed and non-empty: what the minutes AI may have heard.
+    var heardAs: [String] { (variants + (learned ?? [])).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty } }
 }
 struct CorrectionDocument: Codable, Sendable {
     var version = 2
@@ -47,7 +53,7 @@ enum PersonalCorrections {
     /// block the minutes, so it is logged and treated as empty.
     static func loadOrEmpty(at path: URL = url) -> [PersonalCorrection] {
         do { return try load(from: path) } catch {
-            logger.error("Glossary unreadable, minutes continue without it: \(LogRedact.mask(error.localizedDescription))")
+            logger.error("Glossary unreadable, minutes continue without it: \(LogRedact.mask(error.localizedDescription)) error=\(LogRedact.describe(error))")
             return []
         }
     }
@@ -66,6 +72,10 @@ enum PersonalCorrections {
     /// Rejected suggestion keys; empty when the file is missing or unreadable.
     static func dismissed(at path: URL = url) -> [String] {
         (try? JSONDecoder().decode(CorrectionDocument.self, from: Data(contentsOf: path)))?.dismissed ?? []
+    }
+    /// Dismissed key for a learned spelling, so automatic matching does not learn it again.
+    static func learnedKey(canonical: String, heard: String) -> String {
+        "learned:" + canonical.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() + ":" + heard.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
     /// Records a rejected suggestion key so it is not offered again. Entries are kept.
     @MainActor
@@ -125,6 +135,7 @@ enum PersonalCorrections {
                     }
                 }
             }
+            guard (entry.learned ?? []).allSatisfy(valid) else { throw invalid("Ongeldige geleerde spelling.") }
         }
     }
     static func validTerm(_ text: String) -> Bool {
@@ -136,6 +147,9 @@ enum PersonalCorrections {
         updated.id = previous?.id ?? entry.id
         var seen = Set<String>()
         updated.variants = ((previous?.variants ?? []) + entry.variants).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { seen.insert($0.lowercased()).inserted }
+        // A learned spelling that is also a fixed variant is redundant.
+        let learned = ((previous?.learned ?? []) + (entry.learned ?? [])).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { seen.insert($0.lowercased()).inserted }
+        updated.learned = learned.isEmpty ? nil : learned
         return entries.filter { $0.id != entry.id && $0.id != previous?.id } + [updated]
     }
     static func active(_ entries: [PersonalCorrection], profileId: String?) -> [PersonalCorrection] {
@@ -164,7 +178,7 @@ enum PersonalCorrections {
         var candidates: [(line: String, rank: Int)] = []
         // Entries are appended on upsert, so the last one is the newest.
         for entry in active(entries, profileId: profileId).reversed() {
-            let variants = entry.variants.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            let variants = entry.heardAs
             var line = "- " + entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines)
             if !variants.isEmpty { line += " (ook gehoord als: \(variants.joined(separator: ", ")))" }
             if let note = entry.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty { line += ": " + note }
@@ -180,7 +194,7 @@ enum PersonalCorrections {
         }
         // Extra terms (context note) go last, skipping anything already covered.
         var covered = Set<String>()
-        for entry in active(entries, profileId: profileId) { covered.insert(entry.canonical.lowercased()); entry.variants.forEach { covered.insert($0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) } }
+        for entry in active(entries, profileId: profileId) { covered.insert(entry.canonical.lowercased()); entry.heardAs.forEach { covered.insert($0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) } }
         for person in people { covered.insert(person.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()) }
         for term in extraTerms.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }) where !term.isEmpty && covered.insert(term.lowercased()).inserted {
             candidates.append(("- " + term, 3))
@@ -203,24 +217,42 @@ enum PersonalCorrections {
         return contextBlock(entries: entries, people: people, transcript: transcript, profileId: profileId, maxCharacters: contextBudget(for: provider),
                             extraTerms: VaultFolderStore.readContextNote().map { VaultFolderStore.parseTerms(fromNote: $0) } ?? [], includeRoles: includeRoles)
     }
+    private static func spellingKey(_ text: String) -> String {
+        text.lowercased().replacingOccurrences(of: #"[‐‑‒–—−]"#, with: "-", options: .regularExpression)
+    }
     static func text(_ text: String, entries: [PersonalCorrection], profileId: String?, html: Bool = false) -> String {
         var replacements: [String: String] = [:]
         for entry in active(entries, profileId: profileId) {
-            for variant in entry.variants { replacements[variant.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines) }
+            for variant in entry.variants { replacements[spellingKey(variant.trimmingCharacters(in: .whitespacesAndNewlines))] = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines) }
         }
         guard !replacements.isEmpty else { return text }
-        let alternatives = replacements.keys.sorted { $0.count > $1.count }.map(NSRegularExpression.escapedPattern(for:)).joined(separator: "|")
+        let alternatives = replacements.keys.sorted { $0.count > $1.count }.map { NSRegularExpression.escapedPattern(for: $0).replacingOccurrences(of: "-", with: "[-‐‑‒–—−]") }.joined(separator: "|")
         let pattern = #"&(?:#\d+|#x[\da-f]+|[a-z]+);|(?:https?://|www\.)[^\s<>]+|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}|`[^`]*`|(?<![\p{L}\p{N}_])(?:"# + alternatives + #")(?![\p{L}\p{N}_])"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return text }
         var result = text
         for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
-            guard let range = Range(match.range, in: text), let canonical = replacements[String(text[range]).lowercased()], let outputRange = Range(match.range, in: result) else { continue }
+            guard let range = Range(match.range, in: text), let canonical = replacements[spellingKey(String(text[range]))], let outputRange = Range(match.range, in: result) else { continue }
             let matched = String(text[range])
             if matched.hasPrefix("&") || matched.hasPrefix("`") || matched.contains("@") || matched.lowercased().hasPrefix("http://") || matched.lowercased().hasPrefix("https://") || matched.lowercased().hasPrefix("www.") { continue }
             let replacement = html ? escape(canonical) : canonical
             result.replaceSubrange(outputRange, with: replacement)
         }
         return result
+    }
+    /// Applies one correction to a recording's notule and transcript.
+    static func apply(_ entry: PersonalCorrection, notule: String, transcript: String?, title: String = "") -> (notule: String, transcript: String?, title: String) {
+        (html(notule, entries: [entry], profileId: entry.scope), transcript.map { text($0, entries: [entry], profileId: entry.scope) }, text(title, entries: [entry], profileId: entry.scope))
+    }
+    /// Correction that writes `name` over the heard spellings of a person. Skips empty spellings,
+    /// the name itself and spellings that are part of the name ("Sanne" for "Sanne Bakker").
+    /// Nil when no spelling is left.
+    static func personCorrection(name: String, heardAs: [String], scope: String?) -> PersonalCorrection? {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        var seen = Set<String>()
+        let variants = heardAs.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && !containsWord($0, in: name) && seen.insert($0.lowercased()).inserted }
+        guard validTerm(name), !variants.isEmpty else { return nil }
+        return PersonalCorrection(canonical: name, variants: variants, scope: scope)
     }
     static func escape(_ text: String) -> String {
         text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")

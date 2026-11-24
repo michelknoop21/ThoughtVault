@@ -1,19 +1,68 @@
 import Foundation
 import os
 
+private let log = AppLog(category: "NotuleGenerator")
+
 /// Generates a notule once and audits it. Port of `LLMService.generateNotulen` in
 /// windows/src/services/llm.ts: audit problems end up in an "Even nalopen" section, never block (DEC-063).
 struct NotuleGenerator: Sendable {
     let service: any LLMService
     /// Step-2 audit checks in flight; the caller knows the provider (`NotulenProvider.auditNoteConcurrency`).
     var noteConcurrency = NotuleAudit.auditConcurrency
+    /// Names the run in its usage and decides how its cost counts in the monthly ledger.
+    var provider: NotulenProvider? = nil
+    var merging = false
 
     /// `onStep` reports the running step for the task label (`ModelStep.displayLabel`).
+    /// `onUsage` gets length, requests, tokens, cost and duration of a successful run. Every run, also a
+    /// failed one, is added to the monthly `UsageLedger`.
+    /// `detailLevel` shortens the notule below volledig; volledig sends exactly the prompts of before.
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
                   createdAt: Date, corrections: [PersonalCorrection], context: String = "",
-                  onStep: @escaping @Sendable (ModelStep) -> Void = { _ in }) async throws -> String {
+                  detailLevel: NotuleDetailLevel = .volledig,
+                  onStep: @escaping @Sendable (ModelStep) -> Void = { _ in },
+                  onUsage: @Sendable (NotuleUsage) -> Void = { _ in }) async throws -> String {
+        let meter = UsageMeter()
+        let run: Run
+        do {
+            run = try await UsageMeter.$current.withValue(meter) {
+                try await generateRun(transcription: transcription, profile: profile, participants: participants, quickNote: quickNote,
+                                      createdAt: createdAt, corrections: corrections, context: context, detailLevel: detailLevel,
+                                      onStep: onStep)
+            }
+        } catch {
+            recordInLedger(meter.totals, notule: false)
+            throw error
+        }
+        let totals = meter.totals
+        recordInLedger(totals, notule: true)
+        onUsage(NotuleUsage(provider: provider?.rawValue ?? "", model: totals.model ?? "", transcriptCharacters: transcription.count,
+                            notuleHtml: run.html, notuleSentences: NotuleAudit.noteSentenceCount(run.checkedHtml),
+                            totals: totals, durationMs: meter.elapsedMilliseconds, contentCheckSkipReason: run.skipReason,
+                            detailLevel: detailLevel.rawValue))
+        return run.html
+    }
+
+    /// The saved notule, the part the audit checked, and why the content check could not run.
+    private struct Run: Sendable {
+        let html: String
+        let checkedHtml: String
+        let skipReason: String?
+    }
+
+    private func recordInLedger(_ totals: UsageMeter.Totals, notule: Bool) {
+        // Tests run inside the real app: never touch its ledger.
+        guard !AppEnvironment.isRunningTests, let provider else { return }
+        UsageLedger.record(totals, provider: provider, notule: notule)
+    }
+
+    private func generateRun(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
+                             createdAt: Date, corrections: [PersonalCorrection], context: String,
+                             detailLevel: NotuleDetailLevel,
+                             onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> Run {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
-        let constraints = NotuleAudit.constraintSentences(source)
+        // Below volledig only the essential constraints stay mandatory, for the draft and for the audit.
+        let constraints = detailLevel == .volledig ? NotuleAudit.constraintSentences(source) : NotuleAudit.essentialConstraints(source)
 
         // NotuleAudit turns every request error into an audit message; remember cancellation separately.
         let cancelled = OSAllocatedUnfairLock(initialState: false)
@@ -33,12 +82,13 @@ struct NotuleGenerator: Sendable {
         let draft = try await ModelStep.$current.withValue(ModelStep(.draft)) {
             try await service.generateNotulen(
                 transcription: source,
-                systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? ""),
+                systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? "") + (merging ? "\n\n" + NotuleMerge.instructions : ""),
                 notulePrompt: QuickNoteStore.promptBlock(quickNote)
                     + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
                     + context,
                 outputTemplate: profile.template,
                 constraints: constraints,
+                detailBlock: detailLevel.draftBlock(transcriptCharacters: source.utf16.count),
                 onProgress: { _ in }
             )
         }
@@ -52,7 +102,8 @@ struct NotuleGenerator: Sendable {
             throw LLMError.generationFailed("De notule bevat geen bruikbare inhoud. Controleer de transcriptie en probeer opnieuw.")
         }
         let candidate = PersonalCorrections.html(
-            Self.injectDate(into: QuickNoteStore.ensureNotesSection(stripped, note: quickNote), date: createdAt),
+            merging ? QuickNoteStore.ensureNotesSection(stripped, note: quickNote).replacingOccurrences(of: "{{DATE}}", with: "Zie bronnotulen")
+                : Self.injectDate(into: QuickNoteStore.ensureNotesSection(stripped, note: quickNote), date: createdAt),
             entries: corrections, profileId: profile.id)
 
         var warning: String?
@@ -62,13 +113,19 @@ struct NotuleGenerator: Sendable {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
                                               request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
-                                              noteConcurrency: noteConcurrency, onProgress: onStep)
-            return NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate)
+                                              noteConcurrency: noteConcurrency, detailLevel: detailLevel, onProgress: onStep)
+            log.info("Notule audit ran outcome=ok source_warning=\(warning != nil)")
+            return Run(html: NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate), checkedHtml: candidate, skipReason: nil)
         } catch {
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
+            log.info("Notule audit ran outcome=\(LogRedact.describe(error)) source_warning=\(warning != nil)")
             // DEC-063: an audit problem never blocks the notule; it becomes a line in the warning section.
-            let finding = (error as? NotuleAuditError)?.finding ?? NotuleAudit.uncheckedContentWarning
-            return NotuleAudit.appendingWarnings([warning, finding].compactMap { $0 }, to: candidate)
+            let auditError = error as? NotuleAuditError
+            let finding = auditError?.finding ?? NotuleAudit.uncheckedContentWarning
+            // A concrete finding means the check ran; otherwise the content was not checked.
+            let skipReason = auditError?.finding == nil ? (auditError?.message ?? LogRedact.describe(error)) : nil
+            return Run(html: NotuleAudit.appendingWarnings([warning, finding].compactMap { $0 }, to: candidate),
+                       checkedHtml: candidate, skipReason: skipReason)
         }
     }
 
@@ -116,5 +173,36 @@ struct NotuleGenerator: Sendable {
         }
         guard !block.isEmpty else { return notulePrompt }
         return block + "\n\n" + notulePrompt
+    }
+}
+
+// MARK: - Fallback
+
+extension NotuleGenerator {
+    /// UserDefaults key of the optional fallback provider; empty means no fallback.
+    static let fallbackProviderKey = "notulenFallbackProvider"
+
+    /// The configured fallback, or nil when none is set or it is the primary itself.
+    static func fallbackProvider(for primary: NotulenProvider) -> NotulenProvider? {
+        guard let raw = UserDefaults.standard.string(forKey: fallbackProviderKey),
+              let provider = NotulenProvider(rawValue: raw), provider != .cloud, provider != primary else { return nil }
+        return provider
+    }
+
+    /// Runs `primary`; on a model error tries `fallback` once. Cancellation and a draft
+    /// rejected by the audit are not model errors, so they never trigger the fallback.
+    static func withFallback(_ fallback: (@Sendable () async throws -> String)?,
+                             primary: @Sendable () async throws -> String) async throws -> String {
+        do {
+            return try await primary()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let review as NotuleReviewError {
+            throw review
+        } catch {
+            guard let fallback, !Task.isCancelled else { throw error }
+            log.warning("Notule fallback provider used after error=\(LogRedact.describe(error))")
+            return try await fallback()
+        }
     }
 }

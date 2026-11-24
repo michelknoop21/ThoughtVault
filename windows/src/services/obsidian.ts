@@ -2,10 +2,62 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Transcript, AppSettings } from "../types";
 import { htmlToMarkdown } from "../utils/htmlToMarkdown";
 import { loadCredential } from "./tauriCommands";
+import { log } from "./appLog";
+import { useObsidianLinkStore } from "../stores/obsidianStore";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 
 type ObsidianResponse = { status: number; body: string; headers: Record<string, string> };
+
+export const OBSIDIAN_BROKEN_MESSAGE = "De koppeling met Obsidian werkt niet meer. Je notules staan wel in ThoughtVault.";
+
+/** Thrown when the Obsidian link is known to be broken; the UI shows one message for it, never a toast per call. */
+export class ObsidianBrokenError extends Error {
+  constructor() { super(OBSIDIAN_BROKEN_MESSAGE); }
+}
+
+let skipLogged = false;
+
+/**
+ * The one gate for all vault access. Switch off: returns false and never touches Obsidian.
+ * Link broken: throws ObsidianBrokenError without a request until a test succeeds or the app restarts.
+ */
+function gate(settings: AppSettings): boolean {
+  if (!settings.obsidian_enabled) {
+    if (!skipLogged) {
+      skipLogged = true;
+      log.info("Obsidian", "aanroepen overgeslagen: koppeling staat uit");
+    }
+    return false;
+  }
+  if (useObsidianLinkStore.getState().broken) throw new ObsidianBrokenError();
+  return true;
+}
+
+/** Record a broken link (once) and return the error to throw. Reason: error kind or status, never URL or key. */
+function markBroken(reason: string): ObsidianBrokenError {
+  if (!useObsidianLinkStore.getState().broken) {
+    useObsidianLinkStore.getState().setBroken(true);
+    log.warn("Obsidian", `koppeling verbroken: ${reason}`);
+  }
+  return new ObsidianBrokenError();
+}
+
+function markWorking(): void {
+  if (useObsidianLinkStore.getState().broken) {
+    useObsidianLinkStore.getState().setBroken(false);
+    log.info("Obsidian", "koppeling hersteld");
+  }
+}
+
+/** Call a vault command; a failed request (refused, TLS, timeout) or a 401/403 breaks the link. */
+async function request(command: string, args: Record<string, unknown>): Promise<ObsidianResponse> {
+  let res: ObsidianResponse;
+  try { res = await invoke<ObsidianResponse>(command, args); }
+  catch { throw markBroken("verbinding mislukt"); }
+  if (res.status === 401 || res.status === 403) throw markBroken(`status ${res.status}`);
+  return res;
+}
 
 /** Lowercase, hyphen-separated slug: keeps letters/digits, everything else → "-". */
 function slugify(value: string): string {
@@ -80,17 +132,16 @@ function remember(id: string, markdown: string, html: string): void {
 }
 
 async function readNote(filename: string, settings: AppSettings, apiKey: string): Promise<ObsidianResponse> {
-  return invoke<ObsidianResponse>("obsidian_get", {
+  return request("obsidian_get", {
     baseUrl: settings.obsidian_base_url, apiKey, vaultPath: settings.obsidian_vault_path, filename,
   });
 }
 
 /** Write a transcript's notule to the configured Obsidian vault. */
 export async function exportToObsidian(transcript: Transcript, settings: AppSettings): Promise<void> {
+  if (!gate(settings)) return;
   const apiKey = await loadCredential("obsidian_api_key");
-  if (!apiKey || !settings.obsidian_vault_path) {
-    throw new Error("Vul eerst de Obsidian instellingen in");
-  }
+  if (!apiKey || !settings.obsidian_vault_path) throw markBroken("instellingen onvolledig");
   if (!transcript.notule_html) {
     throw new Error("Geen notule om te exporteren");
   }
@@ -112,7 +163,7 @@ export async function exportToObsidian(transcript: Transcript, settings: AppSett
     throw new Error(`Obsidian lezen mislukt (status ${remote.status})`);
   }
 
-  const res = await invoke<ObsidianResponse>("obsidian_put", {
+  const res = await request("obsidian_put", {
     baseUrl: settings.obsidian_base_url,
     apiKey,
     vaultPath: settings.obsidian_vault_path,
@@ -128,8 +179,9 @@ export async function exportToObsidian(transcript: Transcript, settings: AppSett
 
 /** Fetch an externally edited note; the caller saves it before acknowledging the import. */
 export async function importFromObsidian(transcript: Transcript, settings: AppSettings): Promise<{ html: string; markdown: string }> {
+  if (!gate(settings)) throw new Error("Obsidian staat uit");
   const apiKey = await loadCredential("obsidian_api_key");
-  if (!apiKey) throw new Error("Vul eerst de Obsidian API-sleutel in");
+  if (!apiKey) throw markBroken("sleutel ontbreekt");
   let remote = await readNote(buildObsidianNote(transcript).filename, settings, apiKey);
   if (remote.status === 404) {
     const titleSlug = slugify((transcript.title ?? "").trim());
@@ -149,17 +201,21 @@ export function acknowledgeObsidianImport(transcript: Transcript, markdown: stri
 export async function testObsidian(settings: AppSettings): Promise<void> {
   const apiKey = await loadCredential("obsidian_api_key");
   if (!apiKey) throw new Error("Vul eerst de Obsidian API-sleutel in");
-  const res = await invoke<ObsidianResponse>("obsidian_test", {
-    baseUrl: settings.obsidian_base_url,
-    apiKey,
-  });
+  let res: ObsidianResponse;
+  try { res = await invoke<ObsidianResponse>("obsidian_test", { baseUrl: settings.obsidian_base_url, apiKey }); }
+  catch (error) {
+    if (settings.obsidian_enabled) markBroken("verbinding mislukt");
+    throw error;
+  }
 
   // The plugin returns pretty-printed JSON (`"authenticated": true`), so match
   // whitespace-tolerantly rather than on an exact substring.
   const authenticated = /"authenticated"\s*:\s*true/.test(res.body);
   if (res.status >= 300 || !authenticated) {
+    if (settings.obsidian_enabled && (res.status < 300 || res.status === 401 || res.status === 403)) markBroken(`status ${res.status}`);
     throw new Error(
       res.status < 300 ? "API-sleutel niet geaccepteerd" : `Verbinding mislukt (status ${res.status})`,
     );
   }
+  if (settings.obsidian_enabled) markWorking();
 }

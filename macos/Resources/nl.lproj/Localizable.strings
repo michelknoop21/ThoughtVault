@@ -183,7 +183,7 @@
 "Melding sluiten" = "Melding sluiten";
 "Mensen" = "Mensen";
 "Menu uitklappen" = "Menu uitklappen";
-"Michel, Knoop, MK (kommagescheiden)" = "Michel, Knoop, MK (kommagescheiden)";
+"Voornaam, bijnaam, initialen (kommagescheiden)" = "Voornaam, bijnaam, initialen (kommagescheiden)";
 "Microfoon" = "Microfoon";
 "Microsoft 365" = "Microsoft 365";
 "Microsoft 365 Agenda" = "Microsoft 365 Agenda";
@@ -213,7 +213,7 @@
 "Notule beschikbaar" = "Notule beschikbaar";
 "Notulen" = "Notulen";
 "Notulen genereren" = "Notulen genereren";
-"Notulen worden via de server gegenereerd (N8N + Claude)." = "Notulen worden via de server gegenereerd (N8N + Claude).";
+"Notulen worden op de ThoughtVault-server gegenereerd." = "Notulen worden op de ThoughtVault-server gegenereerd.";
 "Of voer deze code handmatig in:" = "Of voer deze code handmatig in:";
 "Oké" = "Oké";
 "Ollama" = "Ollama";
@@ -299,7 +299,7 @@
 "Stel in op Ollama Cloud en vul je API-sleutel in" = "Stel in op Ollama Cloud en vul je API-sleutel in";
 "Stijl" = "Stijl";
 "Stop" = "Stop";
-"Stop en upload" = "Stop en upload";
+"Stop en verwerk" = "Stop en verwerk";
 "Stop opname en upload" = "Stop opname en upload";
 "Systeem statistieken" = "Systeem statistieken";
 "Systeemaudio kon niet worden samengevoegd" = "Systeemaudio kon niet worden samengevoegd";
@@ -462,6 +462,7 @@
 
 /* Support center */
 "Support" = "Support";
+"Handleiding" = "Handleiding";
 "Melding maken" = "Melding maken";
 "Mijn meldingen" = "Mijn meldingen";
 "Terug naar Mijn meldingen" = "Terug naar Mijn meldingen";
@@ -502,3 +503,275 @@
 "notule.step.coverage" = "Dekkingscontrole %d van %d";
 "notule.step.sentenceCheck" = "Controle %d van %d";
 "notule.step.contextSuggestions" = "Contextsuggesties";
+
+/* Support window restyle (macOS) */
+"Waar gaat je melding over?" = "Waar gaat je melding over?";
+"Iets werkt niet zoals het hoort" = "Iets werkt niet zoals het hoort";
+"Een wens of verbetering" = "Een wens of verbetering";
+"Je wilt weten hoe iets werkt" = "Je wilt weten hoe iets werkt";
+"Wat deed je, wat verwachtte je en wat gebeurde er?" = "Wat deed je, wat verwachtte je en wat gebeurde er?";
+"Met je melding gaan je naam, e-mailadres, de app-versie, je apparaat, je klikpad en een afgeschermd logbestand mee. Je opnames, transcripties en notulen gaan nooit mee." = "Met je melding gaan je naam, e-mailadres, de app-versie, je apparaat, je klikpad en een afgeschermd logbestand mee. Je opnames, transcripties en notulen gaan nooit mee.";
+"Kies links een melding om het gesprek te lezen." = "Kies links een melding om het gesprek te lezen.";
+"Schrijf een antwoord" = "Schrijf een antwoord";
+"Support: %@" = "Support: %@";
+"Jij" = "Jij";
+/* Prospect Flow */
+"Maak offerte in Prospect Flow" = "Maak offerte in Prospect Flow";
+"Open offerte %@" = "Open offerte %@";
+"Nieuwe conceptofferte maken" = "Nieuwe conceptofferte maken";
+"Conceptofferte in Prospect Flow" = "Conceptofferte in Prospect Flow";
+"Klant zoeken…" = "Klant zoeken…";
+"Regels afleiden, dit kan tot 2 minuten duren." = "Regels afleiden, dit kan tot 2 minuten duren.";
+"Offerte %@ bestond al" = "Offerte %@ bestond al";
+"Offerte %@ aangemaakt" = "Offerte %@ aangemaakt";
+"Klant: %@%@" = "Klant: %@%@";
+"%lld regels, waarvan %lld te controleren." = "%lld regels, waarvan %lld te controleren.";
+"Gemaakt met het terugvalmodel %@." = "Gemaakt met het terugvalmodel %@.";
+"Concept: er is niets naar de klant gestuurd." = "Concept: er is niets naar de klant gestuurd.";
+"Klant" = "Klant";
+"Zoek een andere klant" = "Zoek een andere klant";
+"Nieuwe klant" = "Nieuwe klant";
+"Naam van de nieuwe klant" = "Naam van de nieuwe klant";
+"Open offerte" = "Open offerte";
+"Maak conceptofferte" = "Maak conceptofferte";
+"Adres" = "Adres";
+"API-sleutel" = "API-sleutel";
+"Sleutel van de Prospect Flow-instance" = "Sleutel van de Prospect Flow-instance";
+"Verbonden" = "Verbonden";
+"Maakt vanuit een notule een conceptofferte in Prospect Flow. Er gaat nooit iets naar de klant." = "Maakt vanuit een notule een conceptofferte in Prospect Flow. Er gaat nooit iets naar de klant.";
+"Conceptofferte uit een klantgesprek." = "Conceptofferte uit een klantgesprek.";
+"Vul eerst de Prospect Flow-URL en API-sleutel in." = "Vul eerst de Prospect Flow-URL en API-sleutel in.";
+"Prospect Flow accepteert de API-sleutel niet." = "Prospect Flow accepteert de API-sleutel niet.";
+"Deze functie staat uit in Prospect Flow." = "Deze functie staat uit in Prospect Flow.";
+"Het transcript is te lang voor Prospect Flow." = "Het transcript is te lang voor Prospect Flow.";
+"Te veel verzoeken. Probeer het over een minuut opnieuw." = "Te veel verzoeken. Probeer het over een minuut opnieuw.";
+"Het AI-model van Prospect Flow is niet bereikbaar." = "Het AI-model van Prospect Flow is niet bereikbaar.";
+"Prospect Flow gaf status %lld." = "Prospect Flow gaf status %lld.";
+"Terugval bij fout" = "Terugval bij fout";
+"Geen" = "Geen";
+"Bij een terugval naar ChatGPT, Claude of een andere online aanbieder gaat het transcript naar die aanbieder." = "Bij een terugval naar ChatGPT, Claude of een andere online aanbieder gaat het transcript naar die aanbieder.";
+
+"Prospect Flow gaf een ongeldige offertelink." = "Prospect Flow gaf een ongeldige offertelink.";
+
+"De offerte is bewaard, maar de link kon niet worden geopend. Probeer opnieuw." = "De offerte is bewaard, maar de link kon niet worden geopend. Probeer opnieuw.";
+
+"Eerder gekozen klant" = "Eerder gekozen klant";
+
+"Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest." = "Er is nog een onbevestigde offerteaanvraag. Heropen dit venster en rond die eerst af voordat je een andere klant kiest.";
+
+"OpenRouter" = "OpenRouter";
+"Parakeet" = "Parakeet";
+"Parakeet Ultra" = "Parakeet Ultra";
+"Parakeet TDT v3" = "Parakeet TDT v3";
+"Parakeet Redux" = "Parakeet Redux";
+"Nederlands en 24 andere talen" = "Nederlands en 24 andere talen";
+"Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account." = "Het transcript wordt naar OpenRouter gestuurd. De kosten lopen via je eigen account.";
+
+"Parakeet-modellen van NVIDIA, licentie CC BY 4.0" = "Parakeet-modellen van NVIDIA, licentie CC BY 4.0";
+"Aangeraden voor deze Mac" = "Aangeraden voor deze Mac";
+"Aangeraden voor dit toestel" = "Aangeraden voor dit toestel";
+"In gebruik" = "In gebruik";
+"Vraagt macOS %lld of nieuwer." = "Vraagt macOS %lld of nieuwer.";
+"Vraagt iOS %lld of nieuwer." = "Vraagt iOS %lld of nieuwer.";
+"Te weinig geheugen: vraagt %lld GB." = "Te weinig geheugen: vraagt %lld GB.";
+"Te weinig vrije opslag: vraagt %@." = "Te weinig vrije opslag: vraagt %@.";
+"Downloaden" = "Downloaden";
+"Verwijder" = "Verwijder";
+"Downloaden lukte niet: %@" = "Downloaden lukte niet: %@";
+"OpenRouter heeft nog geen sleutel. Vul die in bij Notulen om notulen te maken." = "OpenRouter heeft nog geen sleutel. Vul die in bij Notulen om notulen te maken.";
+"OpenRouter: sleutel nodig" = "OpenRouter: sleutel nodig";
+"Vul je sleutel in om notulen te maken." = "Vul je sleutel in om notulen te maken.";
+"Sleutel invullen" = "Sleutel invullen";
+"Stel in hoe ThoughtVault gesprekken transcribeert en notulen genereert." = "Stel in hoe ThoughtVault gesprekken transcribeert en notulen genereert.";
+"Snelle setup" = "Snelle setup";
+"Aanbevolen instellingen voor dit toestel" = "Aanbevolen instellingen voor dit toestel";
+"Op basis van je systeem en je huidige configuratie stellen we dit voor. Je kunt alles daarna nog aanpassen." = "Op basis van je systeem en je huidige configuratie stellen we dit voor. Je kunt alles daarna nog aanpassen.";
+"Lokaal op dit toestel" = "Lokaal op dit toestel";
+"Het model is nog niet gedownload. Toepassen start de download." = "Het model is nog niet gedownload. Toepassen start de download.";
+"Toegepast" = "Toegepast";
+"Toepassen" = "Toepassen";
+"Verberg details" = "Verberg details";
+"Bekijk details" = "Bekijk details";
+"Aanbevolen" = "Aanbevolen";
+"Hoe werkt dit?" = "Hoe werkt dit?";
+"Lokaal zet WhisperKit, Parakeet of Apple Spraakherkenning de opname op dit toestel om naar tekst en verlaat de audio je apparaat niet. Bij Cloud wordt de opname naar de ThoughtVault-server geüpload, die ook de notulen maakt." = "Lokaal zet WhisperKit, Parakeet of Apple Spraakherkenning de opname op dit toestel om naar tekst en verlaat de audio je apparaat niet. Bij Cloud wordt de opname naar de ThoughtVault-server geüpload, die ook de notulen maakt.";
+"Het transcript gaat naar de aanbieder die je kiest en die schrijft de notulen. Ollama, LM Studio en Apple Intelligence draaien lokaal. OpenRouter, ChatGPT, Claude, Ollama Cloud en een OpenAI-compatibele aanbieder gebruiken je eigen API-sleutel en account." = "Het transcript gaat naar de aanbieder die je kiest en die schrijft de notulen. Ollama, LM Studio en Apple Intelligence draaien lokaal. OpenRouter, ChatGPT, Claude, Ollama Cloud en een OpenAI-compatibele aanbieder gebruiken je eigen API-sleutel en account.";
+"Zet audio om naar tekst." = "Zet audio om naar tekst.";
+"Locatie" = "Locatie";
+"Lokaal (aanbevolen)" = "Lokaal (aanbevolen)";
+"Audio verlaat je apparaat niet." = "Audio verlaat je apparaat niet.";
+"Via de ThoughtVault-server" = "Via de ThoughtVault-server";
+"Audio wordt naar de server geüpload voor transcriptie en notulen." = "Audio wordt naar de server geüpload voor transcriptie en notulen.";
+"Model" = "Model";
+"Automatisch (aanbevolen)" = "Automatisch (aanbevolen)";
+"%@, beste keuze voor dit toestel" = "%@, beste keuze voor dit toestel";
+"Zelf kiezen" = "Zelf kiezen";
+"Kies handmatig een model" = "Kies handmatig een model";
+"Apple Spraakherkenning werkt direct, zonder download." = "Apple Spraakherkenning werkt direct, zonder download.";
+"Maak gestructureerde notulen van het transcript." = "Maak gestructureerde notulen van het transcript.";
+"Whisper-model, eenmalig downloaden" = "Whisper-model, eenmalig downloaden";
+"Parakeet-model, eenmalig downloaden" = "Parakeet-model, eenmalig downloaden";
+"Werkt direct, zonder download" = "Werkt direct, zonder download";
+"Audio gaat naar je eigen cloud-aanbieder" = "Audio gaat naar je eigen cloud-aanbieder";
+"Model verwijderen?" = "Model verwijderen?";
+"Het model wordt van dit toestel verwijderd. Je kunt het later opnieuw downloaden." = "Het model wordt van dit toestel verwijderd. Je kunt het later opnieuw downloaden.";
+"Gedownload, %@" = "Gedownload, %@";
+"Wordt gedownload" = "Wordt gedownload";
+"Nog niet gedownload. Nodig om op dit toestel te transcriberen." = "Nog niet gedownload. Nodig om op dit toestel te transcriberen.";
+"continued.title" = "Opname verwerken";
+"continued.transcribing" = "Transcriberen %d%%";
+"continued.waiting" = "Wacht op vorige transcriptie";
+"Houd ThoughtVault open tot de verwerking klaar is." = "Houd ThoughtVault open tot de verwerking klaar is.";
+
+/* Notule usage */
+"Gebruik deze maand" = "Gebruik deze maand";
+"Vorige maand" = "Vorige maand";
+"Geteld op dit apparaat." = "Geteld op dit apparaat.";
+"De kosten zitten vooral in de controle: die toetst elke zin van de notule apart aan het gesprek." = "De kosten zitten vooral in de controle: die toetst elke zin van de notule apart aan het gesprek.";
+
+/* Obsidian link */
+"De koppeling met je Obsidian-vault werkt niet meer. Je notules staan wel in ThoughtVault." = "De koppeling met je Obsidian-vault werkt niet meer. Je notules staan wel in ThoughtVault.";
+"Vault opnieuw kiezen" = "Vault opnieuw kiezen";
+"Obsidian uitzetten" = "Obsidian uitzetten";
+"Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in." = "Deze map lijkt geen Obsidian-vault: er staat geen .obsidian-map in.";
+"Zet Obsidian eerst aan" = "Zet Obsidian eerst aan";
+
+/* Onboarding: notulen */
+"Wie schrijft je notulen?" = "Wie schrijft je notulen?";
+"Opnemen en omzetten naar tekst gebeurt op je eigen Mac. Voor de notule kies je een taalmodel: op deze Mac of bij een aanbieder met je eigen sleutel." = "Opnemen en omzetten naar tekst gebeurt op je eigen Mac. Voor de notule kies je een taalmodel: op deze Mac of bij een aanbieder met je eigen sleutel.";
+"STAP %lld VAN %lld" = "STAP %lld VAN %lld";
+"Eén sleutel voor veel modellen. Je betaalt per notule." = "Eén sleutel voor veel modellen. Je betaalt per notule.";
+"Op deze Mac" = "Op deze Mac";
+"Gratis en blijft op je Mac. Kortere, eenvoudiger notulen." = "Gratis en blijft op je Mac. Kortere, eenvoudiger notulen.";
+"Andere aanbieder" = "Andere aanbieder";
+"Een eigen adres met je eigen sleutel." = "Een eigen adres met je eigen sleutel.";
+"Kies een model" = "Kies een model";
+"Het aanbevolen model staat al klaar. Later wisselen kan in Instellingen › Verwerking." = "Het aanbevolen model staat al klaar. Later wisselen kan in Instellingen › Verwerking.";
+"Je kunt dit later doen." = "Je kunt dit later doen.";
+"Zonder taalmodel verder?" = "Zonder taalmodel verder?";
+"Model kiezen" = "Model kiezen";
+"Toch overslaan" = "Toch overslaan";
+"Opnemen en omzetten naar tekst werken gewoon. Notulen maakt de app pas als je een model kiest in Instellingen › Verwerking." = "Opnemen en omzetten naar tekst werken gewoon. Notulen maakt de app pas als je een model kiest in Instellingen › Verwerking.";
+"Apple Intelligence schrijft de notule op deze %@. Er gaat niets naar internet." = "Apple Intelligence schrijft de notule op deze %@. Er gaat niets naar internet.";
+"Ollama schrijft de notule op deze Mac. Installeer Ollama en kies het model later in Instellingen › Verwerking." = "Ollama schrijft de notule op deze Mac. Installeer Ollama en kies het model later in Instellingen › Verwerking.";
+"Apple Intelligence is niet beschikbaar op deze iPhone. Kies OpenRouter of stel later een eigen server in bij Instellingen › Verwerking." = "Apple Intelligence is niet beschikbaar op deze iPhone. Kies OpenRouter of stel later een eigen server in bij Instellingen › Verwerking.";
+"Opnemen en omzetten naar tekst gebeurt op je iPhone. Kies wie de notule schrijft." = "Opnemen en omzetten naar tekst gebeurt op je iPhone. Kies wie de notule schrijft.";
+"Eén sleutel voor veel modellen" = "Eén sleutel voor veel modellen";
+"Op deze iPhone" = "Op deze iPhone";
+"Gratis, kortere notulen" = "Gratis, kortere notulen";
+"Eigen adres en sleutel" = "Eigen adres en sleutel";
+"Sleutel geweigerd of niet bereikbaar" = "Sleutel geweigerd of niet bereikbaar";
+"OpenRouter is niet bereikbaar. Controleer je internetverbinding." = "OpenRouter is niet bereikbaar. Controleer je internetverbinding.";
+"OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt." = "OpenRouter weigert deze sleutel. Controleer of je hem volledig hebt geplakt.";
+"OpenRouter gaf foutcode %lld. Probeer het later opnieuw." = "OpenRouter gaf foutcode %lld. Probeer het later opnieuw.";
+
+/* Private iCloud minutes sync */
+"Synchroniseer notulen via iCloud" = "Synchroniseer notulen via iCloud";
+"Je notulen op Mac en iPhone." = "Je notulen op Mac en iPhone.";
+"Notulen, transcripties, titels en tags worden gesynchroniseerd met je eigen Apple-account. Zet dit aan op je Mac én iPhone. Audio blijft op het oorspronkelijke apparaat." = "Notulen, transcripties, titels en tags worden gesynchroniseerd met je eigen Apple-account. Zet dit aan op je Mac én iPhone. Audio blijft op het oorspronkelijke apparaat.";
+"Bewerken en verwijderen werkt door op je andere apparaten. Offline wijzigingen worden later verstuurd. Bij gelijktijdige wijzigingen bewaren we een extra versie met ‘bewerkingsconflict’ in de titel." = "Bewerken en verwijderen werkt door op je andere apparaten. Offline wijzigingen worden later verstuurd. Bij gelijktijdige wijzigingen bewaren we een extra versie met ‘bewerkingsconflict’ in de titel.";
+"Wijzigingen wachten op synchronisatie." = "Wijzigingen wachten op synchronisatie.";
+"Laatst gesynchroniseerd: %@" = "Laatst gesynchroniseerd: %@";
+"iCloud wordt verbonden…" = "iCloud wordt verbonden…";
+"Synchroniseer nu" = "Synchroniseer nu";
+"Uitschakelen bewaart je notulen op dit apparaat en in iCloud." = "Uitschakelen bewaart je notulen op dit apparaat en in iCloud.";
+"Meld je aan met het oorspronkelijke iCloud-account. Je notulen worden niet naar een ander account verstuurd." = "Meld je aan met het oorspronkelijke iCloud-account. Je notulen worden niet naar een ander account verstuurd.";
+"Meld je aan bij iCloud om je notulen te synchroniseren." = "Meld je aan bij iCloud om je notulen te synchroniseren.";
+"De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard." = "De synchronisatiegegevens konden niet veilig worden gelezen. Je lokale notulen blijven bewaard.";
+"De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen." = "De lokale opslag moet eerst worden hersteld. iCloud-synchronisatie is gepauzeerd om je notulen te beschermen.";
+"De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard." = "De notulenopslag is uit iCloud verwijderd. Synchronisatie is gepauzeerd; je lokale notulen blijven bewaard.";
+"support.unread.summary" = "Ongelezen antwoorden van support: %lld";
+"support.badge.explanation" = "Het cijfer telt alleen nieuwe supportantwoorden. Een verstuurd foutrapport telt niet mee.";
+"support.readAll" = "Alles als gelezen markeren";
+"support.readAll.error" = "Als gelezen markeren lukt nu niet. Probeer het opnieuw.";
+
+/* Recording notebook and reprocessing */
+"Actiepunt" = "Actiepunt";
+"Actiepunt verwijderen" = "Actiepunt verwijderen";
+"Actiepunten" = "Actiepunten";
+"Agenda: " = "Agenda: ";
+"Audio optimaliseren" = "Audio optimaliseren";
+"Automatisch na verwerking" = "Automatisch na verwerking";
+"Blijft bij deze opname bewaard" = "Blijft bij deze opname bewaard";
+"Deelnemers kiezen" = "Deelnemers kiezen";
+"Eigen notities" = "Eigen notities";
+"Eigen notities meenemen" = "Eigen notities meenemen";
+"Eigen titel" = "Eigen titel";
+"Gekoppeld aan deze agenda-afspraak" = "Gekoppeld aan deze agenda-afspraak";
+"Kladblok" = "Kladblok";
+"Kladblokonderdeel" = "Kladblokonderdeel";
+"Nieuw actiepunt…" = "Nieuw actiepunt…";
+"Notities" = "Notities";
+"Opnieuw transcriberen" = "Opnieuw transcriberen";
+"Titel van agendameeting" = "Titel van agendameeting";
+"Titel van deze opname" = "Titel van deze opname";
+"Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard." = "Verbetert het volume op een tijdelijke kopie. Herstel van beschadigde spraak is niet gegarandeerd. Het origineel blijft bewaard.";
+"Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd." = "Verbetert het volume op een tijdelijke kopie. Het origineel blijft bewaard; herstel van beschadigde spraak is niet gegarandeerd.";
+
+"Samenvoegen" = "Samenvoegen";
+"Bronnotulen" = "Bronnotulen";
+"Notulenprofiel" = "Notulenprofiel";
+"Notulen samenvoegen" = "Notulen samenvoegen";
+"Samenvoegen mislukt" = "Samenvoegen mislukt";
+"De AI maakt één nieuwe notule. De originelen blijven behouden." = "De AI maakt één nieuwe notule. De originelen blijven behouden.";
+"Samengevoegde notule" = "Samengevoegde notule";
+"Samenvoegen geannuleerd." = "Samenvoegen geannuleerd.";
+"Selecteer minstens twee verschillende notulen." = "Selecteer minstens twee verschillende notulen.";
+"Een bronnotule heeft geen bruikbare inhoud." = "Een bronnotule heeft geen bruikbare inhoud.";
+"De geselecteerde notulen zijn samen te groot. Selecteer minder notulen en probeer opnieuw." = "De geselecteerde notulen zijn samen te groot. Selecteer minder notulen en probeer opnieuw.";
+"Samenvoegen is al bezig of de app wordt bijgewerkt." = "Samenvoegen is al bezig of de app wordt bijgewerkt.";
+"Kies een notulenprofiel." = "Kies een notulenprofiel.";
+
+"Selecteer %@" = "Selecteer %@";
+
+"%lld bronnotulen" = "%lld bronnotulen";
+
+"Originelen blijven bewaard." = "Originelen blijven bewaard.";
+
+// Prospect Flow customer review
+"Controleer de definitieve notule" = "Controleer de definitieve notule";
+"Beoordeel eerst de woordenboekvoorstellen en sla eventuele wijzigingen op in de notule." = "Beoordeel eerst de woordenboekvoorstellen en sla eventuele wijzigingen op in de notule.";
+"Ik accordeer deze notule voor Prospect Flow" = "Ik accordeer deze notule voor Prospect Flow";
+"Voorgestelde opdrachtgever" = "Voorgestelde opdrachtgever";
+"Bron: notule" = "Bron: notule";
+"Bron: transcriptie" = "Bron: transcriptie";
+"Bron: agenda-afspraak" = "Bron: agenda-afspraak";
+"Bron: titel" = "Bron: titel";
+"Geen eenduidige klantnaam gevonden. Kies of vul een klant in." = "Geen eenduidige klantnaam gevonden. Kies of vul een klant in.";
+"Klantvoorstel niet beschikbaar. Kies of vul zelf een klant in." = "Klantvoorstel niet beschikbaar. Kies of vul zelf een klant in.";
+"Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig." = "Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig.";
+"Notule accorderen en naar Prospect Flow" = "Notule accorderen en naar Prospect Flow";
+"Geen klanten gevonden. Kies een nieuwe klant of zoek opnieuw." = "Geen klanten gevonden. Kies een nieuwe klant of zoek opnieuw.";
+"Zoeken mislukt. Probeer opnieuw of vul zelf een klant in." = "Zoeken mislukt. Probeer opnieuw of vul zelf een klant in.";
+/* Notule detail level (DEC-073) */
+"Detailniveau" = "Detailniveau";
+"Kort" = "Kort";
+"Normaal" = "Normaal";
+"Volledig" = "Volledig";
+"Genereer" = "Genereer";
+"Kort: besluiten, acties en bedragen; ongeveer 6% van het gesprek, 1.500 tot 4.000 tekens" = "Kort: besluiten, acties en bedragen; ongeveer 6% van het gesprek, 1.500 tot 4.000 tekens";
+"Normaal: ook één of twee zinnen context per onderwerp; ongeveer 15%, 2.500 tot 8.000 tekens" = "Normaal: ook één of twee zinnen context per onderwerp; ongeveer 15%, 2.500 tot 8.000 tekens";
+"Volledig: elke bronzin uit het gesprek komt terug, ook bijzaken" = "Volledig: elke bronzin uit het gesprek komt terug, ook bijzaken";
+/* Folders and automatic labels */
+"Alle notulen" = "Alle notulen";
+"Zonder map" = "Zonder map";
+"Mappen" = "Mappen";
+"Slimme mappen" = "Slimme mappen";
+"Nieuwe map…" = "Nieuwe map…";
+"Nieuwe slimme map…" = "Nieuwe slimme map…";
+"Labels beheren…" = "Labels beheren…";
+"Labels beheren" = "Labels beheren";
+"Nieuw label…" = "Nieuw label…";
+"Labelinstellingen" = "Labelinstellingen";
+"Map bewerken" = "Map bewerken";
+"Automatisch toekennen" = "Automatisch toekennen";
+"Verplaats naar…" = "Verplaats naar…";
+"Verplaatsen mislukt" = "Verplaatsen mislukt";
+"Bestaande notulen labelen…" = "Bestaande notulen labelen…";
+"Bestaande notulen labelen?" = "Bestaande notulen labelen?";
+"Toon notulen met minstens één van deze labels." = "Toon notulen met minstens één van deze labels.";
+"De ingestelde AI-provider gebruikt deze omschrijving. Labels blijven handmatig corrigeerbaar." = "De ingestelde AI-provider gebruikt deze omschrijving. Labels blijven handmatig corrigeerbaar.";
+"De ingestelde AI-provider verwerkt de titel en notuletekst. Handmatige labels blijven bewaard. Afgeronde resultaten blijven behouden bij annuleren." = "De ingestelde AI-provider verwerkt de titel en notuletekst. Handmatige labels blijven bewaard. Afgeronde resultaten blijven behouden bij annuleren.";
+"Automatisch labelen opnieuw proberen (%lld)" = "Automatisch labelen opnieuw proberen (%lld)";
+"Label %lld notulen" = "Label %lld notulen";
+"De huidige AI-aanvraag wordt afgerond. Het resultaat wordt niet opgeslagen." = "De huidige AI-aanvraag wordt afgerond. Het resultaat wordt niet opgeslagen.";

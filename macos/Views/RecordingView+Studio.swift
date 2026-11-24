@@ -105,11 +105,36 @@ extension RecordingView {
     // MARK: Composition
 
     var studioView: some View {
-        HStack(spacing: 0) {
-            studioWorkspace
-            Rectangle().fill(StudioColor.divider).frame(width: 1)
-            studioInspector
-                .frame(width: 309)
+        GeometryReader { geometry in
+            if RecordingFeatures.enabled {
+                if geometry.size.width >= 900 {
+                    HStack(spacing: 0) {
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                studioWorkspace.frame(height: showNoteField ? 500 : max(640, geometry.size.height))
+                                if showNoteField { noteFieldCard.padding(TS.Spacing.lg) }
+                            }
+                        }
+                        Rectangle().fill(StudioColor.divider).frame(width: 1)
+                        studioInspector.frame(width: 309)
+                    }
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            recordingIdentityFields.padding(TS.Spacing.md)
+                            studioWorkspace.frame(height: 500)
+                            if showNoteField { noteFieldCard.padding(TS.Spacing.md) }
+                            compactStudioActions
+                        }
+                    }
+                }
+            } else {
+                HStack(spacing: 0) {
+                    studioWorkspace
+                    Rectangle().fill(StudioColor.divider).frame(width: 1)
+                    studioInspector.frame(width: 309)
+                }
+            }
         }
         .ignoresSafeArea(.container, edges: .top)
         .toolbarBackground(.hidden, for: .windowToolbar)
@@ -359,7 +384,7 @@ extension RecordingView {
                 roundControl(systemName: "pause.fill", label: "Pauzeer", size: 74, width: itemWidth) { recordingVM.pauseRecording() }
                 stopControl(label: "Stop en verwerk", width: itemWidth) { Task { await recordingVM.stopAndUpload() } }
                 roundControl(systemName: "square.and.pencil", label: "Notitie", size: 70, width: itemWidth) { showNoteField.toggle() }
-                    .popover(isPresented: $showNoteField, arrowEdge: .top) {
+                    .popover(isPresented: Binding(get: { showNoteField && !RecordingFeatures.enabled }, set: { showNoteField = $0 }), arrowEdge: .top) {
                         noteFieldCard.frame(width: 340).padding(TS.Spacing.sm)
                     }
             }

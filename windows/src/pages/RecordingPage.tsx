@@ -40,7 +40,8 @@ import { SavedRecordings } from "../components/recording/SavedRecordings";
 import { SeedReviewSheet } from "./SeedReviewSheet";
 import { ParticipantPicker } from "./ParticipantPicker";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
-import { saveQuickNote, saveQuickNoteDraft } from "../services/quickNotes";
+import { RecordingNotebook } from "../components/recording/RecordingNotebook";
+import { saveQuickNote } from "../services/quickNotes";
 import { useCalendarStore } from "../stores/calendarStore";
 
 import { DocumentText24Regular } from "../components/ui/StudioIcons";
@@ -103,6 +104,11 @@ export function RecordingPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [seedCandidates, setSeedCandidates] = useState<string[]>([]);
 
+  const identityTitle = useRecordingStore(s => s.recordingTitle);
+  const identityMode = useRecordingStore(s => s.recordingTitleMode);
+  const identityMeeting = useRecordingStore(s => s.activeMeeting);
+  const calendarEvents = useCalendarStore(s => s.events);
+  const currentMeeting = identityMeeting ?? calendarEvents.find(event => new Date(event.start).getTime() <= Date.now() && new Date(event.end).getTime() > Date.now());
   const calendarAccountEmail = useCalendarStore((s) => s.accountEmail);
   const newSeedCandidates = usePeopleDirectoryStore((s) => s.newSeedCandidates);
 
@@ -352,6 +358,7 @@ export function RecordingPage() {
   }
 
   return <div className="recording-studio">{confirmation}
+    <div className={`studio-main${panel === "note" ? " notebook-open" : ""}`}>
     <section ref={workspaceRef} className="studio-workspace" style={workspaceStyle} aria-label="Opnamestudio">
       <header className="studio-topline">
         <span className={`studio-status ${phase}`} role="status"><i />{status}</span>
@@ -387,11 +394,21 @@ export function RecordingPage() {
           <button className="studio-link" disabled={isLive || isBusy} onClick={() => navigate("/settings")}>Instellen</button></div>
       </div>
     </section>
+    {panel === "note" && <div className="notebook-inset"><RecordingNotebook value={quickNote} onChange={setQuickNote} /></div>}
+    </div>
     <aside className="studio-inspector">
       <section>
       <h2>Huidige opname</h2>
-      <div className="studio-identity"><Person24Regular /><div><strong>Nieuwe opname</strong><span>Titel na verwerking</span></div></div>
-      <p className="studio-meta"><Tag24Regular />Tags na verwerking</p>
+      <div className="studio-identity"><Person24Regular /><div><strong>{identityMode === "meeting" ? currentMeeting?.title : identityMode === "manual" ? identityTitle || "Nieuwe opname" : "Nieuwe opname"}</strong><span>{identityMode === "automatic" ? "Titel na verwerking" : "Titel blijft behouden"}</span></div></div>
+      <div className="studio-identity-fields"><label className="flex-col gap-4">Titel
+        <select className="select" value={identityMode} onChange={e => {
+          const mode = e.target.value as "automatic" | "manual" | "meeting";
+          useRecordingStore.setState({ recordingTitleMode: mode, ...(mode === "meeting" ? { activeMeeting: currentMeeting ?? null, pendingSeedAttendees: currentMeeting?.attendees ?? [] } : {}) });
+        }}><option value="automatic">Automatisch na verwerking</option><option value="manual">Eigen titel</option>{currentMeeting && <option value="meeting">Titel van agendameeting</option>}</select>
+      </label>
+      {identityMode === "manual" && <label className="flex-col gap-4">Titel van deze opname<input className="input" value={identityTitle} onChange={e => useRecordingStore.setState({ recordingTitle: e.target.value })} /></label>}
+      {identityMode === "meeting" && currentMeeting && <p className="settings-desc">Gekoppeld aan agenda-afspraak: {currentMeeting.title}</p>}
+      </div><p className="studio-meta"><Tag24Regular />Tags na verwerking</p>
       <button className="studio-meta studio-people" onClick={() => setPanel("people")}><People24Regular />{selectedParticipantIds.length ? `${selectedParticipantIds.length} personen` : "Geen personen"}<span>＋</span></button>
       <p className="studio-meta"><DocumentText24Regular />Wordt na verwerking aangevuld</p>
       <section className="studio-live-panel"><h3><WaveformIcon />Live opname</h3>
@@ -414,20 +431,8 @@ export function RecordingPage() {
       </section>
     </aside>
     {panel === "people" && <ParticipantPicker onClose={() => setPanel(null)} />}
-    {panel && panel !== "people" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>
-      <header><h2>{panel === "note" ? "Snelle notitie" : panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"}</h2><button className="btn btn-secondary" onClick={() => setPanel(null)}>Sluiten</button></header>
-      {panel === "note" && <><p>Context voor je notulen; dit wordt apart van het gesproken transcript bewaard.</p>
-        <textarea autoFocus rows={7} className="input" aria-label="Snelle notitie" value={quickNote} onChange={e => {
-          try { setQuickNote(e.target.value); }
-          catch { setError("De notitie kon niet lokaal worden bewaard. De tekst blijft in het veld staan; probeer opnieuw te bewaren."); }
-        }} />
-        <p>Wordt lokaal bewaard en meegenomen in de notulen.</p>
-        <button className="btn btn-accent" disabled={!quickNote.trim()} onClick={() => {
-          try {
-            saveQuickNoteDraft(useRecordingStore.getState().filePath ?? "", quickNote);
-            setPanel(null);
-          } catch { setError("De notitie kon niet lokaal worden bewaard. Probeer opnieuw."); }
-        }}>Bewaar notitie</button></>}
+    {panel && panel !== "people" && panel !== "note" && <dialog ref={dialogRef} className="studio-dialog" aria-label={panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"} onCancel={() => setPanel(null)}>
+      <header><h2>{panel === "saved" ? "Opgeslagen opnames" : "YouTube-video"}</h2><button className="btn btn-secondary" onClick={() => setPanel(null)}>Sluiten</button></header>
       {panel === "saved" && <SavedRecordings initiallyExpanded />}
       {panel === "youtube" && <form onSubmit={e => { e.preventDefault(); void handleSubmitYouTube(); }}>
         <label>Video-URL<input className="input" type="url" value={youtubeURL} onChange={e => setYouTubeURL(e.target.value)} required placeholder="https://www.youtube.com/watch?v=…" /></label>

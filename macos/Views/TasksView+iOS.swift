@@ -3,10 +3,10 @@
 //
 // iOS Taken, reconstructed from the approved NorthStar
 // (docs/design/ios/thoughtvault-ios-taken-northstar.jpg): title, the
-// Actief / Wachtrij / Voltooid switch and task cards with status pill,
-// progress and step. The NorthStar's "Alle taken / Mijn taken" filter and
-// per-task retry have no existing behaviour and are left out; a running
-// task opens its Verwerken detail, delete stays in the context menu.
+// Actief / Wachtrij / Geschiedenis switch and task cards with status pill,
+// progress and step. The NorthStar's "Alle taken / Mijn taken" filter is
+// left out; a running task opens its Verwerken detail. The third segment
+// shows the persistent history with details and task actions.
 
 #if os(iOS)
 import SwiftUI
@@ -40,7 +40,8 @@ extension TasksView {
                            if !ProcessingMode.isLocalMode { await tasksVM.loadActiveTasks() }
                        },
                        onCancel: { taskToCancel = $0 },
-                       onDelete: { taskToDelete = $0 })
+                       onDelete: { taskToDelete = $0 },
+                       onOpenTranscript: onOpenTranscript)
     }
 }
 
@@ -52,8 +53,9 @@ private struct IOSTasksScreen: View {
     let onRefresh: () async -> Void
     let onCancel: (TranscriptTask) -> Void
     let onDelete: (TranscriptTask) -> Void
+    let onOpenTranscript: ((Transcript) -> Void)?
 
-    @State private var filter: IOSTaskFilter = .active
+    @State private var filter: IOSTaskFilter = IOSDebug.string("TVDebugTaskFilter") == "history" ? .done : .active
     @State private var debugTaskID: String?
 
     var body: some View {
@@ -73,7 +75,7 @@ private struct IOSTasksScreen: View {
                 .padding(.top, 10)
                 IOSSegmented(options: [(IOSTaskFilter.active, "Actief", nil),
                                        (.queued, "Wachtrij", nil),
-                                       (.done, "Voltooid", nil)],
+                                       (.done, "Geschiedenis", nil)],
                              selection: $filter, height: 42)
                     .padding(.top, 14)
                 if let error {
@@ -108,10 +110,13 @@ private struct IOSTasksScreen: View {
 
     @ViewBuilder
     private var list: some View {
-        let shown = tasks.filter { filter.matches($0.status) }
-        if isLoading && tasks.isEmpty {
+        // A finished task with a history entry is listed once, under Geschiedenis.
+        let historyIDs = Set(TaskHistoryStore.shared.entries.map(\.id))
+        let shown = tasks.filter { filter.matches($0.status) && ($0.status.isActive || !historyIDs.contains($0.taskId)) }
+        let history = filter == .done ? TaskHistorySection.entries(excluding: Set(shown.map(\.taskId))) : []
+        if isLoading && tasks.isEmpty && history.isEmpty {
             ProgressView().tint(IOSColor.lavender).frame(maxWidth: .infinity).padding(40)
-        } else if shown.isEmpty {
+        } else if shown.isEmpty && history.isEmpty {
             VStack(spacing: 8) {
                 Image(systemName: "checklist")
                     .font(.system(size: 30))
@@ -120,7 +125,7 @@ private struct IOSTasksScreen: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(IOSColor.text)
                 Text(filter == .done
-                     ? "Afgeronde verwerkingen staan direct in Notulen."
+                     ? "Afgeronde, mislukte en geannuleerde verwerkingen verschijnen hier met hun details."
                      : "Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.")
                     .font(.system(size: 13))
                     .foregroundStyle(IOSColor.text2)
@@ -140,6 +145,10 @@ private struct IOSTasksScreen: View {
                         card(task).contextMenu { menu(task) }
                     }
                 }
+                if filter == .done {
+                    TaskHistorySection(shownTaskIds: Set(shown.map(\.taskId)), isCompact: true,
+                                       showsHeader: false, onOpenTranscript: onOpenTranscript)
+                }
             }
         }
     }
@@ -148,7 +157,7 @@ private struct IOSTasksScreen: View {
         switch filter {
         case .active: return "Geen actieve taken"
         case .queued: return "Niets in de wachtrij"
-        case .done: return "Nog niets voltooid"
+        case .done: return "Nog geen geschiedenis"
         }
     }
 

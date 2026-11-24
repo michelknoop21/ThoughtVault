@@ -14,6 +14,9 @@ import UIKit
 // MARK: - NotuleResultView
 
 struct NotuleResultView: View {
+    #if os(macOS)
+    @State private var printWebView: WKWebView?
+    #endif
 
     let task: TranscriptTask
     let onDismiss: () -> Void
@@ -24,10 +27,16 @@ struct NotuleResultView: View {
     @State private var selectedTab: ResultTab = .notule
     @State private var showExportMenu: Bool = false
     @State private var exportError: String? = nil
+    @AppStorage(ObsidianService.enabledKey) private var obsidianEnabled = false
     @State private var showAddTag: Bool = false
     @State private var newTagText: String = ""
     @State private var existingTags: [String] = []
     @State private var didCelebrate = false
+    @State private var includeOwnNotes = true
+    private var exportHTML: String? {
+        task.notuleHtml.map { RecordingFeatures.enabled ? QuickNoteStore.exportHTML($0, note: QuickNoteStore.note(forTranscriptId: task.taskId), includeNotes: includeOwnNotes) : $0 }
+    }
+    @State private var brandingSnapshot: String?
 
     enum ResultTab: String, CaseIterable {
         case notule = "Notulen"
@@ -45,6 +54,8 @@ struct NotuleResultView: View {
         VStack(spacing: 0) {
             toolbar
 
+            ObsidianLinkBanner()
+                .padding(.horizontal, TS.Spacing.md)
             resultMetaBar
             tabBar
 
@@ -67,7 +78,11 @@ struct NotuleResultView: View {
             #endif
         }
         .background(Color.surfaceSecondary)
+        #if os(macOS)
+        .focusedSceneValue(\.printAction, task.notuleHtml == nil ? nil : { exportDocument("print") })
+        #endif
         .onAppear {
+            brandingSnapshot = LocalTranscriptStore.shared.record(forTaskId: task.taskId)?.documentBrandingJSON
             let hasNotule = !(task.notuleHtml ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             let hasRaw = !(task.rawTranscription ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             if !hasNotule && hasRaw {
@@ -335,7 +350,14 @@ struct NotuleResultView: View {
     @ViewBuilder
     private var notuleView: some View {
         if let html = task.notuleHtml, !html.isEmpty {
-            HTMLWebView(htmlContent: html, isDarkMode: colorScheme == .dark)
+            DocumentBrandingPicker(taskId: task.taskId) { brandingSnapshot = $0 }
+            Group {
+                if let snapshot = brandingSnapshot {
+                    DocumentWebView(html: html, title: NotuleTitleExtractor.extract(from: html) ?? task.filename, snapshot: snapshot)
+                } else {
+                    HTMLWebView(htmlContent: html, isDarkMode: colorScheme == .dark)
+                }
+            }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(.ultraThinMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous))
@@ -343,6 +365,7 @@ struct NotuleResultView: View {
                     RoundedRectangle(cornerRadius: TS.Radius.md, style: .continuous)
                         .stroke(Color.borderPrimary.opacity(0.45), lineWidth: 1)
                 }
+            NotuleUsageFooter(taskId: task.taskId, html: html)
         } else {
             emptyNotuleView
         }
@@ -435,12 +458,23 @@ struct NotuleResultView: View {
                 .padding(.top, TS.Spacing.md)
                 .padding(.bottom, TS.Spacing.sm)
 
+            if RecordingFeatures.enabled {
+                Toggle("Eigen notities meenemen", isOn: $includeOwnNotes).font(TS.Font.caption).padding(TS.Spacing.md)
+                Divider()
+            }
+            #if os(macOS)
+            exportButton(icon: "printer", title: "Afdrukken") { exportDocument("print") }
+            #endif
             exportButton(icon: "doc.fill", title: "PDF", action: exportAsPDF)
+            exportButton(icon: "doc.text", title: "Word (.docx)") { exportDocument("docx") }
+            exportButton(icon: "chevron.left.forwardslash.chevron.right", title: "HTML") { exportDocument("html") }
             Divider()
             exportButton(icon: "doc.plaintext", title: "Platte tekst (.txt)", action: exportAsTXT)
             Divider()
-            exportButton(icon: "tray.and.arrow.down", title: "Exporteer naar Obsidian", action: exportToObsidian)
-            Divider()
+            if obsidianEnabled {
+                exportButton(icon: "tray.and.arrow.down", title: "Exporteer naar Obsidian", action: exportToObsidian)
+                Divider()
+            }
             exportButton(icon: "doc.on.doc", title: "Kopieer tekst", action: copyContent)
             Divider()
             exportButton(icon: "square.and.arrow.up", title: "Delen...", action: shareContent)
@@ -476,46 +510,22 @@ struct NotuleResultView: View {
 
     // MARK: - Export Actions
 
-    private func exportAsPDF() {
+    private func exportAsPDF() { exportDocument("pdf") }
+
+    private func exportDocument(_ ext: String) {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
-
-        #if os(macOS)
-        let printInfo = NSPrintInfo.shared
-        printInfo.paperSize = NSSize(width: 595, height: 842) // A4
-        printInfo.topMargin = 36
-        printInfo.bottomMargin = 36
-        printInfo.leftMargin = 54
-        printInfo.rightMargin = 54
-
-        let webView = WKWebView(frame: NSRect(x: 0, y: 0, width: 595, height: 842))
-        webView.loadHTMLString(styledHTML(html), baseURL: nil)
-
-        // Brief delay for WKWebView to finish rendering before printing
+        guard let html = exportHTML else { return }
         Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(800))
-            let op = webView.printOperation(with: printInfo)
-            op.showsPrintPanel = true
-            op.showsProgressPanel = true
-            op.run()
+            do { try await DocumentExporter.export(html: html,
+                title: NotuleTitleExtractor.extract(from: html) ?? task.filename,
+                snapshot: brandingSnapshot, ext: ext) }
+            catch { exportError = "Exporteren mislukt: \(error.localizedDescription)" }
         }
-        #else
-        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 595, height: 842))
-        webView.loadHTMLString(styledHTML(html), baseURL: nil)
-
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(800))
-            let printFormatter = webView.viewPrintFormatter()
-            let printController = UIPrintInteractionController.shared
-            printController.printFormatter = printFormatter
-            printController.present(animated: true)
-        }
-        #endif
     }
 
     private func exportAsTXT() {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
+        guard let html = exportHTML else { return }
         let decoded = HTMLPlainText.from(html)
 
         #if os(macOS)
@@ -554,8 +564,8 @@ struct NotuleResultView: View {
             do {
                 if let record = LocalTranscriptStore.shared.record(forTaskId: task.taskId)
                     ?? LocalTranscriptStore.shared.record(forTaskId: task.id) {
-                    try await ObsidianService.tryExport(record)
-                } else if let html = task.notuleHtml, !html.isEmpty {
+                    try await ObsidianService.tryExport(title: record.title, html: exportHTML ?? record.notuleHtml, date: record.createdAt, participants: record.participants, profileName: record.profileName, tags: record.tags, noteID: record.taskId)
+                } else if let html = exportHTML, !html.isEmpty {
                     let title = NotuleTitleExtractor.extract(from: html)
                         ?? (task.filename as NSString).deletingPathExtension
                     try await ObsidianService.tryExport(
@@ -569,6 +579,8 @@ struct NotuleResultView: View {
                 }
                 exportError = nil
                 showExportMenu = false
+            } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                showExportMenu = false   // shown once by ObsidianLinkBanner
             } catch {
                 exportError = "Obsidian: \(error.localizedDescription)"
             }
@@ -577,7 +589,7 @@ struct NotuleResultView: View {
 
     private func copyContent() {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
+        guard let html = exportHTML else { return }
         let decoded = HTMLPlainText.from(prepareNotuleContent(html))
 
         #if os(macOS)
@@ -590,7 +602,7 @@ struct NotuleResultView: View {
 
     private func shareContent() {
         showExportMenu = false
-        guard let html = task.notuleHtml else { return }
+        guard let html = exportHTML else { return }
         let stripped = HTMLPlainText.from(html)
 
         #if os(macOS)
@@ -607,60 +619,6 @@ struct NotuleResultView: View {
         #endif
     }
 
-    private func styledHTML(_ html: String) -> String {
-        let title = (NotuleTitleExtractor.extract(from: html) ?? task.filename)
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <meta charset="utf-8">
-        <style>
-        :root {
-            --text-primary: #1a1a1a;
-            --text-heading: #333;
-            --text-subtle: #555;
-            --brand: #7830D8;
-            --border: #e0e0e0;
-            --surface: #f8f8f8;
-            --surface-light: #f5f5f5;
-            --bg-blockquote: #f8f5fe;
-        }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --text-primary: #EDEBF6;
-                --text-heading: #D9D3F0;
-                --text-subtle: #B3AECE;
-                --brand: #A87DF7;
-                --border: #342F56;
-                --surface: #1B1E33;
-                --surface-light: #1B1E33;
-                --bg-blockquote: #1D1533;
-            }
-        }
-        body { font-family: -apple-system, Helvetica Neue, Arial, sans-serif; font-size: 12pt; line-height: 1.6; color: var(--text-primary); margin: 0; padding: 20pt; }
-        h1 { font-size: 18pt; font-weight: 700; color: var(--brand); margin-bottom: 12pt; }
-        h2 { font-size: 14pt; font-weight: 600; color: var(--text-heading); margin-top: 16pt; }
-        h3 { font-size: 12pt; font-weight: 600; color: var(--text-subtle); margin-top: 12pt; }
-        p  { margin: 6pt 0; }
-        ul, ol { margin: 6pt 0; padding-left: 20pt; }
-        li { margin: 3pt 0; }
-        table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
-        th, td { border: 1px solid var(--border); padding: 6pt 8pt; text-align: left; }
-        th { background: var(--surface-light); font-weight: 600; }
-        [style] { color: inherit !important; background-color: transparent !important; }
-        h1, h1[style] { color: var(--brand) !important; }
-        h2, h2[style], h3, h3[style] { color: var(--text-heading) !important; }
-        em, em[style] { color: var(--text-subtle) !important; }
-        th, th[style] { color: var(--text-heading) !important; background: var(--surface-light) !important; }
-        </style>
-        </head>
-        <body><h1>\(title)</h1>\(prepareNotuleContent(html))</body>
-        </html>
-        """
-    }
 
     private func formattedDate(_ date: Date) -> String {
         let formatter = DateFormatter()

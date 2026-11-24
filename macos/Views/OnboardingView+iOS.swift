@@ -4,8 +4,8 @@
 // iOS onboarding, reconstructed from the approved NorthStar
 // (docs/design/ios/thoughtvault-ios-onboarding-northstar.jpg): brand header
 // with "n van 4" progress, a hero, the permission card and "Daarna komt nog".
-// iOS has four counted steps: welcome, microphone + speech recognition
-// (one step, as in the NorthStar), calendar and "Over jou"; the finish screen
+// iOS has five counted steps: welcome, microphone + speech recognition
+// (one step, as in the NorthStar), calendar, notulen and "Over jou"; the finish screen
 // follows. The NorthStar's screen-recording step is macOS-only. The existing
 // permission, calendar and profile logic is reused unchanged.
 
@@ -15,7 +15,7 @@ import SwiftUI
 extension OnboardingView {
 
     /// Counted steps on iOS; `.spraak` is part of the microphone step.
-    private var iosSteps: [OnboardingStep] { [.welcome, .microphoon, .agenda, .profiel] }
+    private var iosSteps: [OnboardingStep] { [.welcome, .microphoon, .agenda, .notulen, .profiel] }
 
     private var iosIndex: Int? { iosSteps.firstIndex(of: currentStep == .spraak ? .microphoon : currentStep) }
 
@@ -29,6 +29,7 @@ extension OnboardingView {
                 case .welcome: welcomeHero
                 case .microphoon, .spraak: permissionStep
                 case .agenda: reused(agendaStep)
+                case .notulen: notulenStep
                 case .profiel: reused(profielStep)
                 default: reused(klaarStep)
                 }
@@ -278,6 +279,8 @@ extension OnboardingView {
                     }
                     .buttonStyle(.plain)
                 }
+            case .notulen:
+                notulenIOSFooter
             case .klaar:
                 primaryButton("Maak je eerste opname") {
                     pendingFirstRecording = true

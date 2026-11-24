@@ -291,4 +291,11 @@ TestFlight-upload. Ook `macos` en `all` ondersteunen deze vlag. Zonder vlag blij
 het bestaande uploadgedrag gelden. Credentials/provisioning zijn ook voor lokale
 App Store-export vereist. Deze export is geen bewijs van installatie of acceptatie.
 
+Na een upload zet `testflight.sh` de Nederlandse "Wat te testen"-tekst (nl-NL) op de
+nieuwe builds via `scripts/testflight_wat_te_testen.py`. De tekst staat in
+`docs/testflight-wat-te-testen.txt` en begint met `versie: <versie>`. Werk dat bestand
+bij voordat je de release maakt: bij een ander versienummer weigert het script en
+meldt `testflight.sh` dat de tekst niet is gezet. De upload blijft dan geldig. Zelf
+nadraaien: `scripts/testflight_wat_te_testen.py <versie> [ios|macos|all]`.
+
 Actuele kandidaat, checks en open gates: [pilot 5 november](qa/pilot-readiness-2026-11-05.md).

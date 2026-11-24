@@ -80,6 +80,16 @@ private struct IOSProfilesScreen: View {
                     selectedCard(selected)
                         .padding(.top, 10)
 
+                    if selected.detailLevel != nil {
+                        IOSSectionHeader("Detailniveau")
+                            .padding(.top, 24)
+                        ProfileDetailLevelPicker(profile: selected)
+                            .id(selected.id)
+                            .padding(16)
+                            .iosCard()
+                            .padding(.top, 10)
+                    }
+
                     let others = profiles.filter { $0.id != selected.id }
                     if !others.isEmpty {
                         IOSSectionHeader("Overige profielen")

@@ -1,3 +1,5 @@
+import {MemoryRouter} from "react-router-dom";
+import { UsageMeter } from "../../services/usageMeter";
 import { act } from "react";
 import { Store } from "@tauri-apps/plugin-store";
 import { createRoot } from "react-dom/client";
@@ -27,8 +29,9 @@ afterEach(() => {
   useRecordingStore.setState({ backgroundTasks: [] });
 });
 
-it("asks for a template before regeneration and shows the job on Taken", async () => {
+it.each([false, true])("asks for a template and regenerates the saved snapshot (merged=%s)", async merged => {
   const note: Transcript = {
+    merge_sources: merged ? [{ id: "source-a", title: "Bron A", date: "2026-11-10T10:00:00Z" }, { id: "source-b", title: "Bron B", date: "2026-11-12T10:00:00Z" }] : undefined,
     id: "local-regenerate", title: "Overleg", raw_transcription: "We hebben de planning goedgekeurd.",
     notule_html: "<p>Oud</p>", duration_seconds: 12, profile_name: "Standaard", tags: [],
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -37,9 +40,9 @@ it("asks for a template before regeneration and shows the job on Taken", async (
   useProfilesStore.setState({ profiles: [
     { id: "standard", name: "Standaard" }, { id: "decisions", name: "Besluiten" },
   ] });
-  vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn().mockResolvedValue([]), set: vi.fn(), save: vi.fn(),
-  } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({
+    get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
+  } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
@@ -47,7 +50,7 @@ it("asks for a template before regeneration and shows the job on Taken", async (
 
   const container = document.createElement("div");
   const root = createRoot(container);
-  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>); });
   await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Notulen opnieuw genereren met AI"]')!.click(); });
   expect(generate).not.toHaveBeenCalled();
   const select = container.querySelector<HTMLSelectElement>(".td-overlay select")!;
@@ -55,7 +58,8 @@ it("asks for a template before regeneration and shows the job on Taken", async (
   await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-overlay button"))
     .find((button) => button.textContent === "Regenereren")!.click(); });
 
-  expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], undefined, expect.any(Function));
+  expect(generate).toHaveBeenCalledWith(note.raw_transcription, expect.objectContaining({ id: "decisions" }), expect.any(Function), [], "", expect.any(Function), expect.any(UsageMeter), merged, undefined, "volledig");
+  expect(useLocalTranscriptsStore.getState().items.find(item => item.id === note.id)?.raw_transcription).toBe(note.raw_transcription);
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
   expect(useLocalTranscriptsStore.getState().items.find((item) => item.id === note.id)).toMatchObject({ profile_name: "Besluiten", has_notes: true });
   expect(useTranscriptsStore.getState().transcripts.find((item) => item.id === note.id)?.has_notes).toBe(true);
@@ -68,9 +72,9 @@ it("acknowledges Obsidian metadata edits even when imported HTML is unchanged", 
     tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   useSettingsStore.getState().updateSettings({ processing_mode: "local", obsidian_enabled: true });
-  vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn().mockResolvedValue([]), set: vi.fn(), save: vi.fn(),
-  } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({
+    get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
+  } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
@@ -78,11 +82,11 @@ it("acknowledges Obsidian metadata edits even when imported HTML is unchanged", 
   const acknowledge = vi.spyOn(obsidian, "acknowledgeObsidianImport");
   const container = document.createElement("div");
   const root = createRoot(container);
-  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>); });
   await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Exporteren"]')!.click(); });
   await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-export-item"))
     .find(button => button.textContent?.includes("Uit Obsidian"))!.click(); });
-  expect(acknowledge).toHaveBeenCalledWith(note, "# Nieuwe metadata", note.notule_html);
+  expect(acknowledge).toHaveBeenCalledWith(expect.objectContaining(note), "# Nieuwe metadata", note.notule_html);
   await act(async () => { root.unmount(); });
   useSettingsStore.getState().updateSettings({ obsidian_enabled: false });
 });
@@ -94,16 +98,16 @@ it("adds a tag to a local note without a server request", async () => {
     tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   useSettingsStore.getState().updateSettings({ processing_mode: "local" });
-  vi.spyOn(Store, "load").mockResolvedValue({
-    get: vi.fn().mockResolvedValue([]), set: vi.fn(), save: vi.fn(),
-  } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({
+    get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn(),
+  } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
   const serverTags = vi.spyOn(api, "updateTranscriptTags");
   const container = document.createElement("div");
   const root = createRoot(container);
-  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>); });
   await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Tags beheren"]')!.click(); });
   const input = container.querySelector<HTMLInputElement>('input[placeholder="Nieuwe tag..."]')!;
   await act(async () => {
@@ -119,14 +123,14 @@ it("prints a sanitized note inside the app without relying on a popup", async ()
   const note: Transcript = { id: "local-print", title: "Overleg <test>", notule_html: '<p>Planning</p><script>alert(1)</script>',
     duration_seconds: 43.553, tags: [], created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
   useSettingsStore.getState().updateSettings({ processing_mode: "local" });
-  vi.spyOn(Store, "load").mockResolvedValue({ get: vi.fn().mockResolvedValue([]), set: vi.fn(), save: vi.fn() } as unknown as Store);
+  vi.spyOn(Store, "load").mockImplementation(async (file) => ({ get: vi.fn(async (key: string) => key === "library" && file === "document-branding.json" ? {schemaVersion:1,defaultId:null,styles:[]} : []), set: vi.fn(), save: vi.fn() } as unknown as Store));
   await useLocalTranscriptsStore.getState().hydrate();
   await useLocalTranscriptsStore.getState().add(note);
   useTranscriptsStore.setState({ transcripts: [note], selectedId: note.id });
   const popup = vi.spyOn(window, "open");
   const container = document.createElement("div");
   const root = createRoot(container);
-  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>); });
   await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Exporteren"]')!.click(); });
   await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-export-item")).find(button => button.textContent?.includes("PDF"))!.click(); });
   const frame = document.querySelector<HTMLIFrameElement>('iframe[title="Notule afdrukken"]')!;
@@ -135,7 +139,7 @@ it("prints a sanitized note inside the app without relying on a popup", async ()
   expect(frame.srcdoc).not.toContain("<script>");
   expect(popup).not.toHaveBeenCalled();
   const print = vi.spyOn(frame.contentWindow!, "print").mockImplementation(() => {});
-  frame.dispatchEvent(new Event("load"));
+  await act(async () => { frame.dispatchEvent(new Event("load")); });
   expect(print).toHaveBeenCalledOnce();
   vi.useFakeTimers();
   frame.contentWindow!.dispatchEvent(new Event("afterprint"));
@@ -162,7 +166,7 @@ it.each([false, true])("keeps accepted notes intact when review is required (dra
   vi.spyOn(LLMService, "generateNotulen").mockRejectedValue(new NotuleReviewError("Controle onzeker", "<p>Ongecontroleerd nieuw concept</p>"));
   const autoexport = vi.spyOn(obsidian, "exportToObsidian").mockResolvedValue(undefined);
   const container = document.createElement("div"); const root = createRoot(container);
-  await act(async () => { root.render(<TranscriptsPage />); });
+  await act(async () => { root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>); });
   await act(async () => { container.querySelector<HTMLButtonElement>('button[title="Notulen opnieuw genereren met AI"]')!.click(); });
   await act(async () => { Array.from(container.querySelectorAll<HTMLButtonElement>(".td-overlay button")).find(b => b.textContent === "Regenereren")!.click(); });
   expect(update).toHaveBeenCalledWith(note.id, expect.objectContaining({ notule_draft_html: "<p>Ongecontroleerd nieuw concept</p>" }));
@@ -177,4 +181,32 @@ it.each([false, true])("keeps accepted notes intact when review is required (dra
   if (failWrite) { expect(task.error_message).toContain("kon niet worden bewaard"); expect(saved.notule_draft_html).toBeUndefined(); }
   else { expect(task.error_message).toContain("apart bewaard"); expect(container.textContent).toContain("Concept — niet gevalideerd"); }
   await act(async () => { root.unmount(); });
+});
+
+it("uses an existing merge profile when the saved default no longer exists", async () => {
+  const previous = useSettingsStore.getState().default_profile_id;
+  useSettingsStore.getState().updateSettings({ processing_mode: "local", default_profile_id: "removed-profile" });
+  useProfilesStore.setState({ profiles: [{ id: "standard", name: "Standaard" }] });
+  const now = new Date().toISOString();
+  const notes: Transcript[] = ["a", "b"].map(id => ({ id: `local-merge-${id}`, title: `Bron ${id}`,
+    raw_transcription: "Oude transcriptie", notule_html: "<p>Bewaard besluit</p>", duration_seconds: 0,
+    tags: [], created_at: now, updated_at: now }));
+  useLocalTranscriptsStore.setState({ items: notes });
+  useTranscriptsStore.setState({ transcripts: notes, selectedId: null, searchQuery: "", selectedTags: [] });
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<MemoryRouter><TranscriptsPage /></MemoryRouter>));
+    await act(async () => container.querySelector<HTMLButtonElement>('[title="Selectiemodus"]')!.click());
+    await act(async () => container.querySelectorAll<HTMLElement>('.tl-item').forEach(row => row.click()));
+    await act(async () => [...container.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === "Samenvoegen")!.click());
+    expect(container.querySelector<HTMLSelectElement>('dialog select')!.value).toBe("standard");
+    expect([...container.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === "Samenvoegen")!.disabled).toBe(false);
+    expect(useSettingsStore.getState().default_profile_id).toBe("removed-profile");
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    useSettingsStore.getState().updateSettings({ default_profile_id: previous });
+  }
 });

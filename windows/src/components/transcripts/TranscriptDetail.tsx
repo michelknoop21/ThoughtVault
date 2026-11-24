@@ -1,10 +1,15 @@
+import {BrandingPicker} from "./BrandingPicker";
+import {BrandedDocument} from "./BrandedDocument";
+import {saveWordExport} from "../../services/documentExport";
 import { openNoteLink } from "../../services/externalLinks";
-import { correctHTML, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
+import { correctRecording, validateCorrections, upsertCorrection, type PersonalCorrection } from "../../services/personalCorrections";
 import { useProfilesStore } from "../../stores/profilesStore";
 import { usePersonalCorrectionsStore } from "../../stores/personalCorrectionsStore";
 import { CorrectionFields, newCorrection } from "../settings/PersonalCorrections";
 import { DesktopDialog } from "../ui/DesktopDialog";
 import { ContextSuggestionBar } from "./ContextSuggestionBar";
+import { ObsidianBrokenNotice } from "../settings/ObsidianBrokenNotice";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft24Regular,
@@ -29,9 +34,13 @@ import DOMPurify from "dompurify";
 import { prepareNotuleHtml } from "../../services/notulePresentation";
 import { marked } from "marked";
 import type { Transcript } from "../../types";
-import { getTranscriptQuickNote } from "../../services/quickNotes";
+import { exportWithOwnNotes, getTranscriptQuickNote } from "../../services/quickNotes";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 import { draftForReview } from "../../services/notuleAudit";
+import { usageLine } from "../../services/usageMeter";
+import { isConfigured, loadOfferRef, openOffer, type OfferRef } from "../../services/prospectFlow";
+import { ProspectFlowDialog } from "./ProspectFlowDialog";
+import { useToast } from "../ui/InfoBar";
 
 type DetailTab = "notule" | "transcriptie";
 
@@ -42,7 +51,8 @@ interface TranscriptDetailProps {
   onRegenerate: (transcript: Transcript) => void;
   onDelete: (transcript: Transcript) => void;
   onUpdateTitle: (id: string, title: string) => Promise<void>;
-  onSaveNotule: (id: string, html: string) => Promise<void>;
+  /** `transcription` is passed only when a correction changed the transcript. */
+  onSaveNotule: (id: string, html: string, transcription?: string, title?: string) => Promise<void>;
   onCopy: (text: string) => void;
   onExportPDF: (transcript: Transcript) => void;
   onExportTXT: (transcript: Transcript) => void;
@@ -72,6 +82,7 @@ export function TranscriptDetail({
   onOpenTags,
   onGenerateTitle,
 }: TranscriptDetailProps) {
+  const toast = useToast();
   const [detailTab, setDetailTab] = useState<DetailTab>("notule");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -82,9 +93,16 @@ export function TranscriptDetail({
   const [rememberCorrection, setRememberCorrection] = useState(true);
   const [correctionError, setCorrectionError] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [includeOwnNotes, setIncludeOwnNotes] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [pfConfigured, setPfConfigured] = useState(false);
+  const [pfDialog, setPfDialog] = useState(false);
+  const obsidianEnabled = useSettingsStore((s) => s.obsidian_enabled);
+  const [pfRef, setPfRef] = useState<OfferRef | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+  const brandedFrame = useRef<HTMLIFrameElement | null>(null);
+  const currentEditorHTML = () => brandedFrame.current?.contentDocument?.querySelector("[contenteditable]")?.innerHTML ?? editorRef.current?.innerHTML ?? editedHTML;
   const exportRef = useRef<HTMLDivElement>(null);
   /** Set while the correction dialog handles a term suggestion; called once the correction is applied. */
   const suggestionDone = useRef<(() => void) | null>(null);
@@ -95,11 +113,21 @@ export function TranscriptDetail({
   const isRegenerating = regeneratingId === transcript.id;
   const quickNote = transcript.quick_note || getTranscriptQuickNote(transcript.task_id ?? transcript.id);
 
+  const exportTranscript = { ...transcript, notule_html: transcript.notule_html ? exportWithOwnNotes(transcript.notule_html, quickNote, includeOwnNotes) : transcript.notule_html };
+
   // Auto-select tab based on available content
   useEffect(() => {
     if (hasNotule) setDetailTab("notule");
     else if (hasTranscription) setDetailTab("transcriptie");
   }, [transcript.id]);
+
+  // Prospect Flow menu items only appear once URL and key are set.
+  useEffect(() => {
+    let active = true;
+    void isConfigured().then((ok) => { if (active) setPfConfigured(ok); });
+    setPfRef(loadOfferRef(transcript.task_id || transcript.id));
+    return () => { active = false; };
+  }, [transcript.id, exportOpen, pfDialog]);
 
   // Close export menu on outside click
   useEffect(() => {
@@ -140,7 +168,7 @@ export function TranscriptDetail({
   }
 
   async function saveNotuleEdit() {
-    const html = DOMPurify.sanitize(editorRef.current?.innerHTML ?? editedHTML);
+    const html = DOMPurify.sanitize(currentEditorHTML());
     if (!html.trim()) return;
     setIsSaving(true);
     try {
@@ -155,27 +183,31 @@ export function TranscriptDetail({
 
   const correctionScope = () => transcript.profile_id || useProfilesStore.getState().profiles.find(p => p.name === transcript.profile_name || p.id === transcript.profile_name)?.id || null;
   function openCorrection() {
-    const selection = window.getSelection();
-    const selected = selection?.anchorNode?.parentElement?.closest(".td-doc-body") ? selection.toString().trim() : "";
+    const selection = brandedFrame.current?.contentWindow?.getSelection() ?? window.getSelection();
+    const selected = selection?.anchorNode?.parentElement?.closest(".td-doc-body, .tv-content") ? selection.toString().trim() : "";
     suggestionDone.current = null;
     setCorrection({...newCorrection(correctionScope()), variants:[selected]});
     setRememberCorrection(true); setCorrectionError("");
+  }
+  /** Corrects this notule and transcript and, with remember, saves the term. Every correction goes through here. */
+  async function applyCorrection(draft: PersonalCorrection, remember: boolean) {
+    const entry = {...draft, canonical:draft.canonical.trim(), variants:draft.variants.map(v=>v.trim())};
+    const store = usePersonalCorrectionsStore.getState();
+    await store.hydrate();
+    validateCorrections({version:1,entries:remember ? upsertCorrection(store.entries,entry) : [entry]});
+    const corrected = correctRecording(entry, isEditingNotule ? currentEditorHTML() : transcript.notule_html || "", transcript.raw_transcription, transcript.title);
+    await onSaveNotule(transcript.id, corrected.notule, !transcript.merge_sources && corrected.transcript !== transcript.raw_transcription ? corrected.transcript : undefined, corrected.title !== transcript.title ? corrected.title : undefined);
+    if (isEditingNotule) setEditedHTML(corrected.notule);
+    if (remember) {
+      try { await store.save(entry); }
+      catch(e) { throw Error("Notule opgeslagen, maar de correctie is niet onthouden: " + String(e)); }
+    }
   }
   async function saveCorrection() {
     if (!correction) return;
     setIsSaving(true); setCorrectionError("");
     try {
-      const entry = {...correction, canonical:correction.canonical.trim(), variants:correction.variants.map(v=>v.trim())};
-      const store = usePersonalCorrectionsStore.getState();
-      await store.hydrate();
-      validateCorrections({version:1,entries:rememberCorrection ? upsertCorrection(store.entries,entry) : [entry]});
-      const html = correctHTML(isEditingNotule ? editorRef.current?.innerHTML ?? editedHTML : transcript.notule_html || "", [entry], entry.scope ?? undefined);
-      await onSaveNotule(transcript.id,html);
-      if (isEditingNotule) setEditedHTML(html);
-      if (rememberCorrection) {
-        try { await store.save(entry); }
-        catch(e) { setCorrectionError("Notule opgeslagen, maar de correctie is niet onthouden: " + String(e)); return; }
-      }
+      await applyCorrection(correction, rememberCorrection);
       setCorrection(null);
       suggestionDone.current?.(); suggestionDone.current = null;
     } catch(e) { setCorrectionError(e instanceof Error ? e.message : String(e)); }
@@ -216,7 +248,7 @@ export function TranscriptDetail({
               className={`td-tab-btn${detailTab === "transcriptie" ? " active" : ""}`}
               onClick={() => { setDetailTab("transcriptie"); setIsEditingNotule(false); }}
             >
-              Transcriptie
+              {transcript.merge_sources ? "Bronnotulen" : "Transcriptie"}
             </button>
           </div>
         )}
@@ -287,32 +319,54 @@ export function TranscriptDetail({
           </button>
           {exportOpen && (
             <div className="td-export-menu">
+              <label className="own-notes-export"><input type="checkbox" checked={includeOwnNotes} onChange={e => setIncludeOwnNotes(e.target.checked)} /> Eigen notities meenemen</label>
               {transcript.notule_html && (
                 <>
-                  <button className="td-export-item" onClick={() => { onExportPDF(transcript); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onExportPDF(exportTranscript); setExportOpen(false); }}>
                     <DocumentPdf24Regular style={{ fontSize: 15 }} /> PDF
                   </button>
-                  <button className="td-export-item" onClick={() => { onExportMarkdown(transcript); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { void saveWordExport(exportTranscript).catch(e=>toast.show(String(e),"error")); setExportOpen(false); }}>Word (.docx)</button>
+                  <button className="td-export-item" onClick={() => { onExportMarkdown(exportTranscript); setExportOpen(false); }}>
                     <Code24Regular style={{ fontSize: 15 }} /> Markdown
                   </button>
-                  <button className="td-export-item" onClick={() => { onExportHTML(transcript); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onExportHTML(exportTranscript); setExportOpen(false); }}>
                     <ArrowDownload24Regular style={{ fontSize: 15 }} /> HTML
                   </button>
-                  <button className="td-export-item" onClick={() => { onExportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
-                  </button>
-                  <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
-                    <Notebook24Regular style={{ fontSize: 15 }} /> Uit Obsidian
+                  {obsidianEnabled && (
+                    <>
+                      <button className="td-export-item" onClick={() => { onExportObsidian(exportTranscript); setExportOpen(false); }}>
+                        <Notebook24Regular style={{ fontSize: 15 }} /> Naar Obsidian
+                      </button>
+                      <button className="td-export-item" onClick={() => { onImportObsidian(transcript); setExportOpen(false); }}>
+                        <Notebook24Regular style={{ fontSize: 15 }} /> Uit Obsidian
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+              <button className="td-export-item" onClick={() => { onExportTXT(exportTranscript); setExportOpen(false); }}>
+                <TextDescription24Regular style={{ fontSize: 15 }} /> TXT
+              </button>
+              {transcript.notule_html && pfConfigured && (
+                <>
+                  <div className="td-export-divider" />
+                  {pfRef?.number && pfRef.url && (
+                    <button className="td-export-item" onClick={() => {
+                      void openOffer(pfRef.url!).catch(e => toast.show(e instanceof Error ? e.message : String(e), "error"));
+                      setExportOpen(false);
+                    }}>
+                      <Document24Regular style={{ fontSize: 15 }} /> Open offerte {pfRef.number}
+                    </button>
+                  )}
+                  <button className="td-export-item" disabled={isEditingNotule || isSaving} onClick={() => { setPfDialog(true); setExportOpen(false); }}>
+                    <Document24Regular style={{ fontSize: 15 }} /> {pfRef?.number ? "Nieuwe conceptofferte maken" : "Maak offerte in Prospect Flow"}
                   </button>
                 </>
               )}
-              <button className="td-export-item" onClick={() => { onExportTXT(transcript); setExportOpen(false); }}>
-                <TextDescription24Regular style={{ fontSize: 15 }} /> TXT
-              </button>
               {transcript.notule_html && (
                 <>
                   <div className="td-export-divider" />
-                  <button className="td-export-item" onClick={() => { onCopy(htmlToPlainText(prepareNotuleHtml(transcript.notule_html!, transcript.title))); setExportOpen(false); }}>
+                  <button className="td-export-item" onClick={() => { onCopy(htmlToPlainText(prepareNotuleHtml(exportTranscript.notule_html!, transcript.title))); setExportOpen(false); }}>
                     <Copy24Regular style={{ fontSize: 15 }} /> Kopieer tekst
                   </button>
                 </>
@@ -330,6 +384,8 @@ export function TranscriptDetail({
           <Delete24Regular style={{ fontSize: 15 }} />
         </button>
       </div>
+      <ObsidianBrokenNotice />
+      <BrandingPicker transcript={transcript} />
 
       {/* Document content */}
       <div className="td-scroll">
@@ -381,7 +437,7 @@ export function TranscriptDetail({
           </div>
 
           <div className="td-doc-divider" />
-          {quickNote && <details className="td-quick-note"><summary>Snelle notitie bij deze opname</summary><p style={{ whiteSpace: "pre-wrap" }}>{quickNote}</p></details>}
+          {quickNote && !transcript.notule_html?.includes("<!--thoughtvault-own-notes-->") && <details className="td-quick-note"><summary>Eigen notities bij deze opname</summary><p style={{ whiteSpace: "pre-wrap" }}>{quickNote}</p></details>}
           {transcript.notule_draft_html && <section className="td-quick-note" aria-label="Concept ter beoordeling">
             <h3>Concept — niet gevalideerd</h3>
             <p>{transcript.notule_review_reason}</p>
@@ -391,13 +447,23 @@ export function TranscriptDetail({
 
           {detailTab === "notule" && transcript.notule_html && !isEditingNotule && (
             <ContextSuggestionBar key={transcript.id} taskId={transcript.id} profileName={transcript.profile_name ?? ""} scope={correctionScope()}
-              onAddTerm={(entry, done) => { suggestionDone.current = done; setCorrection(entry); setRememberCorrection(true); setCorrectionError(""); }} />
+              onAddTerm={(entry, done) => { suggestionDone.current = done; setCorrection(entry); setRememberCorrection(true); setCorrectionError(""); }}
+              onCorrect={(entry) => applyCorrection(entry, false)} />
           )}
+
+          {detailTab === "notule" && transcript.notule_html && pfConfigured &&
+            (transcript.profile_id === "prospectflow_offerte" || transcript.profile_name === "Prospectflow offerte") &&
+            <section className="context-bar" aria-label="Offerte voorbereiden">
+              <p>Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig.</p>
+              <button className="btn btn-accent" disabled={isEditingNotule || isSaving} onClick={() => setPfDialog(true)}>Notule accorderen en naar Prospect Flow</button>
+            </section>}
 
           {/* Content */}
           {detailTab === "notule" ? (
             transcript.notule_html ? (
-              isEditingNotule ? (
+              transcript.document_branding_json ? (
+                <BrandedDocument transcript={transcript} editable={isEditingNotule} content={isEditingNotule ? editedHTML : undefined} onReady={frame=>{brandedFrame.current=frame;}} />
+              ) : isEditingNotule ? (
                 <div
                   ref={editorRef}
                   className="prose td-doc-body td-doc-editing"
@@ -436,6 +502,9 @@ export function TranscriptDetail({
               </div>
             )
           )}
+          {detailTab === "notule" && transcript.notule_html && !isEditingNotule && (
+            <p className="td-usage-line" style={{ color: "var(--text-secondary)", fontSize: 12, marginTop: 24 }}>{usageLine(transcript.notule_usage, transcript.notule_html)}</p>
+          )}
         </div>
       </div>
 
@@ -448,6 +517,7 @@ export function TranscriptDetail({
           <div className="correction-actions"><button className="btn btn-secondary btn-sm" disabled={isSaving} onClick={() => setCorrection(null)}>Annuleren</button><button className="btn btn-accent btn-sm" disabled={isSaving} onClick={() => void saveCorrection()}>Corrigeren</button></div>
         </div></div>
       </DesktopDialog>}
+      {pfDialog && <ProspectFlowDialog transcript={transcript} onClose={() => setPfDialog(false)} />}
       {deleteConfirm && (
         <DesktopDialog className="td-overlay" label="Notule verwijderen" onClose={() => setDeleteConfirm(false)}>
           <div className="td-confirm" onClick={(e) => e.stopPropagation()}>

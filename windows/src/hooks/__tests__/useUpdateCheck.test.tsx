@@ -1,4 +1,5 @@
 import { act } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Update } from "@tauri-apps/plugin-updater";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -13,7 +14,7 @@ const fakeWindow = {
   hide: vi.fn(async () => {}),
 };
 vi.mock("@tauri-apps/api/webviewWindow", () => ({ WebviewWindow: { getByLabel: vi.fn(async () => null) } }));
-vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => false) }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async (command: string) => command === "app_architecture" ? "x86_64" : false) }));
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => fakeWindow }));
 vi.mock("@tauri-apps/api/app", () => ({getVersion: async () => "1.0.260", getName: async () => "ThoughtVault"}));
 vi.mock("@tauri-apps/plugin-updater", async (importOriginal) => ({
@@ -501,4 +502,89 @@ it.each(["cancelled", "error"] as const)("allows explicit installation after ter
   useRecordingStore.setState({ backgroundTasks: [{ task_id: "terminal", status } as never] });
   await act(async () => { await lastResult.installNow(); });
   expect(u.install).toHaveBeenCalledTimes(1);
+});
+
+
+it("a native candidate is never overwritten by a different manifest release", async () => {
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render();
+  expect(fetch).not.toHaveBeenCalled();
+  expect(lastResult.latestVersion).toBe("1.0.400");
+  expect(lastResult.nativeUpdate).toBe(u);
+});
+
+it.each(["x86_64", "aarch64"])("fallback chooses the native %s installer", async architecture => {
+  await render();
+  vi.mocked(invoke).mockResolvedValueOnce(architecture);
+  vi.stubGlobal("fetch", vi.fn(async () => ({ok:true, json:async()=>({
+    windows_x64:{version:"1.0.500",filename:"ThoughtVault_x64.msi"},
+    windows_arm64:{version:"1.0.501",filename:"ThoughtVault_arm64.msi"},
+  })})));
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  expect(lastResult.latestVersion).toBe(architecture === "aarch64" ? "1.0.501" : "1.0.500");
+  expect(lastResult.downloadUrl).toContain(architecture === "aarch64" ? "_arm64.msi" : "_x64.msi");
+});
+
+it.each([
+  {version:"1.0.200",filename:"old.msi"},
+  {version:"1.0.x",filename:"bad.msi"},
+  {version:"1.0.500",url:"https://evil.test/ThoughtVault.msi"},
+  {version:"1.0.500",url:"https://thoughtvault.yinga.ai/ThoughtVault.msi"},
+  {version:"1.0.500",filename:"../bad.msi"},
+  {version:"1.0.500",filename:"bad.exe"},
+  {version:"1.0.500"},
+])("does not advertise an unusable fallback installer %j", async entry => {
+  await render();
+  vi.stubGlobal("fetch", vi.fn(async () => ({ok:true,json:async()=>({windows_x64:entry})})));
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  expect(lastResult.isUpdateAvailable).toBe(false);
+  expect(lastResult.downloadUrl).toBeNull();
+});
+
+it("an in-flight fallback cannot overwrite a newly discovered native candidate", async () => {
+  await render();
+  let finish!: (response: unknown) => void;
+  vi.stubGlobal("fetch", vi.fn(() => new Promise(resolve => { finish = resolve; })));
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  const u = fakeUpdate("1.0.400");
+  checkMock.mockResolvedValue(u);
+  await act(async () => { window.dispatchEvent(new Event(CHECK_UPDATES_EVENT)); });
+  await act(async () => { finish({ok:true,json:async()=>({windows_x64:{version:"1.0.999",filename:"different.msi"}})}); });
+  expect(lastResult.latestVersion).toBe("1.0.400");
+  expect(lastResult.nativeUpdate).toBe(u);
+  expect(lastResult.downloadUrl).toBeNull();
+});
+
+// TV-000019: the Windows updater exits without RunEvent::Exit, so JS must end the session first.
+function sessionCalls() {
+  return vi.mocked(invoke).mock.calls.filter(([command]) => command === "session_end" || command === "session_stage");
+}
+function endsSessionBeforeInstall(u: ReturnType<typeof fakeUpdate>) {
+  const end = vi.mocked(invoke).mock.calls.findIndex(([command]) => command === "session_end");
+  expect(end).toBeGreaterThanOrEqual(0);
+  expect(vi.mocked(invoke).mock.invocationCallOrder[end]).toBeLessThan(u.install.mock.invocationCallOrder[0]);
+}
+it("installNow ends the session before installing", async () => {
+  vi.mocked(invoke).mockClear();
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render();
+  await act(async () => { await lastResult.installNow(); });
+  endsSessionBeforeInstall(u);
+  expect(sessionCalls()).toEqual([["session_end"]]);
+});
+it("installing on close ends the session before installing", async () => {
+  vi.mocked(invoke).mockClear();
+  const u = fakeUpdate("1.0.400"); checkMock.mockResolvedValue(u);
+  await render(); await close();
+  endsSessionBeforeInstall(u);
+  expect(sessionCalls()).toEqual([["session_end"]]);
+});
+it("restores the session marker when the install fails", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.mocked(invoke).mockClear();
+  const u = fakeUpdate("1.0.400"); u.install.mockRejectedValue(new Error("bad signature"));
+  checkMock.mockResolvedValue(u);
+  await render();
+  await expect(lastResult.installNow()).rejects.toThrow("bad signature");
+  expect(sessionCalls()).toEqual([["session_end"], ["session_stage", { stage: null }]]);
 });

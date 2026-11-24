@@ -20,6 +20,7 @@ Alle routes behalve `POST /installations` vragen de headers `X-TV-Installation` 
 | `POST /reports` | zie hieronder | 1,5 MB, 20 per uur per installatie, 60 per uur per IP | `{ticketId, ref, repeated, count, logAttached}` |
 | `GET /tickets` | geen | 120 per uur per installatie (gedeeld) | `{data:[...], pagination:{...}}`, maximaal 50 |
 | `GET /unread-count` | geen | gedeeld | `{data:{count}}` |
+| `POST /tickets/read-all` | geen | gedeeld | `{data:{readThrough}}`; alle eigen meldingen gelezen, inclusief andere pagina's |
 | `GET /tickets/{id}/messages` | geen | gedeeld | `{data:[...]}`, markeert als gelezen |
 | `POST /tickets/{id}/messages` | `{body}` van 1 tot 5000 tekens | 16 KB, gedeeld | het nieuwe bericht |
 
@@ -66,7 +67,7 @@ Velden van een ticket: `id, ref, status, category, description, createdAt, unrea
 
 Alleen bij `kind: auto`, per paar (installatie, fingerprint). Is het ticket nog open, dan gaat er een vervolgbericht "Opnieuw opgetreden (n keer), laatste keer <occurredAt>" met het logbestand, en de teller gaat pas omhoog als dat lukt. Is het ticket RESOLVED, CLOSED of in de hub verwijderd, dan komt er een nieuw ticket en wordt de koppeling overschreven. De bescherming is een lock binnen het proces; dat klopt omdat uvicorn met één worker draait.
 
-De fingerprint is voor alle platforms hetzelfde: SHA-256 van de UTF-8-tekst `<stage>|<ruwe foutmelding>` met de cijfers 0 tot 9 weggehaald, de eerste 16 hexcijfers in kleine letters. Hij wordt berekend vóór het maskeren van het logbestand.
+De fingerprint is voor alle platforms hetzelfde: SHA-256 van de UTF-8-tekst `<stage>|<ruwe foutmelding>` met de cijfers 0 tot 9 weggehaald, de eerste 16 hexcijfers in kleine letters. Hij wordt berekend vóór het maskeren van het logbestand. De macOS- en iOS-app gebruiken in plaats van de ruwe foutmelding de foutsoort uit `LogRedact.describe` (bijvoorbeeld `LocalTranscriberError.timedOut stage=model-load reason=timeout`), zodat dezelfde soort fout met een andere tekst bij hetzelfde ticket komt. Hun `errorText` is dan `Verwerking mislukt tijdens <stage>. code=<meldingscode> error=<foutsoort>`: alleen codes, typenamen en getallen, nooit de tekst van de fout.
 
 ## Waar de code staat
 

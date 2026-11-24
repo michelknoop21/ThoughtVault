@@ -188,6 +188,57 @@ final class SupportViewModelTests: XCTestCase {
         }
     }
 
+    @MainActor func testAutomaticReportCarriesSafeDiagnosticAndStableFingerprint() async throws {
+        let (vm, relay, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        let shown = ["Lokale transcriptie mislukt: PRIVATE_ONE 300s", "Lokale transcriptie mislukt: PRIVATE_TWO 120s"]
+        let diagnostics = shown.map {
+            RecordingViewModel.failureDiagnostic(shown: $0, error: LocalTranscriberError.timedOut(stage: "model-load", message: $0))
+        }
+        for (text, diagnostic) in zip(shown, diagnostics) {
+            await vm.report(stage: .transcriberen, shown: text, error: text, diagnostic: diagnostic)
+        }
+        let reports = await relay.pendingReports()
+        XCTAssertEqual(reports.count, 2)
+        for (report, diagnostic) in zip(reports, diagnostics) {
+            XCTAssertEqual(report.shownMessage, "Verwerking mislukt tijdens transcriberen.")
+            XCTAssertEqual(report.errorText, "Verwerking mislukt tijdens transcriberen. code=\(diagnostic.code) "
+                           + "error=LocalTranscriberError.timedOut stage=model-load reason=timeout")
+            var again = report
+            again.normalizeAutomatic()
+            XCTAssertEqual(again, report)
+        }
+        // Same kind of failure, different dynamic text: one ticket.
+        XCTAssertEqual(reports[0].fingerprint, reports[1].fingerprint)
+        for file in try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+            XCTAssertFalse(String(decoding: try Data(contentsOf: file), as: UTF8.self).contains("PRIVATE_"))
+        }
+    }
+
+    func testNormalizationDropsErrorTextThatIsNotADiagnostic() {
+        let forged = SupportReport.make(kind: "manual", category: .bug, stage: "notule", shown: "x",
+                                        error: "Verwerking mislukt tijdens notule. code=x error=PRIVATE, \"quote\"",
+                                        fingerprint: nil, clickPath: [])
+        var report = forged
+        report.kind = "auto"
+        report.normalizeAutomatic()
+        XCTAssertEqual(report.errorText, "Verwerking mislukt tijdens notule.")
+    }
+
+    @MainActor func testFailureShownRecordsStaticCodeAndDescriptor() {
+        let vm = RecordingViewModel()
+        vm.recordingState = .error("Kon het audiobestand niet importeren.")
+        XCTAssertEqual(vm.lastFailureDiagnostic, FailureDiagnostic(code: "import-failed", descriptor: "none"))
+        vm.recordingState = .idle
+        vm.recordingFailed(APIError.httpError(422, "PRIVATE-INHOUD", nil))
+        XCTAssertEqual(vm.lastFailureDiagnostic?.descriptor, "APIError.httpError http=422")
+        XCTAssertEqual(vm.lastFailureDiagnostic?.code, LogRedact.mask("PRIVATE-INHOUD"))
+        let task = TranscriptTask(taskId: UUID().uuidString, status: .transcribing)
+        vm.addTask(task)
+        vm.updateTask(task.id, status: .error, errorMessage: "Geannuleerd door gebruiker.", failure: CancellationError())
+        XCTAssertEqual(vm.lastFailureDiagnostic, FailureDiagnostic(code: "cancelled-by-user", descriptor: "cancelled"))
+    }
+
     @MainActor func testAutomaticClassificationUsesOriginalMessageBeforeNormalization() async {
         let (vm, relay, defaults, session, directory, suite) = fixture()
         defer { cleanup(defaults, session, directory, suite) }
@@ -279,6 +330,68 @@ final class SupportViewModelTests: XCTestCase {
         vm.handleSSEEvent(updated)
         XCTAssertEqual(stages, [.notule])
         XCTAssertEqual(vm.activeTasks.first?.rawTranscription, "LOCAL-TRANSCRIPT")
+    }
+
+    @MainActor func testMarkAllReadRefreshesServerStateIncludingNewReplies() async {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        SupportStub.handler { request, _ in
+            switch request.url?.lastPathComponent {
+            case "tickets": .init(status: 200, text: #"{"data":[]}"#)
+            case "unread-count": .init(status: 200, text: #"{"data":{"count":1}}"#)
+            default: .init(status: 200, text: "{}")
+            }
+        }
+        vm.unreadCount = 3
+        await vm.markAllRead()
+        XCTAssertEqual(vm.unreadCount, 1)
+        XCTAssertFalse(vm.markingAllRead)
+        XCTAssertNil(vm.markReadError)
+        SupportStub.handler { request, _ in
+            .init(status: 200, text: request.url?.lastPathComponent == "unread-count" ? #"{"data":{"count":0}}"# : #"{"data":[]}"#)
+        }
+        await vm.markAllRead()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    @MainActor func testSendingCrashReportDoesNotCreateAnUnreadBadge() async {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        await vm.report(stage: .crash, shown: "Onverwacht gestopt", error: "crash")
+        XCTAssertEqual(vm.unreadCount, 0)
+        vm.unreadCount = 2
+        await vm.report(stage: .crash, shown: "Onverwacht gestopt", error: "crash")
+        XCTAssertEqual(vm.unreadCount, 2)
+    }
+
+    @MainActor func testMarkAllReadFailurePreservesUnreadState() async {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        vm.unreadCount = 3
+        await vm.markAllRead()
+        XCTAssertEqual(vm.unreadCount, 3)
+        XCTAssertNotNil(vm.markReadError)
+        XCTAssertFalse(vm.markingAllRead)
+    }
+
+    @MainActor func testUnreadBadgeRemainsUntilTheThreadIsOpened() async throws {
+        let (vm, _, defaults, session, directory, suite) = fixture()
+        defer { cleanup(defaults, session, directory, suite) }
+        SupportStub.handler { request, _ in
+            switch request.url?.lastPathComponent {
+            case "tickets":
+                .init(status: 200, text: #"{"data":[{"id":"c1","ref":"TV-1","status":"WAITING_FOR_USER","category":"BUG","description":"Test","unread":true,"createdAt":"2026-11-17T09:00:00Z"}]}"#)
+            case "messages": .init(status: 200, text: #"{"data":[]}"#)
+            case "unread-count": .init(status: 200, text: #"{"data":{"count":0}}"#)
+            default: .init(status: 201, text: "{}")
+            }
+        }
+        vm.unreadCount = 1
+        await vm.loadTickets()
+        XCTAssertEqual(vm.unreadCount, 1)
+        let ticket = try XCTUnwrap(vm.tickets.first)
+        await vm.openThread(ticket)
+        XCTAssertEqual(vm.unreadCount, 0)
     }
 
     @MainActor func testTicketReadFailuresPreserveExistingState() async {

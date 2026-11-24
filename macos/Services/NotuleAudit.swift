@@ -57,6 +57,11 @@ enum NotuleAudit {
             .enumerated().map { (id: "\(prefix)\($0.offset + 1)", text: $0.element) }
     }
 
+    /// Number of notule sentences the audit checks one by one (its N units), comparable with `maxNoteChecks`.
+    static func noteSentenceCount(_ html: String) -> Int {
+        units(HTMLPlainText.from(scan(html, dropping: ["script", "template", "head"]).html), prefix: "N").count
+    }
+
     /// Explicit constraints that remain mandatory audit obligations (llm.ts).
     // ponytail: lexical Dutch/English constraints only; extend for other languages together with
     // their acceptance fixtures, never treat this as a semantic proof.
@@ -79,6 +84,17 @@ enum NotuleAudit {
         func has(_ pattern: String) -> Bool { regex(pattern, .caseInsensitive).firstMatch(in: sentence, range: whole(sentence)) != nil }
         return has(strongKeyword) || has(anchor) || !(has(hedge) || sentence.hasSuffix("?"))
     }
+
+    /// The constraints kept at detail level kort and normaal: only those with a number, a permission or
+    /// decision word, or a strong keyword. A plain negation may then be left out as a side issue.
+    static func essentialConstraints(_ text: String) -> [String] {
+        constraintSentences(text).filter { sentence in
+            [strongKeyword, anchor].contains { regex($0, .caseInsensitive).firstMatch(in: sentence, range: whole(sentence)) != nil }
+        }
+    }
+
+    /// An amount is never a side issue, whatever the model says (`minor` is refused on it).
+    private static let amount = "[0-9]" + jsSpace + "*(?:euro|procent|%)|€" + jsSpace + "*[0-9]"
 
     // MARK: Model response
 
@@ -147,9 +163,10 @@ enum NotuleAudit {
     /// `sourceUnclear`: the source check warned, so an exact copy of the source still needs the model audit.
     /// `noteConcurrency`: step-2 checks in flight for a long meeting (`NotulenProvider.auditNoteConcurrency`).
     /// `onProgress`: the running step, with finished requests counted for a long meeting.
+    /// `detailLevel`: below volledig a missing side issue may be marked `minor`; volledig is the audit as before.
     static func auditNotule(source: String, html: String, quickNote: String, request: @escaping AuditRequest,
                             requiredSentences: [String] = [], sourceUnclear: Bool = false,
-                            noteConcurrency: Int = auditConcurrency,
+                            noteConcurrency: Int = auditConcurrency, detailLevel: NotuleDetailLevel = .volledig,
                             onProgress: @escaping @Sendable (ModelStep) -> Void = { _ in }) async throws {
         // Only plain semantic HTML has a checkable text representation here, not arbitrary CSS/layout.
         let markup = scan(html, dropping: ["script", "template", "head"])
@@ -170,7 +187,7 @@ enum NotuleAudit {
               sourceUnits.count + noteUnits.count <= 400 else {
             // DEC-065: a long meeting is checked in two steps; within the limit the single request below stays unchanged.
             let checks = try await auditLong(sourceUnits: sourceUnits, noteUnits: noteUnits, request: request,
-                                             noteConcurrency: noteConcurrency, onProgress: onProgress)
+                                             noteConcurrency: noteConcurrency, detailLevel: detailLevel, onProgress: onProgress)
             return try conclude(sourceChecks: checks.source, noteChecks: checks.notes, sourceUnits: sourceUnits,
                                 noteUnits: noteUnits, requiredSentences: requiredSentences)
         }
@@ -181,7 +198,7 @@ enum NotuleAudit {
         Beoordeel EERST of de bron op zichzelf begrijpelijk is, voordat je de notule gebruikt om overeenkomsten te zoeken. Kun je uit een bronzin niet betrouwbaar afleiden wie wat zegt, doet of bedoelt, zet dan uncertain=true en markeer die bronzin uncertain. Een vloeiende notule mag een onbegrijpelijke bron niet achteraf betekenis geven. Vul geen ontbrekende woorden, relaties of getallen in. Onverstaanbare of grammaticaal ontspoorde tekst is geen begroeting, kop of betekenisloze herhaling en mag niet als non_factual worden afgedaan. Twijfel over feiten of acties betekent eveneens uncertain=true.
         Geef alleen JSON, met de onzekerheidsbeslissing eerst: {"uncertain":false,"source":[{"id":"T1","status":"covered"}],"notes":[{"id":"N1","status":"supported","evidence":["T1"]}]}.
         Geef precies één item voor ELKE aangeleverde bron- en notule-ID. Bronstatus: covered, non_factual, missing, uncertain. Notulestatus: supported, non_factual, contradiction, unsupported, uncertain. Alleen notes bevat evidence: uitsluitend relevante T-/Q-IDs. Vermeld iedere bewijsrelatie precies eenmaal bij de notulezin; schrijf geen tweede omgekeerde lijst bij source. supported vereist ten minste één inhoudelijk bron-ID; zonder passend bewijs is een notulezin unsupported, nooit supported met lege evidence. covered betekent dat ten minste één ondersteunde notulezin die bronzin betekenisgetrouw bewaart; anders missing. Een algemene verwijzing naar vereiste acties vervangt niet hun inhoud, actiehouders en termijnen. non_factual bij notes heeft lege evidence en is alleen voor begroetingen, herhalingen zonder nieuwe informatie, opmaaklabels en koppen zonder feitelijke claim; NOOIT voor acties, besluiten, voorwaarden, termijnen of andere feiten. Bij contradiction/unsupported/uncertain mag evidence leeg zijn. Geef geen eindgoedkeuring op basis van alleen trefwoorden of gelijkende namen.
-        """
+        """ + detailLevel.auditSuffix
         let result: Any
         do {
             onProgress(ModelStep(.noteCheck))
@@ -205,7 +222,7 @@ enum NotuleAudit {
             return entry
         }
         let sourceChecks = try verdicts(derivedSource, expected: sourceUnits, references: noteUnits,
-                                        statuses: ["covered", "non_factual", "missing", "uncertain"])
+                                        statuses: detailLevel.sourceStatuses)
         try conclude(sourceChecks: sourceChecks, noteChecks: noteChecks, sourceUnits: sourceUnits, noteUnits: noteUnits,
                      requiredSentences: requiredSentences)
     }
@@ -213,13 +230,23 @@ enum NotuleAudit {
     static let tooLargeMessage = "Deze inhoud is te groot of onvolledig voor betrouwbare controle; beoordeel het concept"
 
     /// The final verdict of both paths: source problems, notule problems, then the obligations.
+    /// `minor` only reaches here below volledig (`verdicts` refuses it otherwise) and only passes for a
+    /// transcription sentence that is not required and names no amount; any other `minor` counts as missing.
     private static func conclude(sourceChecks: [Verdict], noteChecks: [Verdict], sourceUnits: [Unit], noteUnits: [Unit],
                                  requiredSentences: [String]) throws {
+        func allowedMinor(_ check: Verdict, _ text: String) -> Bool {
+            check.status == "minor" && check.id.hasPrefix("T")
+                && !requiredSentences.contains { same(normalize($0), normalize(text)) }
+                && regex(amount, .caseInsensitive).firstMatch(in: text, range: whole(text)) == nil
+        }
         // A valid negative verdict remains a rejection; tell the reviewer which text needs attention.
-        if let problem = sourceChecks.first(where: { $0.status != "covered" && $0.status != "non_factual" }) {
+        if let problem = sourceChecks.first(where: { check in
+            check.status != "covered" && check.status != "non_factual" && !allowedMinor(check, sourceUnits.first { same($0.id, check.id) }!.text)
+        }) {
             let text = sourceUnits.first { same($0.id, problem.id) }!.text
-            throw NotuleAuditError(message: "\(problem.status == "missing" ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"): \(text)",
-                                   finding: "\(problem.status == "missing" ? "Dit is gezegd, maar staat misschien niet in de notule" : "Dit stuk van de opname was niet goed te volgen"): “\(text)”",
+            let missing = problem.status == "missing" || problem.status == "minor"
+            throw NotuleAuditError(message: "\(missing ? "De notule mist broninformatie" : "De bron is onvoldoende duidelijk"): \(text)",
+                                   finding: "\(missing ? "Dit is gezegd, maar staat misschien niet in de notule" : "Dit stuk van de opname was niet goed te volgen"): “\(text)”",
                                    supportMessage: "Inhoudscontrole bron \(problem.id): \(problem.status)")
         }
         try rejectNoteProblem(noteChecks, noteUnits: noteUnits)
@@ -274,7 +301,7 @@ enum NotuleAudit {
                   Set(evidence.map { Array($0.utf16) }).count == evidence.count else {
                 throw NotuleAuditError(message: "Ongeldig controlebewijs")
             }
-            if status == "non_factual" {
+            if status == "non_factual" || status == "minor" {
                 if !evidence.isEmpty { throw NotuleAuditError(message: "Ongeldig controlebewijs") }
             } else if (status == "covered" || status == "supported") && evidence.isEmpty {
                 throw NotuleAuditError(message: "Ontbrekend controlebewijs bij \(id)")

@@ -20,6 +20,12 @@ struct TasksView: View {
 
     @State var taskToCancel: TranscriptTask? = nil
     @State var taskToDelete: TranscriptTask? = nil
+    @State var showImporter = false
+
+    /// Opens the Opnemen tab (macOS empty state).
+    var onStartRecording: (() -> Void)? = nil
+    /// Opens a notule in the Notulen tab (history actions).
+    var onOpenTranscript: ((Transcript) -> Void)? = nil
 
     // MARK: Body
 
@@ -45,14 +51,19 @@ struct TasksView: View {
                     ? recordingVM.activeTasks
                     : (tasksVM.activeTasks + recordingVM.activeTasks.filter { !fetchedIDs.contains($0.taskId) })
 
-                if tasksVM.isLoading && allTasks.isEmpty {
+                // A finished task with a history entry is shown once, under Geschiedenis.
+                let historyIDs = Set(TaskHistoryStore.shared.entries.map(\.id))
+                let shownTasks = allTasks.filter { $0.status.isActive || !historyIDs.contains($0.taskId) }
+                let hasHistory = !TaskHistorySection.entries(excluding: Set(shownTasks.map(\.taskId))).isEmpty
+
+                if tasksVM.isLoading && allTasks.isEmpty && !hasHistory {
                     // First load
                     ProgressView("Taken laden...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if allTasks.isEmpty {
+                } else if shownTasks.isEmpty && !hasHistory {
                     emptyState
                 } else {
-                    taskList(tasks: allTasks, isCompact: isCompact)
+                    taskList(tasks: shownTasks, isCompact: isCompact)
                 }
             }
         }
@@ -129,6 +140,7 @@ struct TasksView: View {
                 if let task = taskToDelete {
                     if task.taskId.hasPrefix("local-") {
                         recordingVM.removeTask(task.taskId)
+                        TaskHistoryStore.shared.remove(task.taskId)
                     } else {
                         Task { await tasksVM.deleteTask(task.taskId) }
                     }
@@ -143,27 +155,6 @@ struct TasksView: View {
                 Text("Weet je zeker dat je \"\(task.filename)\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.")
             }
         }
-    }
-
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack(spacing: TS.Spacing.md) {
-            Image(systemName: "list.bullet.clipboard")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.labelTertiary)
-
-            Text("Geen actieve taken")
-                .font(TS.Font.title3Semibold)
-                .foregroundStyle(Color.labelPrimary)
-
-            Text("Wanneer je een opname start of een audiobestand importeert, verschijnt de voortgang hier.")
-                .font(TS.Font.callout)
-                .foregroundStyle(Color.labelSecondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 300)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Error Banner
@@ -208,6 +199,8 @@ struct TasksView: View {
                         onRestart: recordingVM.canRestartTask(task) ? { recordingVM.restartTask(task) } : nil
                     )
                 }
+                TaskHistorySection(shownTaskIds: Set(tasks.map(\.taskId)), isCompact: isCompact,
+                                   onOpenTranscript: onOpenTranscript)
             }
             .padding(.horizontal, isCompact ? TS.Spacing.md : TS.Spacing.lg)
             .padding(.vertical, TS.Spacing.sm)

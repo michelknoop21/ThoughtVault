@@ -19,8 +19,7 @@ struct SuggestingTextField: View {
     var body: some View {
         HStack(spacing: TS.Spacing.xs) {
             TextField(placeholder, text: $text)
-                .textFieldStyle(.roundedBorder)
-                .font(TS.Font.body)
+                .personFieldStyle()
                 .autocorrectionDisabled()
 
             if !suggestions.isEmpty {

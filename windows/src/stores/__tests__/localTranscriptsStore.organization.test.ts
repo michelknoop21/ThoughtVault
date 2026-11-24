@@ -1,0 +1,38 @@
+import { expect, it, vi } from "vitest";
+import { Store } from "@tauri-apps/plugin-store";
+import type { Transcript } from "../../types";
+import type { LibraryEntry } from "../../services/libraryOrganization";
+
+it("migrates unchanged content, persists folder operations, rolls back failed writes and reopens", async () => {
+  const note = { id: "local-old", title: "Oud", notule_html: "<p>Notule</p>", has_notes: true, tags: ["Bestaand"], local_audio_path: "C:/audio.wav" } as Transcript;
+  const disk: Record<string, unknown> = { items: [note] };
+  const cache: Record<string, unknown> = structuredClone(disk);
+  const save = vi.fn(async () => Object.assign(disk, structuredClone(cache)));
+  // Document branding has its own store file; keep it apart from the notes store.
+  vi.spyOn(Store, "load").mockImplementation(async file => (file === "document-branding.json"
+    ? { get: vi.fn(async () => undefined), set: vi.fn(), save: vi.fn() }
+    : { get: vi.fn(async key => cache[key]), set: vi.fn(async (key, value) => { cache[key] = value; }), save }) as unknown as Store);
+  const { useLocalTranscriptsStore } = await import("../localTranscriptsStore");
+  await useLocalTranscriptsStore.getState().hydrate();
+  expect(useLocalTranscriptsStore.getState().items[0]).toEqual(note);
+  const folder: LibraryEntry = { id: "f", name: "Werk", kind: "folder", labelIDs: [], description: "", automatic: false };
+  await useLocalTranscriptsStore.getState().saveEntry(folder);
+  await useLocalTranscriptsStore.getState().add({ ...note, id: "local-2" });
+  await useLocalTranscriptsStore.getState().move(["local-old", "local-2"], "f");
+  expect(useLocalTranscriptsStore.getState().items.every(t => t.organization?.folderID === "f")).toBe(true);
+  save.mockRejectedValueOnce(new Error("disk full"));
+  await expect(useLocalTranscriptsStore.getState().move(["local-old"], undefined)).rejects.toThrow("disk full");
+  expect(useLocalTranscriptsStore.getState().items.find(t => t.id === "local-old")?.organization?.folderID).toBe("f");
+  await useLocalTranscriptsStore.getState().saveEntry({ ...folder, name: "Project" });
+  expect((disk.items as Transcript[]).every(t => t.organization?.folderID === "f")).toBe(true);
+  await expect(useLocalTranscriptsStore.getState().move(["missing", "local-old"], "f")).rejects.toThrow();
+  await useLocalTranscriptsStore.getState().removeEntry("f");
+  vi.resetModules();
+  const reopened = (await import("../localTranscriptsStore")).useLocalTranscriptsStore;
+  await reopened.getState().hydrate();
+  expect(reopened.getState().library).toEqual([]);
+  const original = reopened.getState().items.find(t => t.id === "local-old")!;
+  expect(original.tags).toEqual(note.tags);
+  expect(original.notule_html).toBe(note.notule_html);
+  expect(original.local_audio_path).toBe(note.local_audio_path);
+});

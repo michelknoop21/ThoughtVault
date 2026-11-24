@@ -5,6 +5,34 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [2026-11-16]: 1.0.329, iCloud voor notulen op Mac en iPhone
+
+### Added
+- macOS en iOS: private synchronisatie van notulen, transcripties, titels, tags en bijbehorende notulegegevens via CloudKit; standaard uit en instelbaar per apparaat. Audio blijft lokaal.
+- Offline wachtrij, handmatige synchronisatie, accountbinding en behoud van beide versies bij bewerkingsconflicten. Bestaande SwiftData-opslag blijft expliciet lokaal.
+- CloudKit- en pushrechten voor beide platformen; het schema is gepubliceerd naar Production.
+
+### Tests
+- 61 gerichte tests geslaagd met een cloudondertekende host; lokale testopslag schakelt CloudKit expliciet uit. Ondertekende Mac- en iOS-builds gecontroleerd. Synchronisatie tussen fysieke apparaten is nog te accepteren.
+
+## [2026-11-16]: 1.0.328, opnamekwaliteit en betrouwbaardere notulen
+
+### Fixed
+- macOS: de ontbrekende systeemaudiofix is teruggebracht. Opnamen volgen wijzigingen in samplefrequentie en blijven uitgelijnd met de microfoon. Een regressietest controleert herhaalde wissels tussen 16, 24 en 48 kHz, ook bij een vertraagde formaatmelding.
+- Introductie op macOS, iOS en Windows: Volgende slaat eerst de ingevoerde sleutel op en controleert precies die sleutel. Alleen een geslaagde controle stelt de aanbieder in; bij een weigering of onbereikbare aanbieder kan de gebruiker bewust overslaan.
+- De prijsgrens van USD 3 invoer en USD 15 uitvoer per miljoen tokens geldt in het gedeelde verzoekpad. Een hogere, verse catalogusprijs telt mee, ook bij een eigen serveradres.
+- Windows: lange antwoorden worden gestreamd en afgebroken antwoorden worden als fout gemeld. Het uitvoerplafond en de denkstand volgen de mogelijkheden van het gekozen model.
+
+## [2026-11-13]: 1.0.322, conceptofferte in Prospect Flow (Windows)
+
+### Added
+- Windows en macOS: vanuit een notule een conceptofferte maken in Prospect Flow (`POST /api/ai/offers/from-conversation`), met klantkeuze, herstel van een onbevestigde aanvraag en het e-mailadres van de maker (`maker_email`), zodat de offerte in Mijn inbox van die collega landt. Vereist in Prospect Flow de module AI-hulp en een ingestelde AI-provider.
+- Terugvalaanbieder voor de notule bij een fout van de gekozen aanbieder.
+
+### Fixed
+- Windows: Test verbinding bij Ollama gebruikt dezelfde controle als de modellijst (`/v1/models`, daarna `/api/tags`). De Rust-opdracht `ollama_test` is weg.
+- CI: een Dev-build krijgt via `tauri build --config` echt de naam en ID van Dev; Tauri 2 leest `TAURI_CONFIG` niet als invoer. Een naamcontrole stopt een Dev-build die de productienaam draagt.
+
 ## [2026-11-12]: Notuletitels afkappen op een woordgrens (1.0.319, 1.0.320)
 
 ### Fixed

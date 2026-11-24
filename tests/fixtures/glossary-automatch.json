@@ -1,0 +1,148 @@
+{
+  "soundKeys": [["Yinga", "jng"], ["Jengo", "jng"], ["Philips", "flps"], ["Backer", "bkr"], ["Bakker", "bkr"], ["Zeeuw", "sw"]],
+  "cases": [
+    {
+      "name": "misheard brand, real word refused",
+      "transcript": "Vandaag sprak Jengo over de planning. Het jonge team was er ook.",
+      "entries": [{"id": "y", "canonical": "Yinga", "variants": [], "scope": null, "enabled": true, "note": "Merknaam"}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["Jengo", "Yinga"], ["jonge", "Yinga"]],
+      "answer": "1 ja\n2 nee",
+      "text": "Vandaag sprak Yinga over de planning. Het jonge team was er ook.",
+      "learned": [["Yinga", "Jengo"]]
+    },
+    {
+      "name": "split word and person name",
+      "transcript": "Sanne Backer zet Kuber netes op. Daarna belt Jan.",
+      "entries": [{"id": "k", "canonical": "Kubernetes", "variants": [], "scope": null, "enabled": true}],
+      "people": [{"id": "p1", "name": "Sanne Bakker", "aliases": ["Sanne"]}],
+      "dismissed": [],
+      "candidates": [["Sanne Backer", "Sanne Bakker"], ["Kuber netes", "Kubernetes"]],
+      "answer": "Antwoord:\n1. ja\n2) ja",
+      "text": "Sanne Bakker zet Kubernetes op. Daarna belt Jan.",
+      "learned": [["Sanne Bakker", "Sanne Backer"], ["Kubernetes", "Kuber netes"]]
+    },
+    {
+      "name": "fixed variant, exact term and dismissed key are skipped",
+      "transcript": "Django en Yinga en Jengo en Jinga.",
+      "entries": [{"id": "y", "canonical": "Yinga", "variants": ["Django"], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": ["learned:yinga:jengo"],
+      "candidates": [["Jinga", "Yinga"]],
+      "answer": "1 ja",
+      "text": "Django en Yinga en Jengo en Yinga.",
+      "learned": [["Yinga", "Jinga"]]
+    },
+    {
+      "name": "same spelling yes and no is replaced once and not learned; known spelling is not learned again",
+      "transcript": "Jengo begon. Later zei Jengo iets anders. Jinga ook.",
+      "entries": [{"id": "y", "canonical": "Yinga", "variants": [], "scope": null, "enabled": true, "learned": ["Jinga"]}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["Jengo", "Yinga"], ["Jengo", "Yinga"], ["Jinga", "Yinga"]],
+      "answer": "1 ja\n2 nee\n3 ja",
+      "text": "Yinga begon. Later zei Jengo iets anders. Yinga ook.",
+      "learned": []
+    },
+    {
+      "name": "unreadable answer means no",
+      "transcript": "Vandaag sprak Jengo.",
+      "entries": [{"id": "y", "canonical": "Yinga", "variants": [], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["Jengo", "Yinga"]],
+      "answer": "Ik weet het niet zeker. 1 misschien\n1 ja\n1 nee",
+      "text": "Vandaag sprak Jengo.",
+      "learned": []
+    },
+    {
+      "name": "disabled entry and other profile are ignored",
+      "transcript": "Vandaag sprak Jengo.",
+      "entries": [{"id": "y", "canonical": "Yinga", "variants": [], "scope": null, "enabled": false}, {"id": "z", "canonical": "Yinga", "variants": [], "scope": "other", "enabled": true}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [],
+      "answer": "",
+      "text": "Vandaag sprak Jengo.",
+      "learned": []
+    },
+    {
+      "name": "short acronym: each meaning checked",
+      "transcript": "AE-oplossingen. AE is een andere afkorting. A–E systemen. A E modellen.",
+      "entries": [{"id": "ai", "canonical": "AI", "variants": [], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["AE", "AI"], ["AE", "AI"], ["A–E", "AI"], ["A E", "AI"]],
+      "answer": "1 ja\n2 nee\n3 ja\n4 ja",
+      "text": "AI-oplossingen. AE is een andere afkorting. AI systemen. AI modellen.",
+      "learned": [["AI", "A–E"]]
+    },
+    {
+      "name": "protected short tokens",
+      "transcript": "https://host/AE `AE` <code>AE</code> <a href=\"/AE\">AE</a> AI. AE modellen.",
+      "entries": [{"id": "ai", "canonical": "AI", "variants": [], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["AE", "AI"]],
+      "answer": "1 ja",
+      "text": "https://host/AE `AE` <code>AE</code> <a href=\"/AE\">AE</a> AI. AI modellen.",
+      "learned": [["AI", "AE"]]
+    },
+    {
+      "name": "short rejected variant",
+      "transcript": "AE modellen.",
+      "entries": [{"id": "ai", "canonical": "AI", "variants": [], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": ["learned:ai:ae"],
+      "candidates": [],
+      "answer": "",
+      "text": "AE modellen.",
+      "learned": []
+    },
+    {
+      "name": "all occurrences, including beyond first batch",
+      "transcript": "AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen. AE modellen.",
+      "entries": [{"id": "ai", "canonical": "AI", "variants": [], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"], ["AE", "AI"]],
+      "answer": "1 ja\n2 ja\n3 ja\n4 ja\n5 ja\n6 ja\n7 ja\n8 ja\n9 ja\n10 ja\n11 ja\n12 ja\n13 ja\n14 ja\n15 ja\n16 ja\n17 ja\n18 ja\n19 ja\n20 ja",
+      "text": "AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen. AI modellen.",
+      "learned": [["AI", "AE"]]
+    },
+    {
+      "name": "four separated letters",
+      "transcript": "A B C D modules. A–B–C–E systemen.",
+      "entries": [{"id": "a", "canonical": "ABCD", "variants": [], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["A B C D", "ABCD"], ["A–B–C–E", "ABCD"]],
+      "answer": "1 ja\n2 ja",
+      "text": "ABCD modules. ABCD systemen.",
+      "learned": [["ABCD", "A B C D"], ["ABCD", "A–B–C–E"]]
+    },
+    {
+      "name": "same sentence, different meanings",
+      "transcript": "AE modellen en AE als andere afkorting.",
+      "entries": [{"id": "a", "canonical": "AI", "variants": [], "scope": null, "enabled": true}],
+      "people": [],
+      "dismissed": [],
+      "candidates": [["AE", "AI"], ["AE", "AI"]],
+      "answer": "1 ja\n2 nee",
+      "text": "AI modellen en AE als andere afkorting.",
+      "learned": []
+    }
+  ],
+  "recordings": [
+    {
+      "name": "fixed acronym in title and every paragraph",
+      "title": "A-E-oplossingen voor A–E",
+      "notule": "<h1>A-E-oplossingen</h1><p>A‑E werkt.</p><p>A—E systemen.</p><a href=\"/A-E\">A-E</a><code>A-E</code>",
+      "transcript": "A-E-oplossingen. A–E modellen. AE blijft contextgevoelig. https://x/A-E `A-E`",
+      "expectedTitle": "AI-oplossingen voor AI",
+      "expectedNotule": "<h1>AI-oplossingen</h1><p>AI werkt.</p><p>AI systemen.</p><a href=\"/A-E\">A-E</a><code>A-E</code>",
+      "expectedTranscript": "AI-oplossingen. AI modellen. AE blijft contextgevoelig. https://x/A-E `A-E`"
+    }
+  ]
+}

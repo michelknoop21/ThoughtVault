@@ -4,15 +4,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
 
 const RELEASES_URL = "https://thoughtvault.yinga.ai/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/releases.json";
-const DOWNLOAD_BASE = "https://thoughtvault.yinga.ai";
 
 function isNewer(remote: string, local: string): boolean {
+  if (!/^\d+\.\d+\.\d+$/.test(remote) || !/^\d+\.\d+\.\d+$/.test(local)) return false;
   const r = remote.split(".").map(Number);
   const l = local.split(".").map(Number);
   if (r.length < 3 || l.length < 3) return false;
   if (r[0] !== l[0]) return r[0] > l[0];
   if (r[1] !== l[1]) return r[1] > l[1];
   return r[2] > l[2];
+}
+
+// The Windows updater exits via process::exit, skipping RunEvent::Exit and its session_end.
+// Close the session first so the next start does not report a crash; restore it if install fails.
+async function installClosingSession(update: Update): Promise<void> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("session_end").catch(() => {});
+  try {
+    await update.install();
+  } catch (error) {
+    await invoke("session_stage", { stage: null }).catch(() => {});
+    throw error;
+  }
 }
 
 export const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -79,25 +92,35 @@ export function useUpdateCheck() {
           }
         }
       } catch { /* The existing manifest check remains a fallback. */ }
-      const res = await fetch(RELEASES_URL);
+      // A verified native candidate owns both the version and its installation action.
+      if (updateRef.current) return;
+      const res = await fetch(RELEASES_URL, { cache: "no-store" });
       if (!res.ok) return;
       const json = await res.json();
 
       // Determine channel from app title
       const isDev = appName.toLowerCase().includes("dev");
 
-      const platformKey = isDev ? "dev_windows_x64" : "windows_x64";
+      const { invoke } = await import("@tauri-apps/api/core");
+      const architecture = await invoke<string>("app_architecture");
+      // Never offer an x64 installer to an ARM installation when architecture is unknown.
+      if (architecture !== "x86_64" && architecture !== "aarch64") return;
+      const platformKey = `${isDev ? "dev_" : ""}windows_${architecture === "aarch64" ? "arm64" : "x64"}`;
       const platformInfo = json[platformKey];
       const remoteVersion = platformInfo?.version;
       if (!remoteVersion || typeof remoteVersion !== "string") return;
-      if (unmountedRef.current) return;
+      if (unmountedRef.current || updateRef.current) return;
 
       if (isNewer(remoteVersion, currentVersion)) {
+        const filename = platformInfo?.filename;
+        const rawUrl = platformInfo?.download_url ?? platformInfo?.url;
+        const url = new URL(rawUrl ?? filename, RELEASES_URL);
+        const base = new URL(RELEASES_URL);
+        if (url.origin !== base.origin || url.username || url.password || url.search || url.hash ||
+            url.pathname.slice(0, url.pathname.lastIndexOf("/") + 1) !== base.pathname.replace("releases.json", "") ||
+            !/^[A-Za-z0-9._-]+\.msi$/.test(decodeURIComponent(url.pathname.split("/").pop() ?? ""))) return;
         setLatestVersion(remoteVersion);
-        if (platformInfo?.url) {
-          const url = new URL(platformInfo.url, DOWNLOAD_BASE);
-          if (url.origin === DOWNLOAD_BASE && url.pathname.startsWith("/d-05921304471ce66e62d0a2b7f324c2354dfb1d895d23a895bba7f86110e2472e/")) setDownloadUrl(url.href);
-        }
+        setDownloadUrl(url.href);
       }
     } catch {
       // Silently ignore — update check is best-effort
@@ -127,7 +150,7 @@ export function useUpdateCheck() {
     if (unmountedRef.current || updateRef.current !== update || keepBeforeInstall || hasMainWork()) return;
     if (installingRef.current) return installingRef.current;
     if (!downloadedRef.current) throw new Error("Update download failed");
-    const installation = update.install();
+    const installation = installClosingSession(update);
     installingRef.current = installation;
     try {
       await installation;
@@ -177,7 +200,7 @@ export function useUpdateCheck() {
           }
           try {
             if (!installation) {
-              installation = update!.install();
+              installation = installClosingSession(update!);
               installingRef.current = installation;
             }
             await installation;

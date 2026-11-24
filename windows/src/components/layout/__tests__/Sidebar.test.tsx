@@ -21,7 +21,7 @@ import { vi } from "vitest";
 import { TranscriptsList } from "../../transcripts/TranscriptsList";
 it("opens notes by keyboard without activating the row from its menu", async () => {
  const host = document.createElement("div"), root = createRoot(host), select = vi.fn(), noop = () => {};
- await act(async () => {root.render(<TranscriptsList transcripts={[{id:"local-review",title:"Review",tags:[],duration_seconds:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString()}]} selectedId={null} searchQuery="" selectedTags={[]} isLoading={false} onSelect={select} onSearchChange={noop} onTagToggle={noop} onRefresh={noop} onContextMenu={noop} onBulkDelete={noop}/>);});
+ await act(async () => {root.render(<TranscriptsList transcripts={[{id:"local-review",title:"Review",tags:[],duration_seconds:1,created_at:new Date().toISOString(),updated_at:new Date().toISOString()}]} selectedId={null} searchQuery="" selectedTags={[]} isLoading={false} onSelect={select} onSearchChange={noop} onTagToggle={noop} onRefresh={noop} onContextMenu={noop} onBulkDelete={async () => false}/>);});
  const row = host.querySelector(".tl-item")!;
  await act(async () => {row.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));});
  expect(select).toHaveBeenCalledWith("local-review");

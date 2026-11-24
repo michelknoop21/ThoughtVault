@@ -250,4 +250,51 @@ final class AppLogTests: XCTestCase {
         XCTAssertNotNil(line)
         XCTAssertLessThan((line ?? "").utf8.count, 2_100)
     }
+
+    func testDescribeNamesAppErrorCasesWithoutAssociatedText() {
+        let secret = "PRIVATE anna@example.com"
+        let cases: [(Error, String)] = [
+            (AudioRecorderError.recordingInterrupted, "AudioRecorderError.recordingInterrupted"),
+            (AudioRecorderError.failedToStart, "AudioRecorderError.failedToStart"),
+            (LocalTranscriberError.transcriptionFailed(secret), "LocalTranscriberError.transcriptionFailed"),
+            (LocalTranscriberError.timedOut(stage: "model-load", message: secret),
+             "LocalTranscriberError.timedOut stage=model-load reason=timeout"),
+            (LocalTranscriberError.modelNotInstalled(secret), "LocalTranscriberError.modelNotInstalled"),
+            (LocalTranscriberError.engineUnavailable(secret), "LocalTranscriberError.engineUnavailable"),
+            (LocalTranscriberError.emptyResult, "LocalTranscriberError.emptyResult"),
+            (LLMError.generationFailed(secret), "LLMError.generationFailed"),
+            (LLMError.serverError(429), "LLMError.serverError http=429"),
+            (LLMError.timedOut, "LLMError.timedOut"),
+            (APIError.httpError(422, secret, secret), "APIError.httpError http=422"),
+            (APIError.networkError(URLError(.notConnectedToInternet)), "APIError.networkError underlying=NSURLErrorDomain -1009"),
+            (APIError.decodingError(NSError(domain: "decoder", code: 1, userInfo: [NSLocalizedDescriptionKey: secret])),
+             "APIError.decodingError underlying=decoder 1"),
+            (NotuleReviewError(reason: secret, draftHtml: secret, supportReason: secret), "NotuleReviewError.rejected"),
+            (NotuleAuditError(message: secret, finding: secret), "NotuleAuditError.finding"),
+            (TranscriberError.recognitionFailed(secret), "TranscriberError.recognitionFailed"),
+            (AudioExtractorError.readFailed(secret), "AudioExtractorError.readFailed"),
+            (ObsidianService.ObsidianError.badStatus(500, secret), "ObsidianError.badStatus http=500"),
+        ]
+        for (error, expected) in cases {
+            let text = LogRedact.describe(error)
+            XCTAssertEqual(text, expected)
+            XCTAssertFalse(text.contains("PRIVATE") || text.contains("anna"), text)
+        }
+    }
+
+    func testDescribeNSErrorGivesDomainCodeAndUnderlyingOnly() {
+        let underlying = NSError(domain: NSPOSIXErrorDomain, code: 2, userInfo: [NSLocalizedDescriptionKey: "PRIVATE"])
+        let error = NSError(domain: NSCocoaErrorDomain, code: 260,
+                            userInfo: [NSUnderlyingErrorKey: underlying, NSFilePathErrorKey: "/Users/anna/PRIVATE.md",
+                                       NSLocalizedDescriptionKey: "PRIVATE"])
+        XCTAssertEqual(LogRedact.describe(error), "NSError NSCocoaErrorDomain 260 underlying=NSPOSIXErrorDomain 2")
+        XCTAssertEqual(LogRedact.describe(URLError(.notConnectedToInternet)), "URLError NSURLErrorDomain -1009")
+        XCTAssertEqual(LogRedact.describe(NSError(domain: "Some domain, with: punctuation", code: 7)),
+                       "NSError Some_domain__with__punctuation 7")
+    }
+
+    func testDescribeCancellation() {
+        XCTAssertEqual(LogRedact.describe(CancellationError()), "cancelled")
+        XCTAssertEqual(LogRedact.describe(URLError(.cancelled)), "cancelled")
+    }
 }

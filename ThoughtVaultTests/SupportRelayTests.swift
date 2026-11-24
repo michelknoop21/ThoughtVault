@@ -267,6 +267,18 @@ final class SupportRelayTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(tickets.first?.lastMessage?.createdAt.timeIntervalSince(tickets[0].createdAt), 3600)
     }
 
+    func testMarkAllReadIsAuthenticatedPostAndPreservesFailures() async throws {
+        reply(status: 200, body: "{}")
+        try await relay.markAllRead()
+        let sent = try XCTUnwrap(SupportStub.requests.last)
+        XCTAssertEqual(sent.httpMethod, "POST")
+        XCTAssertEqual(sent.url?.path, "/support/tickets/read-all")
+        XCTAssertNotNil(sent.value(forHTTPHeaderField: "X-TV-Installation"))
+        reply(status: 503, body: "{}")
+        do { try await relay.markAllRead(); XCTFail("Expected HTTP failure") }
+        catch { XCTAssertEqual(error as? SupportRelayError, .http(503)) }
+    }
+
     func testThreadAndUnreadRoutes() async throws {
         SupportStub.handler { request, _ in
             if request.url?.lastPathComponent == "installations" { return .init(status: 201, text: "{}") }
@@ -674,5 +686,27 @@ final class SupportStub: URLProtocol, @unchecked Sendable {
             result.append(buffer, count: count)
         }
         return result
+    }
+}
+
+final class HelpLinkTests: XCTestCase {
+    func testBaseWithTrailingSlash() {
+        XCTAssertEqual(SupportLinks.helpURL(base: "https://example.com/help/", platform: "macos")?.absoluteString,
+                       "https://example.com/help/?platform=macos")
+    }
+
+    func testBaseWithoutTrailingSlash() {
+        XCTAssertEqual(SupportLinks.helpURL(base: "https://example.com/help", platform: "ios")?.absoluteString,
+                       "https://example.com/help/?platform=ios")
+    }
+
+    func testEmptyOrMissingBaseHidesButton() {
+        XCTAssertNil(SupportLinks.helpURL(base: "", platform: "macos"))
+        XCTAssertNil(SupportLinks.helpURL(base: "  ", platform: "macos"))
+        XCTAssertNil(SupportLinks.helpURL(base: nil, platform: "macos"))
+    }
+
+    func testUnresolvedBuildSettingHidesButton() {
+        XCTAssertNil(SupportLinks.helpURL(base: "$(TV_HELP_URL)", platform: "macos"))
     }
 }

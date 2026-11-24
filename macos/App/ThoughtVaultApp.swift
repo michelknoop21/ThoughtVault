@@ -49,6 +49,8 @@ struct ThoughtVaultApp: App {
         #if os(macOS)
         AppLog.endSessionOnTermination()
         #endif
+        // Before settings sync can write `notulenProvider`: existing installs keep their notule default.
+        NotulenProvider.decideLegacyDefault(defaults: .standard, storeExists: LocalTranscriptStore.storeFileExists)
         // Before any view reads UserDefaults: adopt iCloud-synced provider
         // settings (Ollama Cloud URL/model/provider from the Mac).
         SettingsSyncService.shared.start()
@@ -68,6 +70,7 @@ struct ThoughtVaultApp: App {
                 .environment(calendarService)
                 .environment(permissionManager)
                 .modelContainer(LocalTranscriptStore.shared.container)
+                .task { await NotuleSyncService.shared.start() }
                 .task {
                     #if os(macOS)
                     while !Task.isCancelled {
@@ -88,9 +91,12 @@ struct ThoughtVaultApp: App {
                     guard !AppEnvironment.isDebugSnapshot else { return }
                     // Install the failure hook before startup work or support network awaits.
                     recordingVM.onFailure = { stage, message in
-                        Task { await supportVM.report(stage: stage, shown: message, error: message) }
+                        // Set synchronously just before this hook runs, so it belongs to this failure.
+                        let diagnostic = recordingVM.lastFailureDiagnostic
+                        Task { await supportVM.report(stage: stage, shown: message, error: message, diagnostic: diagnostic) }
                     }
                     if let outcome = supportVM.beginSessionIfNeeded() {
+                        recordingVM.logSettings(trigger: "session")
                         #if os(iOS)
                         supportVM.reconcileSession(isBackground: scenePhase == .background)
                         #endif
@@ -129,11 +135,18 @@ struct ThoughtVaultApp: App {
                 }
                 .onChange(of: NetworkMonitor.shared.isConnected) { _, connected in
                     guard !AppEnvironment.isDebugSnapshot else { return }
+                    if connected { Task { await NotuleSyncService.shared.syncNow() } }
                     if connected && !IOSDebug.supportSeed { Task { await SupportRelay.shared.flush() } }
                 }
                 .onChange(of: scenePhase) { _, phase in
                     guard !AppEnvironment.isDebugSnapshot else { return }
+                    #if os(iOS)
+                    // iOS only: on macOS the phase follows window focus and would flood the log.
+                    DiagnosticLog.scenePhaseChanged(to: phase == .active ? "active" : phase == .background ? "background" : "inactive",
+                                                    inFlight: recordingVM.activeTasks.filter { $0.status.isActive })
+                    #endif
                     if phase == .active {
+                        Task { await NotuleSyncService.shared.syncNow() }
                         #if os(iOS)
                         // Startup must read the previous marker before any resume can replace it.
                         if supportVM.hasBegunSession {
@@ -250,6 +263,9 @@ struct SupportCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .help) {
+            if let help = SupportLinks.help {
+                Button("Handleiding") { NSWorkspace.shared.open(help) }
+            }
             Button("Melding maken…") {
                 supportVM.pane = .report
                 openWindow(id: "support")

@@ -26,7 +26,7 @@ extension TranscriptDetailView {
                 .padding(.top, 6)
             if hasNotule && hasRaw && !isEditingNotule {
                 IOSSegmented(options: [(DetailTab.notule, "Notule", "doc.text"),
-                                       (.raw, "Transcript", "waveform")],
+                                       (.raw, fullTranscript.mergeSourcesJSON == nil ? "Transcript" : "Bronnotulen", "doc.text")],
                              selection: $selectedTab, height: 38)
                     .padding(.horizontal, IOSMetric.gutter)
                     .padding(.top, 14)
@@ -183,11 +183,18 @@ extension TranscriptDetailView {
                 }
             }
             Menu {
+                Toggle("Eigen notities meenemen", isOn: $includeOwnNotes)
+                Divider()
                 Button("PDF", systemImage: "doc.richtext") { exportAsPDF() }
+                Button("Word (.docx)", systemImage: "doc.text") { exportDocument("docx") }
+                Button("HTML", systemImage: "chevron.left.forwardslash.chevron.right") { exportDocument("html") }
                 Button("Markdown", systemImage: "doc.plaintext") { exportAsMarkdown() }
-                Button("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down") { exportToObsidian() }
-                Button("Haal op uit Obsidian", systemImage: "tray.and.arrow.up") { importFromObsidian() }
+                if obsidianEnabled {
+                    Button("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down") { exportToObsidian() }
+                    Button("Haal op uit Obsidian", systemImage: "tray.and.arrow.up") { importFromObsidian() }
+                }
                 Button("Platte tekst", systemImage: "doc.text") { exportAsTXT() }
+                ProspectFlowMenuItems(transcript: fullTranscript, onOpenError: { errorMessage = $0 }) { showProspectFlowSheet = true }
                 Divider()
                 Button("Kopieer tekst", systemImage: "doc.on.doc") { copyContent() }
             } label: {

@@ -1,7 +1,9 @@
+import { refreshProfileAccess } from "./services/prospectFlow";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { startSupportOwner } from "./services/supportOwner";
+import { UpdateContext } from "./contexts/UpdateContext";
 import { useUpdateCheck } from "./hooks/useUpdateCheck";
 import { UpdateBanner } from "./components/ui/UpdateBanner";
 import { TitleBar } from "./components/layout/TitleBar";
@@ -43,7 +45,7 @@ import { canOpenRoute, shouldBlockForLocalNotes } from "./services/routeAccess";
 
 initCrashReporter(); installConsoleForwarding(); installClickPath();
 
-const UpdateContext = createContext<ReturnType<typeof useUpdateCheck> | null>(null);
+
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const {isUpdateAvailable, latestVersion, downloadUrl, nativeUpdate, downloaded, installNow} = useContext(UpdateContext)!;
@@ -55,7 +57,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         <a href="#main-content" className="skip-link">Ga naar hoofdinhoud</a>
         <TitleBar />
         <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-          <Sidebar />
+          <Sidebar updateAvailable={isUpdateAvailable} />
           <main className="app-main" id="main-content">
             <ProcessingBar />
             <OfflineQueueBanner />
@@ -122,6 +124,7 @@ function ProtectedRoutes() {
   useEffect(() => logRoute(location.pathname), [location.pathname]);
   const setProfiles = useProfilesStore((s) => s.setProfiles);
   const showLocalProfiles = useProfilesStore((s) => s.showLocalProfiles);
+  useEffect(() => { void refreshProfileAccess(); }, []);
 
   const addBackgroundTask = useRecordingStore((s) => s.addBackgroundTask);
   const updateBackgroundTask = useRecordingStore((s) => s.updateBackgroundTask);
@@ -221,7 +224,7 @@ function ProtectedRoutes() {
     return <div className="app-shell"><TitleBar /><IdentityGate /></div>;
   }
 
-  if (!has_completed_onboarding && processing_mode !== "local") {
+  if (!has_completed_onboarding) {
     return (
       <div className="app-shell">
         <OnboardingWizard />

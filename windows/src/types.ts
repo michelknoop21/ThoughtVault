@@ -32,7 +32,7 @@ export const TaskStatusLabels: Record<TaskStatus, string> = {
 export type RecordingMode = "microphone" | "combined";
 
 // Notulen providers
-export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic";
+export type NotulenProvider = "cloud" | "ollama" | "lm-studio" | "openai" | "anthropic" | "openrouter";
 
 // Processing mode: "cloud" = upload to backend, "local" = transcribe + generate
 // fully on-device (Whisper + Ollama/LM Studio). Mirrors the macOS processingMode.
@@ -47,6 +47,17 @@ export const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
   { id: "medium", label: "Medium: balans tussen snelheid en kwaliteit", size: "~1,5 GB" },
   { id: "large-v3", label: "Large v3: beste kwaliteit, traag op CPU", size: "~3 GB" },
 ];
+
+// Opt-in cloud speech-to-text with the user's own key (DEC-074). Any
+// OpenAI-compatible /v1/audio/transcriptions endpoint; custom = own base URL.
+export type TranscriptionEngine = "whisper" | "cloud_api";
+export type CloudSttProvider = "openai" | "groq" | "openrouter" | "custom";
+export const CLOUD_STT_PRESETS: Record<CloudSttProvider, { label: string; baseUrl: string; models: string[]; credentialKey: string }> = {
+  openai: { label: "OpenAI", baseUrl: "https://api.openai.com", models: ["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1"], credentialKey: "openai_api_key" },
+  groq: { label: "Groq", baseUrl: "https://api.groq.com/openai", models: ["whisper-large-v3", "whisper-large-v3-turbo"], credentialKey: "groq_api_key" },
+  openrouter: { label: "OpenRouter", baseUrl: "https://openrouter.ai/api", models: ["openai/gpt-4o-transcribe", "openai/whisper-large-v3"], credentialKey: "openrouter_api_key" },
+  custom: { label: "Eigen adres", baseUrl: "", models: [], credentialKey: "custom_stt_api_key" },
+};
 
 // In-progress recording/processing task
 export interface TranscriptTask {
@@ -71,8 +82,55 @@ export interface TranscriptTask {
   username?: string;
 }
 
+/** How a notule run is billed: OpenRouter reports a cost, OpenAI and Anthropic do not, local servers are free,
+ * Ollama with a key is a subscription. */
+export type NotuleBilling = "metered" | "unpriced" | "free" | "subscription";
+
+/** Real length, requests and cost of the run that wrote a notule. Absent on notules from before this existed. */
+export interface NotuleUsage {
+  provider: string;
+  model: string;
+  billing: NotuleBilling;
+  transcript_chars: number;
+  notule_chars: number;
+  words: number;
+  sentences: number;
+  requests: number;
+  unknown_requests: number;
+  input_tokens: number;
+  output_tokens: number;
+  reasoning_tokens: number;
+  /** USD; null when unknown (a request that should have a cost lacked it, or the provider reports none). */
+  cost_usd: number | null;
+  duration_ms: number;
+  steps: Record<string, { requests: number; input_tokens: number; output_tokens: number }>;
+  content_check: "ran" | "skipped";
+  /** Detail level of the run; absent for notules generated before detail levels existed. */
+  detail_level?: NotuleDetailLevel;
+}
+
+/** How much detail a notule keeps; absent everywhere means volledig. */
+export type NotuleDetailLevel = "kort" | "normaal" | "volledig";
+
+/** Per-device totals for one month ("yyyy-MM"). */
+export interface MonthUsage {
+  notules: number;
+  requests: number;
+  cost_usd: number;
+  unknown_cost_runs: number;
+}
+
 // Completed saved transcript
+export interface MergeSource { id: string; title: string; date: string; }
+
 export interface Transcript {
+  merge_sources?: MergeSource[];
+  document_branding_json?: string | null;
+  organization?: import("./services/libraryOrganization").NoteOrganization;
+  auto_label_error?: string;
+  notule_usage?: NotuleUsage;
+  /** Detail level the notule was (or will be) generated with; regenerate and retry start from it. */
+  detail_level?: NotuleDetailLevel;
   notule_draft_html?: string;
   notule_review_reason?: string;
   profile_id?: string;
@@ -121,6 +179,8 @@ export interface Profile {
   notule_prompt?: string;
   output_template?: string;  // Backend uses output_template
   notule_template?: string;  // Frontend alias for compatibility
+  /** Default detail level from the bundled templates (kort, normaal, volledig); absent means volledig. */
+  detail_level?: string;
   is_default?: boolean;
   isDefault?: boolean;
   is_public?: boolean;       // Backend uses is_public
@@ -141,6 +201,7 @@ export const DEFAULT_PROFILES: Profile[] = profileTemplates.map((entry) => ({
   system_prompt: entry.systemPrompt,
   notule_prompt: entry.notulePrompt,
   output_template: entry.template,
+  detail_level: entry.detailLevel,
   is_default: true,
 }));
 
@@ -353,16 +414,27 @@ export interface ProfilesResponse {
 
 // Settings
 export interface AppSettings {
+  /** Usage per month, counted on this pc only. */
+  usage_ledger: Record<string, MonthUsage>;
   server_url: string;
   processing_mode: ProcessingMode;
   whisper_model: string;
+  transcription_engine: TranscriptionEngine;
+  cloud_stt_provider: CloudSttProvider;
+  cloud_stt_model: string;
+  cloud_stt_base_url: string;
   notulen_provider: NotulenProvider;
+  /** Provider tried once when the main one fails; "" = no fallback. */
+  notulen_fallback_provider: NotulenProvider | "";
+  /** The user's notule detail level per profile id; a profile without a choice uses its default. */
+  profile_detail_levels: Record<string, NotuleDetailLevel>;
   ollama_url: string;
   ollama_model: string;
   lm_studio_url: string;
   lm_studio_model: string;
   openai_model: string;
   anthropic_model: string;
+  openrouter_model: string;
   default_profile_id: string;
   default_recording_mode: RecordingMode;
   has_completed_onboarding: boolean;
@@ -374,19 +446,28 @@ export interface AppSettings {
   obsidian_enabled: boolean;
   obsidian_base_url: string;
   obsidian_vault_path: string;
+  prospectflow_base_url: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  usage_ledger: {},
   server_url: "https://n8n.prezent.nl/tstudio/api",
   processing_mode: "local",
   whisper_model: "medium",
-  notulen_provider: "ollama",
+  transcription_engine: "whisper",
+  cloud_stt_provider: "openai",
+  cloud_stt_model: "gpt-4o-transcribe",
+  cloud_stt_base_url: "",
+  notulen_provider: "openrouter",
+  notulen_fallback_provider: "",
+  profile_detail_levels: {},
   ollama_url: "http://localhost:11434",
   ollama_model: "llama3.2",
   lm_studio_url: "http://localhost:1234",
   lm_studio_model: "local-model",
   openai_model: "gpt-5.6-terra",
   anthropic_model: "claude-sonnet-5-5",
+  openrouter_model: "mistralai/mistral-large-4-0",
   default_profile_id: "standaard",
   default_recording_mode: "combined",
   has_completed_onboarding: false,
@@ -396,4 +477,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   obsidian_enabled: false,
   obsidian_base_url: "https://127.0.0.1:27124",
   obsidian_vault_path: "Notulen",
+  prospectflow_base_url: "",
 };

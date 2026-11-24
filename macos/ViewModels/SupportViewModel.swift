@@ -9,6 +9,8 @@ final class SupportViewModel {
     private(set) var hasBegunSession = false
     @ObservationIgnored private var pollingTask: Task<Void, Never>?
     var unreadCount = 0
+    private(set) var markingAllRead = false
+    private(set) var markReadError: String?
     var tickets: [SupportTicket] = []
     var thread: [SupportMessage] = []
     var pane: SupportPane = .report
@@ -42,7 +44,8 @@ final class SupportViewModel {
             || defaults.bool(forKey: SupportIdentity.autoReportKey)
     }
 
-    func report(stage: SupportStage, shown: String, error: String) async {
+    /// `diagnostic` (from `RecordingViewModel.failureDiagnostic`) becomes the report's `errorText` and fingerprint.
+    func report(stage: SupportStage, shown: String, error: String, diagnostic: FailureDiagnostic? = nil) async {
         // Error strings can contain provider response text; never copy them into the log.
         logger.warning("Failure during \(stage.rawValue)")
         guard isAutoReportEnabled, Self.shouldReport(shown) else { return }
@@ -50,12 +53,12 @@ final class SupportViewModel {
         guard isAutoReportEnabled else { return }
         let report = SupportReport.make(kind: "auto", category: .bug, stage: stage.rawValue,
                                         shown: shown, error: error,
-                                        fingerprint: Self.fingerprint(stage: stage, error: error),
-                                        clickPath: clickPath)
+                                        fingerprint: Self.fingerprint(stage: stage, error: diagnostic?.fingerprintKey ?? error),
+                                        clickPath: clickPath, diagnostic: diagnostic)
         do {
             try await relay.enqueue(report)
             Task { await relay.flush() }
-        } catch { logger.warning("Automatic support report could not be queued") }
+        } catch { logger.warning("Automatic support report could not be queued error=\(LogRedact.describe(error))") }
     }
 
     func reportCrash(runningStage: SupportStage?) async {
@@ -71,20 +74,45 @@ final class SupportViewModel {
     }
 
     func refreshUnread() async {
-        guard !IOSDebug.supportSeed else { return }
+        guard !IOSDebug.supportSeed && !IOSDebug.supportBadgeSnapshot else { return }
         do { unreadCount = try await relay.unreadCount() }
         catch { logger.warning("Support unread count could not be loaded") }
     }
 
     func loadTickets() async {
-        guard !IOSDebug.supportSeed else { return }
+        guard !IOSDebug.supportSeed && !IOSDebug.supportBadgeSnapshot else { return }
         do { tickets = try await relay.tickets() }
         catch { logger.warning("Support tickets could not be loaded") }
     }
 
+    func markAllRead() async {
+        guard !markingAllRead else { return }
+        markingAllRead = true
+        markReadError = nil
+        defer { markingAllRead = false }
+        #if DEBUG
+        if IOSDebug.supportBadgeSnapshot || IOSDebug.supportSeed {
+            tickets = tickets.map { ticket in
+                SupportTicket(id: ticket.id, ref: ticket.ref, status: ticket.status, category: ticket.category,
+                              description: ticket.description, unread: false, createdAt: ticket.createdAt,
+                              updatedAt: ticket.updatedAt, lastMessage: ticket.lastMessage)
+            }
+            unreadCount = 0
+            return
+        }
+        #endif
+        do {
+            try await relay.markAllRead()
+            await loadTickets()
+            await refreshUnread()
+        } catch {
+            markReadError = String(localized: "support.readAll.error")
+        }
+    }
+
     func messages(for ticket: SupportTicket) async -> [SupportMessage]? {
         #if DEBUG
-        if IOSDebug.supportSeed { return DebugScreenshotSeed.supportMessages(for: ticket) }
+        if IOSDebug.supportSeed || IOSDebug.supportBadgeSnapshot { return DebugScreenshotSeed.supportMessages(for: ticket) }
         #endif
         do {
             let messages = try await relay.messages(ticketId: ticket.id)

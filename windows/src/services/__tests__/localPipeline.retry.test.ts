@@ -28,14 +28,14 @@ beforeEach(() => {
 });
 
 it("finishes the existing partial document on retry without retranscribing", async () => {
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   const update = vi.fn().mockResolvedValue(undefined);
   useLocalTranscriptsStore.setState({ items: [partial], add, update });
   vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Volgende week begint de planning.</p>");
 
   await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
 
-  expect(invoke).not.toHaveBeenCalled();
+  expect(vi.mocked(invoke).mock.calls.some(([command]) => command === "transcribe_local")).toBe(false);
   expect(add).not.toHaveBeenCalled();
   expect(update).toHaveBeenCalledWith(partial.id, expect.objectContaining({ has_notes: true }));
   expect(useRecordingStore.getState().backgroundTasks).toHaveLength(1);
@@ -57,7 +57,7 @@ it("keeps simultaneous transcription progress attached to its own task", async (
     throw new Error(`Unexpected command: ${command}`);
   });
   vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
-  useLocalTranscriptsStore.setState({ items: [], add: vi.fn(), update: vi.fn() });
+  useLocalTranscriptsStore.setState({ items: [], add: vi.fn(async (record: Transcript) => record), update: vi.fn() });
   vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>De planning begint maandag.</p>");
 
   const first = processLocally("C:\\first.wav", "standaard", "microphone", [], 12, "local-first");
@@ -76,7 +76,7 @@ it("shows native transcription errors without discarding the original message", 
     throw "Segment lezen mislukt: invalid UTF-8";
   });
   vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   await processLocally("C:\\recording.wav", "standaard", "combined", [], 12, "local-failed");
   expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({
@@ -93,7 +93,7 @@ it("persists imported audio duration and keeps it on the task", async () => {
     throw new Error(`Unexpected command: ${command}`);
   });
   vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Alex controleert maandag de opname.</p>");
   await processLocally("C:\\import.wav", "standaard", "microphone", [], 0, "local-import");
@@ -105,7 +105,7 @@ it("persists imported audio duration and keeps it on the task", async () => {
 
 it("keeps a duration read failure visible without saving an incomplete import", async () => {
   vi.mocked(invoke).mockRejectedValue("Kan de audioduur niet lezen");
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   await processLocally("C:\\missing.wav", "standaard", "microphone", [], 0, "local-missing");
   expect(invoke).toHaveBeenCalledWith("audio_duration", { filePath: "C:\\missing.wav" });
@@ -155,6 +155,7 @@ it("clears stale review fields only when a new validated replacement is saved", 
   await processLocally("C:\\recording.wav", "standaard", "microphone", [], 12, partial.id);
   expect(update).toHaveBeenCalledWith(partial.id, expect.objectContaining({ has_notes: true, notule_draft_html: "", notule_review_reason: "" }));
   expect(useRecordingStore.getState().backgroundTasks[0].status).toBe("completed");
+  expect(invoke).not.toHaveBeenCalledWith("obsidian_get", expect.anything());
 });
 
 it("keeps the recording retryable instead of downloading a missing model without a user action", async () => {
@@ -167,7 +168,7 @@ it("keeps the recording retryable instead of downloading a missing model without
     return undefined as never;
   });
   const generate = vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<p>Noor controleert vrijdag de offertes.</p>");
-  const add = vi.fn();
+  const add = vi.fn(async (record: Transcript) => record);
   useLocalTranscriptsStore.setState({ items: [], add, update: vi.fn() });
   await processLocally("C:/eigen opnamen/één overleg.wav", "standaard", "microphone", [], 12, "local-needs-model");
   expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({
@@ -178,4 +179,51 @@ it("keeps the recording retryable instead of downloading a missing model without
   expect(invoke).not.toHaveBeenCalledWith("transcribe_local", expect.anything());
   expect(generate).not.toHaveBeenCalled();
   expect(add).not.toHaveBeenCalled();
+});
+
+it("saves corrected transcription before generation, even when the model fails", async () => {
+  const input = { ...partial, raw_transcription: "A-E-oplossingen voor het team." };
+  const update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [input], add: vi.fn(), update });
+  vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
+  usePersonalCorrectionsStore.setState({ entries: [{ id: "ai", canonical: "AI", variants: ["A-E"], scope: null, enabled: true }], dismissed: [] });
+  const generate = vi.spyOn(LLMService, "generateNotulen").mockImplementation(async source => {
+    expect(source).toBe("AI-oplossingen voor het team.");
+    expect(update).toHaveBeenCalledWith(input.id, { raw_transcription: source });
+    throw new Error("Model offline");
+  });
+  await processLocally("C:/recording.wav", "standaard", "microphone", [], 12, input.id);
+  expect(generate).toHaveBeenCalled();
+  expect(useTranscriptsStore.getState().transcripts[0].raw_transcription).toBe("AI-oplossingen voor het team.");
+  expect(useRecordingStore.getState().backgroundTasks[0].error_message).toContain("Model offline");
+  usePersonalCorrectionsStore.setState({ entries: [] });
+});
+
+it("creates a new optimized transcription and leaves an existing partial intact", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => {
+    if (command === "whisper_model_status") return { exists: true } as never;
+    if (command === "transcribe_local") return "Alex controleert maandag de opname en de planning." as never;
+    throw new Error(`Unexpected command: ${command}`);
+  });
+  vi.spyOn(usePersonalCorrectionsStore.getState(), "hydrate").mockResolvedValue(undefined);
+  const add = vi.fn(), update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [partial], add, update });
+  vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>Alex controleert de planning.</p>");
+  await processLocally("C:/recording.wav", "standaard", "microphone", [], 12, partial.id, true);
+  expect(invoke).toHaveBeenCalledWith("transcribe_local", expect.objectContaining({ optimizeAudio: true, requestId: expect.not.stringMatching(/^local-partial$/) }));
+  expect(add).toHaveBeenCalledWith(expect.objectContaining({ id: expect.not.stringMatching(/^local-partial$/) }));
+  expect(update).not.toHaveBeenCalledWith(partial.id, expect.anything());
+  expect(partial.notule_html).toBe("");
+});
+
+it("regenerates a completed document from its transcript in a separate record", async () => {
+  const completed = { ...partial, notule_html: "<p>Oorspronkelijke notule</p>", has_notes: true };
+  const add = vi.fn(), update = vi.fn().mockResolvedValue(undefined);
+  useLocalTranscriptsStore.setState({ items: [completed], add, update });
+  vi.spyOn(LLMService, "generateNotulen").mockResolvedValue("<h2>Besluit</h2><p>De planning begint maandag.</p>");
+  await processLocally("C:/recording.wav", "standaard", "microphone", [], 12, undefined, false, completed.id);
+  expect(invoke).not.toHaveBeenCalled();
+  expect(add).toHaveBeenCalledWith(expect.objectContaining({ id: expect.not.stringMatching(/^local-partial$/), raw_transcription: completed.raw_transcription }));
+  expect(update).not.toHaveBeenCalledWith(completed.id, expect.anything());
+  expect(completed.notule_html).toBe("<p>Oorspronkelijke notule</p>");
 });

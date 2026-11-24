@@ -1,0 +1,9 @@
+{
+  "source": "fictief",
+  "facts": [
+    { "id": "start-oogst", "fact": "Oogst begint 3 oktober", "any": ["3 oktober"] },
+    { "id": "prijs", "fact": "Prijs 1,25 per kilo", "any": ["1,25"] },
+    { "id": "transport", "fact": "Marit regelt transport", "any": ["Marit regelt", "transport"] },
+    { "id": "peren", "fact": "Peren uit Zeeland", "any": ["Zeeland"] }
+  ]
+}

@@ -24,17 +24,26 @@ struct ProfileSettingsView: View {
     @State private var showSaved: Bool = false
     @State private var saveError: String? = nil
 
+    /// true: plain stack for a card that shows its own heading (macOS settings).
+    var embedded = false
+
     // MARK: - Body
 
     var body: some View {
-        Section {
-            profileContent
-        } header: {
-            VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-                Text("Profiel")
-                Text("Over jou")
-                    .font(TS.Font.caption)
-                    .foregroundStyle(Color.labelSecondary)
+        Group {
+            if embedded {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) { profileContent }
+            } else {
+                Section {
+                    profileContent
+                } header: {
+                    VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                        Text("Profiel")
+                        Text("Over jou")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
+                    }
+                }
             }
         }
         .onAppear {

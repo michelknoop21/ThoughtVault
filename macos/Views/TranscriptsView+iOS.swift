@@ -24,6 +24,7 @@ extension TranscriptsView {
                     .foregroundStyle(IOSColor.text)
                     .accessibilityAddTraits(.isHeader)
                     .padding(.top, 2)
+                libraryNavigation
                 searchRow
                     .padding(.top, 10)
                 IOSSegmented(options: [(DateFilter.all, "Alles", nil),
@@ -299,6 +300,7 @@ extension TranscriptsView {
             .padding(.top, 18)
         }
         .padding(12)
+        .contextMenu { LibraryMoveMenu(taskIDs: [transcript.taskId], refresh: { await loadTranscripts() }) }
         .iosCard(highlighted: selected)
         .contentShape(Rectangle())
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -312,6 +314,9 @@ extension TranscriptsView {
         HStack {
             Button("Stoppen") { isSelecting = false; selectedIds.removeAll() }
                 .foregroundStyle(IOSColor.text)
+            Spacer()
+            Button("Samenvoegen") { showMergeSheet = true }
+                .disabled(selectedIds.count < 2 || recordingVM.isMerging)
             Spacer()
             Button("Verwijder \(selectedIds.count)", role: .destructive) { showBulkDeleteConfirm = true }
                 .foregroundStyle(selectedIds.isEmpty ? IOSColor.text3 : IOSColor.danger)

@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Delete24Regular, PersonAdd24Regular, People24Regular } from "../components/ui/StudioIcons";
+import { Delete24Regular, Edit24Regular, PersonAdd24Regular, People24Regular } from "../components/ui/StudioIcons";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import type { PersonProfile } from "../types";
-import { PersonEditModal } from "./PersonEditModal";
+import { PersonEditModal, initials } from "./PersonEditModal";
 
 export function PeoplePage() {
   const people = usePeopleDirectoryStore((s) => s.people);
@@ -58,186 +58,146 @@ export function PeoplePage() {
     setEditingPerson(null);
   }
 
-  function getStatusDot(isInternal: boolean | null): { color: string; label: string } {
-    if (isInternal === true) return { color: "var(--fill-accent)", label: "Intern" };
-    if (isInternal === false) return { color: "var(--text-accent)", label: "Extern" };
-    return { color: "var(--text-tertiary)", label: "Onbekend" };
+  function kind(isInternal: boolean | null): { className: string; label: string } {
+    if (isInternal === true) return { className: "intern", label: "Intern" };
+    if (isInternal === false) return { className: "extern", label: "Extern" };
+    return { className: "unknown", label: "Onbekend" };
   }
 
   return (
     <div className="page-scroll desktop-page desktop-people">
-      {/* Page header */}
-      <div className="page-header">
-        <h1 className="page-title-sm">Mensen</h1>
+      <div className="page-content people-wrap">
+        {/* Page header */}
+        <header className="people-head">
+          <div className="people-head-title">
+            <h1>Mensen</h1>
+            {people.length > 0 && (
+              <p>
+                {people.length} {people.length === 1 ? "persoon" : "personen"}. ThoughtVault gebruikt deze lijst om namen goed te schrijven en actiepunten toe te wijzen.
+              </p>
+            )}
+          </div>
           <input
             type="search"
             placeholder="Zoeken..."
+            aria-label="Zoeken"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setDeleteConfirmId(null); }}
             className="input people-toolbar-search"
           />
-        <button
-          className="btn btn-primary"
-          onClick={handleAddPerson}
-          title="Persoon toevoegen"
-        >
-          <PersonAdd24Regular style={{ fontSize: 16 }} />
-          Persoon toevoegen
-        </button>
-      </div>
+          <button
+            className="btn btn-primary"
+            onClick={handleAddPerson}
+            title="Persoon toevoegen"
+          >
+            <PersonAdd24Regular style={{ fontSize: 16 }} />
+            Persoon toevoegen
+          </button>
+        </header>
 
-      {/* Page content */}
-      <div className="page-content">
-        <div className="page-content-narrow">
-
-
-
-          {/* Empty state — no people at all */}
-          {people.length === 0 && (
-            <div
-              className="people-empty"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 12,
-                padding: "48px 16px",
-                textAlign: "center",
-              }}
-            >
-              <People24Regular className="people-empty-icon" />
-              <p style={{ font: "var(--type-subtitle)", color: "var(--text-primary)", margin: 0 }}>
-                Nog geen personen toegevoegd
-              </p>
-              <p style={{ font: "400 13px/1.5 var(--font-family)", color: "var(--text-secondary)", margin: 0, maxWidth: 320 }}>
-                Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen.
-              </p>
-              <button className="btn btn-primary" onClick={handleAddPerson}>
-                Persoon toevoegen
-              </button>
-            </div>
-          )}
-
-          {/* Search empty state — people exist but no search matches */}
-          {people.length > 0 && query && filtered.length === 0 && (
-            <p style={{ color: "var(--text-secondary)", padding: "12px 0", margin: 0 }}>
-              Geen resultaten voor '{search}'
+        {/* Empty state — no people at all */}
+        {people.length === 0 && (
+          <div className="people-empty">
+            <People24Regular className="people-empty-icon" />
+            <p className="people-empty-title">Nog geen personen toegevoegd</p>
+            <p className="people-empty-body">
+              Voeg collega's en bekende externen toe zodat ThoughtVault actiepunten aan hen kan koppelen.
             </p>
-          )}
+            <button className="btn btn-primary" onClick={handleAddPerson}>
+              Persoon toevoegen
+            </button>
+          </div>
+        )}
 
-          {/* Person list */}
-          {filtered.length > 0 && (
-            <div className="settings-group">
-              {filtered.map((person) => {
-                const dot = getStatusDot(person.isInternal);
-                const subtitle = [person.role, person.organization]
-                  .filter(Boolean)
-                  .join(" · ");
-                const isConfirming = deleteConfirmId === person.id;
+        {/* Search empty state — people exist but no search matches */}
+        {people.length > 0 && query && filtered.length === 0 && (
+          <p className="people-no-results">Geen resultaten voor '{search}'</p>
+        )}
 
-                return (
-                  <div
-                    key={person.id}
-                    className="settings-row"
-                    style={{ cursor: isConfirming ? "default" : "pointer", userSelect: "none" }}
-                    onClick={() => !isConfirming && handleEditPerson(person)}
-                  >
-                    {/* Status dot */}
-                    <span
-                      title={dot.label}
-                      style={{
-                        display: "inline-block",
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: dot.color,
-                        flexShrink: 0,
-                        marginRight: 10,
-                        alignSelf: "center",
-                      }}
-                    />
-
-                    {/* Name + subtitle */}
-                    <div className="flex-1">
-                      <p
-                        style={{
-                          font: "var(--type-body)",
-                          fontWeight: 600,
-                          color: "var(--text-primary)",
-                          margin: 0,
-                        }}
-                      >
-                        {person.name || <span style={{ color: "var(--text-tertiary)" }}>Naamloos</span>}
-                      </p>
-                      {subtitle && (
-                        <p
-                          style={{
-                            fontSize: "var(--font-caption)",
-                            color: "var(--text-secondary)",
-                            margin: 0,
-                          }}
-                        >
-                          {subtitle}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Inline delete confirm OR hover-reveal delete button */}
-                    {isConfirming ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "flex-end",
-                          gap: 4,
-                          flexShrink: 0,
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <p
-                          style={{
-                            fontSize: "var(--font-caption)",
-                            color: "var(--text-secondary)",
-                            margin: 0,
-                          }}
-                        >
-                          Weet je het zeker? Dit verwijdert {person.name || "deze persoon"} uit je directory.
-                        </p>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button
-                            className="btn btn-sm"
-                            style={{ color: "var(--fill-system-critical)" }}
-                            onClick={(e) => handleDeleteConfirm(e, person.id)}
-                          >
-                            Verwijderen
-                          </button>
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            onClick={handleDeleteCancel}
-                          >
-                            Annuleren
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        className="btn btn-ghost btn-sm person-row-delete"
-                        aria-label={`Verwijder ${person.name}`} data-log-label="Persoon verwijderen"
-                        title={`Verwijder ${person.name}`}
-                        onClick={(e) => handleDeleteClick(e, person.id)}
-                        style={{ opacity: 0, transition: "opacity 0.1s", flexShrink: 0 }}
-                        onFocus={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
-                        onBlur={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0"; }}
-                      >
-                        <Delete24Regular style={{ fontSize: 16, color: "var(--fill-system-critical)" }} />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+        {/* Person list */}
+        {filtered.length > 0 && (
+          <div className="people-card">
+            <div className="people-row people-row-head" aria-hidden="true">
+              <span /><span>Naam</span><span>Expertise</span><span>Soort</span><span />
             </div>
-          )}
-        </div>
+            {filtered.map((person) => {
+              const k = kind(person.isInternal);
+              const subtitle = [person.role, person.organization]
+                .filter(Boolean)
+                .join(" · ");
+              const isConfirming = deleteConfirmId === person.id;
+              const displayName = person.name || "Naamloos";
+
+              return (
+                <div
+                  key={person.id}
+                  className={`people-row${isConfirming ? " confirming" : ""}`}
+                  onClick={() => !isConfirming && handleEditPerson(person)}
+                >
+                  <span className={`people-avatar ${k.className}`} aria-hidden="true">
+                    {initials(person.name) || <People24Regular />}
+                  </span>
+
+                  {/* Name + subtitle */}
+                  <div className="people-name">
+                    <p>{person.name || <span className="people-muted">Naamloos</span>}</p>
+                    {subtitle && <p className="people-sub">{subtitle}</p>}
+                  </div>
+
+                  <div className="people-tags">
+                    {(person.expertiseTags ?? []).length > 0
+                      ? person.expertiseTags.map((tag) => <span key={tag} className="people-tag">{tag}</span>)
+                      : <span className="people-muted">Nog geen expertise</span>}
+                  </div>
+
+                  <div className="people-kind">
+                    <span className={`people-chip ${k.className}`}>{k.label}</span>
+                  </div>
+
+                  <div className="people-actions">
+                    <button
+                      className="people-icon-btn"
+                      aria-label={`${displayName} bewerken`}
+                      title="Bewerken"
+                      disabled={isConfirming}
+                      onClick={(e) => { e.stopPropagation(); handleEditPerson(person); }}
+                    >
+                      <Edit24Regular />
+                    </button>
+                    <button
+                      className="people-icon-btn danger"
+                      aria-label={`Verwijder ${person.name}`} data-log-label="Persoon verwijderen"
+                      title={`Verwijder ${person.name}`}
+                      disabled={isConfirming}
+                      onClick={(e) => handleDeleteClick(e, person.id)}
+                    >
+                      <Delete24Regular />
+                    </button>
+                  </div>
+
+                  {/* Inline delete confirm */}
+                  {isConfirming && (
+                    <div className="people-confirm" onClick={(e) => e.stopPropagation()}>
+                      <p>Weet je het zeker? Dit verwijdert {person.name || "deze persoon"} uit je directory.</p>
+                      <div>
+                        <button
+                          className="btn btn-sm"
+                          style={{ color: "var(--fill-system-critical)" }}
+                          onClick={(e) => handleDeleteConfirm(e, person.id)}
+                        >
+                          Verwijderen
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={handleDeleteCancel}>
+                          Annuleren
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Edit / Add modal */}
@@ -249,12 +209,6 @@ export function PeoplePage() {
         />
       )}
 
-      {/* Hover-reveal delete button CSS */}
-      <style>{`
-        .settings-row:hover .person-row-delete {
-          opacity: 1 !important;
-        }
-      `}</style>
     </div>
   );
 }

@@ -14,7 +14,7 @@ struct HistoryEntry: Codable, Identifiable {
     let kind: HistoryKind
     let itemId: String
     let date: Date
-    /// "handmatig", "gesprek:<taskId>", "voorstel:<taskId>" or "herstel".
+    /// "handmatig", "gesprek:<taskId>", "voorstel:<taskId>", "automatisch:<taskId>" or "herstel".
     let source: String
     let snapshotJSON: String
 }

@@ -8,6 +8,66 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-074: Optionele cloud-transcriptie met eigen API-sleutel
+
+**Date:** 2026-11-20
+**Status:** Accepted
+
+**Context:** Lokale transcriptie (WhisperKit, Parakeet, Apple Speech, whisper.cpp) is traag op oudere hardware en de backend-route vraagt een account. Gebruikers met een eigen OpenAI- of Groq-sleutel willen transcriptie uitbesteden zonder onze server. DEC-005 belooft dat audio in lokale modus het apparaat niet verlaat.
+
+**Decision:** Een derde engine in lokale modus: `cloudAPI` (macOS/iOS, `CloudAPITranscriber`) en `cloud_api` (Windows, `transcribe_cloud` in `src-tauri/src/transcribe/cloud.rs`). Eén implementatie voor elk OpenAI-compatibel endpoint `POST {base}/v1/audio/transcriptions`, met presets voor OpenAI, Groq en OpenRouter en een vrij adres. De opname gaat in WAV-delen van 10 minuten (16 kHz mono, ongeveer 19 MB) om onder de uploadgrens van 25 MB te blijven; de teksten worden achter elkaar gezet. De sleutel staat in de Keychain of Windows Credential Manager. Op Windows leest Rust de sleutel zelf en accepteert alleen `openai_api_key`, `groq_api_key`, `openrouter_api_key` en `custom_stt_api_key`, zodat de frontend geen willekeurige opgeslagen sleutel naar een zelfgekozen adres kan sturen.
+
+**Consequences:** De privacybelofte van DEC-005 geldt niet meer zodra de gebruiker deze engine kiest; de instellingen tonen dan "Audio gaat naar {aanbieder} voor transcriptie." Er is geen stille terugval naar lokaal: een fout (401 wordt "API-sleutel ongeldig") komt in de taak terecht en de opname blijft beschikbaar voor een nieuwe poging. Android, streaming en aanbieders met een eigen API-formaat vallen erbuiten. De backend verandert niet. Net als bij lokale Whisper gaat de woordenlijst niet als prompt mee; namen worden daarna in de notulestap gecorrigeerd. Uitgewerkt op 9 november, geïntegreerd op 20 november 2026; DEC-060 en DEC-067 tot en met DEC-073 waren toen al vergeven.
+
+---
+
+## DEC-073: Detailniveau per notuleprofiel (Kort, Normaal, Volledig)
+
+**Date:** 2026-11-16
+**Status:** Implemented on `feat/notule-detailniveau`; not measured with a live model
+
+**Context:** Een notule van een gesprek van 45 minuten werd te lang voor wie alleen de afspraken wil teruglezen. De lengte kwam uit de opdracht zelf: de conceptstap en de controle eisten dat elke bronzin terugkwam, ook bijzaken. DEC-071 en DEC-072 zijn gereserveerd voor de videolink en de widget, daarom is dit DEC-073.
+
+**Decision:**
+- Elk profiel in `data/profileBlueprints.json` krijgt een `detailLevel`. Standaard en Projectoverleg: Volledig. Klantgesprek en Brainstorm: Normaal. Executive en 1-op-1: Kort. Promptnotitie heeft geen niveau.
+- Kort en Normaal voegen een blok toe aan de conceptopdracht, na "Verplicht te behouden bronzinnen". De doellengte L hangt af van de lengte T van de gecorrigeerde transcriptie: Kort clamp(0,06 x T, 1.500, 4.000) tekens, Normaal clamp(0,15 x T, 2.500, 8.000). Besluiten, acties met actiehouder en termijn, bedragen, ontkenningen en voorwaarden blijven verplicht.
+- De controle krijgt bij Kort en Normaal de status `minor`: een ontbrekende bronzin die alleen een bijzaak bevat. `minor` geldt nooit voor besluiten, acties, termijnen, bedragen, ontkenningen, voorwaarden, afwezigheid, open vragen of gebruikersnotities; bij twijfel blijft het `missing`.
+- Volledig levert byte-identiek dezelfde opdracht als voorheen. De M3-hashes zijn ongewijzigd.
+- Het gekozen niveau staat bij de notule (`detailLevel`, `detail_level`) en in de gebruiksregel. Opnieuw genereren met hetzelfde profiel gebruikt het opgeslagen niveau, met een ander profiel het niveau van dat profiel.
+- `NotuleDetailLevel.swift` is de bron van de teksten; `notuleDetailLevel.ts` volgt, en een pariteitstest op Windows leest de Swift-bron.
+
+**Consequences:**
+- Of een model met Kort en Normaal werkelijk kortere notules schrijft zonder besluiten te verliezen, is niet gemeten. De meting op het schadebezoek (18 feiten) en het thuisservergesprek (16 kernpunten) volgt met het evalscript op `feat/notule-eval`.
+- Een keuzeveld per profiel en in het venster Opnieuw genereren ontbreekt nog; tot dan geldt het niveau uit het profiel.
+- De kopie van de profielsjablonen in `transcript-studio-backend` heeft geen `detailLevel`. Die liep al achter en de notuleroute via de server is legacy (DEC-060).
+
+---
+
+## DEC-070: Verwerking: Parakeet, OpenRouter als standaard en de iOS-pagina gelijk aan macOS
+
+**Date:** 2026-11-14
+**Status:** Implemented on `feat/ios-verwerking-parakeet-openrouter`; not accepted on a device
+
+**Context:** Op 14 november mislukte lokale transcriptie op een iPhone met "Model gereedmaken duurde te lang (300s)". De oorzaak zat in `withTimeout` (`LocalTranscriber.swift`): die liet één `Task.sleep` van 300 seconden tegen het laden van het model lopen en telde daarmee kloktijd. iOS had de app 12 minuten opgeschort, dus de limiet was al verlopen op het moment dat de app terugkwam, terwijl het model nauwelijks tijd had gehad. Los daarvan liep de iOS-pagina Verwerking achter op macOS: geen Snelle setup, geen modellijst, geen sleutelpaneel. Notulen via OpenRouter bestonden alleen als OpenAI-compatibel adres. DEC-067 tot en met DEC-069 staan op andere branches, daarom is dit DEC-070.
+
+**Decision:**
+- **Parakeet** wordt de derde lokale transcriptie-engine op macOS en iOS naast WhisperKit en Apple Spraakherkenning. De catalogus (`ParakeetCatalog.swift`) kent Parakeet Ultra (632 MB, aanbevolen vanaf 16 GB op een Mac), Parakeet TDT v3 (496 MB, vanaf 8 GB) en Parakeet Redux (220 MB, vraagt macOS 15 of iOS 18). Elk model kent Nederlands en 24 andere talen. Het toestel krijgt het eerste model uit die volgorde waarvoor geheugen, systeemversie en vrije opslag (twee keer de downloadgrootte) toereikend zijn. De drempels zijn een schatting en niet per toestel gemeten. De lijst (`ParakeetModelRows.swift`) is op beide platforms dezelfde, met Download, voortgang met Stop, Verwijder, Opnieuw, de labels "Aangeraden voor deze Mac" en "Aangeraden voor dit toestel" en bij een model dat niet past de reden. De modellen zijn van NVIDIA onder CC BY 4.0, wat in de lijst staat. WhisperKit blijft de engine die Snelle setup instelt. Windows had al een Parakeet-model en blijft ongewijzigd.
+- **OpenRouter** wordt een eigen aanbieder voor notulen op macOS, iOS en Windows, als eerste tegel, met een eigen sleutelveld en standaardmodel `mistralai/mistral-large-4-0` (de uitkomst van de evaluatie in DEC-060). Nieuwe installaties starten op OpenRouter. Bestaande installaties houden hun aanbieder: op Apple beslist `decideLegacyDefault` eenmalig bij de eerste start van de nieuwe versie en bewaart dat in de lokale vlag `notulenLegacyDefault`, die niet synchroniseert en `notulenProvider` zelf niet schrijft. Op Windows zet settingsmigratie naar versie 2 een ontbrekende aanbieder op Ollama. Snelle setup laat een OpenRouter zonder sleutel staan en toont "OpenRouter: sleutel nodig" met de knop "Sleutel invullen"; een andere gehoste aanbieder zonder sleutel valt nog steeds terug op Apple Intelligence of Ollama.
+- **iOS-pagina Verwerking** krijgt dezelfde kaarten als macOS (`SettingsView+VerwerkingIOS.swift`): Snelle setup, Transcriptie met engine, Whisper-modeldownload en Parakeet-rijen, en Notulen met aanbiedertegels, sleutelpaneel en "Terugval bij fout". Logica die beide platformen delen staat in `SettingsView+VerwerkingLogic.swift`.
+- **Opnemen op iOS** mengt met andere audio (`.mixWithOthers`): een video of muziek in een andere app speelt door en komt via de speaker in de opname. `allowBluetoothHFP` is eruit, zodat oordopjes niet naar belkwaliteit schakelen en de microfoon van de iPhone opneemt. Met oordopjes in hoort die microfoon de video dus niet.
+- **Modellimiet**: de tijdslimiet van 300 seconden voor het laden van een lokaal model telt alleen tijd waarin de app draait. `withTimeout` telt nu 300 tikken van een seconde, en tijdens een opschorting door iOS loopt geen tik. iOS pauzeert de verwerking nog steeds zodra de app naar de achtergrond gaat; de gebruiker houdt de app open tijdens verwerking.
+- **Diagnose**: het log en de automatische rapporten bevatten foutcodes, de gebruikte instellingen, de audioroute en de levenscyclus van de app, nooit inhoud. Dat staat beschreven in `SUPPORT-RELAY.md`.
+
+**Measurements (this Mac, not an iPhone):** een opname van 82 minuten met veel ruis kostte 55 seconden met Parakeet v3 en 39 seconden met Ultra, met een piekgeheugen van 757 en 671 MB. Engelse functiewoorden (the, and, you, that) kwamen 325 keer voor in het v3-transcript, 74 keer bij Ultra en 2 keer in het bewaarde Whisper-transcript: v3 laat in dit transcript veel Engelse woorden zien die Whisper niet had. Een opname van 17 minuten duurde met beide ongeveer 10 seconden. Op een iPhone is niets gemeten, dus de geheugendrempels voor iOS en de duur daar zijn niet bewezen.
+
+**Consequences:**
+- Parakeet is op beide platformen beschikbaar maar niet de standaard. Ultra past bij ruisige opnames beter dan v3; of Parakeet Whisper op kwaliteit verslaat, is met de woordtelling niet aangetoond.
+- Een nieuwe installatie kan zonder sleutel geen notulen maken. Snelle setup wijst die sleutel aan, maar een gebruiker die de pagina niet opent, ziet pas bij de eerste notule dat de sleutel ontbreekt.
+- Een bestaande installatie met een gesynchroniseerde `notulenProvider` verandert niet. `decideLegacyDefault` draait voor de start van de instellingensynchronisatie, zodat de beslissing valt voordat er een aanbieder uit iCloud binnenkomt.
+- De opnamewijziging en de iPhone-metingen zijn niet op een toestel geaccepteerd. Het handboek (`14-instellingen.md`, `09-lokaal-of-cloud.md`) is bijgewerkt; de schermafbeeldingen volgen.
+
+---
+
 ## DEC-066: Lokale integratie van support, veilig bijwerken en privacy
 
 **Date:** 2026-11-10
@@ -151,6 +211,23 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 - Elke bronzin met "niet", "geen", "nooit" of "zonder" wordt een verplicht te behouden zin. In het schadebezoek zijn dat er ongeveer 150, en de notule nam ze letterlijk over. Dat is een apart probleem, buiten dit besluit.
 
 ---
+
+## DEC-062: Woordenlijst vindt verkeerd gehoorde spellingen zelf
+
+**Date:** 2026-11-10
+**Status:** Accepted
+
+**Context:** De woordenlijst verving alleen spellingen die de gebruiker zelf als variant had ingevuld. Wie "Yinga" invoert, moest ook "Jengo", "Jinga" en "Django" kennen voordat de notule klopte. Een variant wordt bovendien blind vervangen: als "Django" ooit als variant van Yinga in de lijst komt, verandert elk gesprek over het webframework mee.
+
+**Decision:**
+1. **Kandidaten zonder model.** `GlossaryAutoMatch` (Swift) en `glossaryAutoMatch.ts` zoeken n-grammen van 1 tot 3 woorden die lijken op een actieve term of een persoon uit de personenlijst. Een woord telt mee bij een gelijkenis (1 min Levenshtein gedeeld door de langste lengte) van 0,75 of hoger, of bij een gelijke klanksleutel en een gelijkenis vanaf 0,5. De klanksleutel maakt ph/f, ch/g, ij/ei, ou/au, y/j, c/k, v/f en z/s gelijk, voegt dubbele letters samen en houdt de eerste klank plus de medeklinkers over: "Jengo" en "Yinga" geven allebei `jng`. Woorden onder 4 tekens, de juiste spelling zelf, vaste varianten en afgewezen spellingen vallen af. Hoogstens 12 kandidaten, hoogstens 3 per spelling.
+2. **Eén controle door het notulemodel.** Per kandidaat gaan het gehoorde woord, de zin (hoogstens 160 tekens) en de bedoelde term mee, samen onder de 1500 tekens zodat Apple Intelligence het ook aankan. Het model antwoordt per regel `n ja` of `n nee`. Een onleesbaar of tegenstrijdig antwoord telt als nee. Bij een fout, een time-out van 20 seconden of geen kandidaten loopt de notule door met het ongewijzigde transcript.
+3. **Toepassen en leren.** Alleen de bevestigde plekken worden vervangen, in de tekst die naar de notulegenerator gaat. De opgeslagen transcriptie blijft zoals ze was. Een spelling wordt geleerd als ze in deze opname ergens ja en nergens nee kreeg: bij een term in het nieuwe veld `learned`, bij een persoon als alias, met bron `automatisch:<taskId>` in de geschiedenis zodat herstellen werkt.
+4. **`learned` is geen variant.** Een geleerde spelling gaat mee in "ook gehoord als" in het contextblok en is in een volgende opname meteen kandidaat, maar `PersonalCorrections.text()` vervangt hem niet. Elke opname controleert het model hem opnieuw in context. In de editor maakt "Vast maken" er een variant van. "Verwijderen" zet de sleutel `learned:<term>:<spelling>` in `dismissed`, zodat de spelling niet terugkomt.
+5. **Personen.** Aliassen tellen als bekende spellingen. Een alias die alleen uit delen van de naam bestaat ("Michel" bij "Michel Knoop") doet niet mee, anders zou elke voornaam door de volledige naam worden vervangen.
+6. **Alleen lokale notulen.** De cloudroute krijgt dit niet: daar maakt de server de notule uit het transcript.
+
+**Consequences:** Een opname met kandidaten kost één extra modelaanroep vóór de notule. Het zoeken kost ongeveer 0,4 seconde voor een transcript van een uur met 100 termen en namen (gemeten in vitest op de Mac). De fixture `tests/fixtures/glossary-automatch.json` houdt beide platforms gelijk. Een oudere app-versie leest `learned` niet en laat het veld weg bij opslaan.
 
 ## DEC-061: Lerende context: één woordenlijst, één contextblok, voorstellen na de notule
 

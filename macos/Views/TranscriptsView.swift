@@ -19,7 +19,10 @@ private let logger = AppLog(category: "TranscriptsView")
 /// Locally processed records carry a deterministic "local-<uuid>" task id (minted in
 /// RecordingViewModel.processLocally) and live in SwiftData, not on the server.
 /// Server ids never use this prefix, so the check is unambiguous.
-func isLocalTranscript(_ taskId: String) -> Bool { taskId.hasPrefix("local-") }
+@MainActor
+func isLocalTranscript(_ taskId: String) -> Bool {
+    taskId.hasPrefix("local-") || LocalTranscriptStore.shared.record(forTaskId: taskId) != nil
+}
 
 
 // MARK: - TranscriptsView
@@ -49,12 +52,15 @@ struct TranscriptsView: View {
     @State private var searchDebounceTask: Task<Void, Never>? = nil
     @State var sortNewest = true
     @State var selectedDateFilter: DateFilter = .all
+    @State var librarySelection = "all"
     @State var selectedTags: Set<String> = []
 
     // MARK: State - selection / bulk
 
     @State var isSelecting = false
     @State var selectedIds: Set<String> = []
+    @State var showMergeSheet = false
+    @State private var mergeError: String?
     @State var showBulkDeleteConfirm = false
     @State var transcriptToDelete: Transcript? = nil
     @State var showSingleDeleteConfirm = false
@@ -80,7 +86,10 @@ struct TranscriptsView: View {
     }
 
     var filteredTranscripts: [Transcript] {
-        var result = transcripts
+        var result = transcripts.filter {
+            LibraryOrganization.shared.matches(librarySelection,
+                folderID: LocalTranscriptStore.shared.record(forTaskId: $0.taskId)?.organization.folderID, tags: $0.tags)
+        }
 
         // Search
         if !searchText.isEmpty {
@@ -131,6 +140,11 @@ struct TranscriptsView: View {
         recordingVM.activeTasks.filter { $0.status == .error }
     }
 
+    var libraryNavigation: some View {
+        LibraryNavigation(selection: $librarySelection, transcripts: transcripts, selectedIDs: selectedIds, refresh: { await loadTranscripts() })
+
+    }
+
     // MARK: Body
 
     var body: some View {
@@ -143,6 +157,7 @@ struct TranscriptsView: View {
             // card metadata; wide windows get a capped, centered column.
             let isCompact = geo.size.width < 640
             VStack(spacing: 0) {
+                libraryNavigation
                 searchBar(isCompact: isCompact)
                 filtersRow(isCompact: isCompact)
                 tagFilterRow(isCompact: isCompact)
@@ -154,6 +169,8 @@ struct TranscriptsView: View {
         .toolbar { toolbarContent }
 #endif
         }
+        .onReceive(NotificationCenter.default.publisher(for: LibraryOrganization.didChange)) { _ in Task { await loadTranscripts() } }
+        .onChange(of: librarySelection) { _, _ in selectedIds.removeAll() }
         .navigationTitle("Notulen")
         .navigationDestination(for: Transcript.self) { transcript in
             TranscriptDetailView(transcript: transcript, availableTags: availableTags)
@@ -187,7 +204,37 @@ struct TranscriptsView: View {
         } message: {
             Text("Deze transcriptie wordt permanent verwijderd.")
         }
+        .sheet(isPresented: $showMergeSheet) {
+            MergeNotulenSheet(sources: transcripts.filter { selectedIds.contains($0.id) }) { profileId in
+                let ids = transcripts.filter { selectedIds.contains($0.id) }.map(\.taskId)
+                showMergeSheet = false
+                Task {
+                    do {
+                        let result = try await recordingVM.mergeNotulen(sourceIDs: ids, profileId: profileId)
+                        await loadTranscripts()
+                        isSelecting = false
+                        selectedIds.removeAll()
+                        transcriptsNavPath.append(result)
+                    } catch is CancellationError {
+                        // Cancellation leaves the selection available for another attempt.
+                    } catch { mergeError = error.localizedDescription }
+                }
+            }
+        }
+        .alert("Samenvoegen mislukt", isPresented: Binding(get: { mergeError != nil }, set: { if !$0 { mergeError = nil } })) {
+            Button("OK", role: .cancel) { mergeError = nil }
+        } message: { Text(mergeError ?? "") }
         .task { await loadTranscripts() }
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: LocalTranscriptStore.didChange) {
+                await loadTranscripts()
+            }
+        }
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: NotuleSyncService.didImport) {
+                await loadTranscripts()
+            }
+        }
         .onAppear { if !initialSearch.isEmpty { searchText = initialSearch } }
 #if os(macOS)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -388,6 +435,7 @@ struct TranscriptsView: View {
                 } else {
                     ForEach(filteredTranscripts) { transcript in
                         transcriptCardRow(transcript, isCompact: isCompact)
+                            .draggable(transcript.taskId)
                     }
                 }
             }
@@ -629,6 +677,7 @@ struct TranscriptsView: View {
             showSingleDeleteConfirm = true
         }
         .contextMenu {
+            LibraryMoveMenu(taskIDs: [transcript.taskId], refresh: { await loadTranscripts() })
             Button {
                 transcriptsNavPath.append(transcript)
             } label: {
@@ -663,6 +712,8 @@ struct TranscriptsView: View {
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text("Selecteer \(transcript.title)"))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .offset(x: -14)
         .padding(.top, TS.Spacing.sm)
     }
@@ -674,6 +725,8 @@ struct TranscriptsView: View {
         ToolbarItem(placement: .primaryAction) {
             if isSelecting {
                 HStack(spacing: TS.Spacing.sm) {
+                    Button("Samenvoegen", systemImage: "doc.on.doc") { showMergeSheet = true }
+                        .disabled(selectedIds.count < 2 || recordingVM.isMerging)
                     if !selectedIds.isEmpty {
                         Button {
                             showBulkDeleteConfirm = true
@@ -1004,6 +1057,7 @@ struct TranscriptDetailView: View {
     @State private var regeneratingMessage = ""
     @State var showProfileSheet = false
     @State var profileSheetMode: ProfileSheetMode = .regenerate
+    @State var showProspectFlowSheet = false
 
     enum ProfileSheetMode { case regenerate, retranscribe }
 
@@ -1011,6 +1065,12 @@ struct TranscriptDetailView: View {
 
     @State private var isRetranscribing = false
     @State private var retranscribeMessage = ""
+    @State var includeOwnNotes = true
+    var exportNotuleHTML: String? {
+        fullTranscript.notuleHtml.map { html in
+            RecordingFeatures.enabled ? QuickNoteStore.exportHTML(html, note: QuickNoteStore.note(forTranscriptId: fullTranscript.taskId), includeNotes: includeOwnNotes) : html
+        }
+    }
 
     // MARK: State - editing notulen
 
@@ -1018,13 +1078,12 @@ struct TranscriptDetailView: View {
     @State var editedHTML = ""
     @State private var wordCorrection: PersonalCorrection?
     @State private var pendingObsidianImport: (filename: String, markdown: String, html: String)?
+    /// Obsidian actions are only shown while the switch is on.
+    @AppStorage(ObsidianService.enabledKey) var obsidianEnabled = false
 
     // MARK: State - errors
 
     @State var errorMessage: String? = nil
-    #if os(macOS)
-    @State private var printWebView: WKWebView?
-    #endif
 
     // MARK: Init
 
@@ -1089,7 +1148,7 @@ struct TranscriptDetailView: View {
 #endif
         }
         #if os(macOS)
-        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportAsPDF() })
+        .focusedSceneValue(\.printAction, fullTranscript.notuleHtml == nil ? nil : { exportDocument("print") })
         #endif
         .alert("Titel bewerken", isPresented: $showTitleEditAlert) {
             TextField("Titel", text: $pendingTitle)
@@ -1110,13 +1169,19 @@ struct TranscriptDetailView: View {
         .sheet(item: $wordCorrection) { entry in
             WordCorrectionSheet(entry: entry, profiles: recordingVM.availableProfiles, apply: applyWordCorrection)
         }
+        .sheet(isPresented: $showProspectFlowSheet) {
+            ProspectFlowOfferSheet(transcript: fullTranscript)
+        }
         .sheet(isPresented: $showProfileSheet) {
-            ProfileSelectionSheet(mode: profileSheetMode) { profile, usePremium in
+            // Only local records take a detail level; the server's regenerate call has none.
+            ProfileSelectionSheet(mode: profileSheetMode,
+                                  record: profileSheetMode == .regenerate && isLocalTranscript(fullTranscript.taskId)
+                                      ? LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) : nil) { profile, usePremium, optimizeAudio, retranscribe, level in
                 showProfileSheet = false
-                if profileSheetMode == .regenerate {
-                    Task { await startRegenerate(profileId: profile.id, usePremium: usePremium) }
+                if !retranscribe {
+                    Task { await startRegenerate(profileId: profile.id, usePremium: usePremium, detailLevel: level) }
                 } else {
-                    Task { await startRetranscribe(profileId: profile.id) }
+                    Task { await startRetranscribe(profileId: profile.id, optimizeAudio: optimizeAudio) }
                 }
             }
             .environment(recordingVM)
@@ -1126,6 +1191,11 @@ struct TranscriptDetailView: View {
             // the user taps "Regenereer" (avoids an empty profile list).
             if recordingVM.availableProfiles.isEmpty {
                 await recordingVM.reloadProfiles()
+            }
+            // Screenshot hook: `-TVDebugRegenerate YES` opens the regenerate sheet (debug builds only).
+            if IOSDebug.string("TVDebugRegenerate") == "YES" {
+                profileSheetMode = .regenerate
+                showProfileSheet = true
             }
 
             // Local records already carry full content (raw + notule), no server fetch.
@@ -1202,7 +1272,7 @@ struct TranscriptDetailView: View {
         if hasNotule && hasRaw {
             HStack(spacing: 0) {
                 compactTabButton(.notule, label: "Notule")
-                compactTabButton(.raw, label: "Transcriptie")
+                compactTabButton(.raw, label: transcript.mergeSourcesJSON == nil ? "Transcriptie" : "Bronnotulen")
             }
             .background(Color.surfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: TS.Radius.xs))
@@ -1237,6 +1307,7 @@ struct TranscriptDetailView: View {
 
     @ViewBuilder
     var progressBanners: some View {
+        ObsidianLinkBanner()
         if isRegenerating {
             progressBanner(
                 message: regeneratingMessage.isEmpty
@@ -1477,6 +1548,7 @@ struct TranscriptDetailView: View {
 
             // Export menu
             Menu {
+                if RecordingFeatures.enabled { Toggle("Eigen notities meenemen", isOn: $includeOwnNotes); Divider() }
                 Button { shareContent() } label: {
                     Label("Delen...", systemImage: "square.and.arrow.up")
                 }
@@ -1484,18 +1556,24 @@ struct TranscriptDetailView: View {
                 Button { exportAsPDF() } label: {
                     Label("PDF", systemImage: "doc.richtext")
                 }
+                Button { exportDocument("docx") } label: { Label("Word (.docx)", systemImage: "doc.text") }
+                Button { exportDocument("html") } label: { Label("HTML", systemImage: "chevron.left.forwardslash.chevron.right") }
                 Button { exportAsMarkdown() } label: {
                     Label("Markdown", systemImage: "doc.plaintext")
                 }
-                Button { exportToObsidian() } label: {
-                    Label("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down")
-                }
-                Button { importFromObsidian() } label: {
-                    Label("Haal op uit Obsidian", systemImage: "tray.and.arrow.up")
+                if obsidianEnabled {
+                    Button { exportToObsidian() } label: {
+                        Label("Exporteer naar Obsidian", systemImage: "tray.and.arrow.down")
+                    }
+                    Button { importFromObsidian() } label: {
+                        Label("Haal op uit Obsidian", systemImage: "tray.and.arrow.up")
+                    }
                 }
                 Button { exportAsTXT() } label: {
                     Label("Platte tekst", systemImage: "doc.text")
                 }
+                ProspectFlowMenuItems(transcript: fullTranscript, onOpenError: { errorMessage = $0 }) { showProspectFlowSheet = true }
+                    .disabled(isEditingNotule)
                 Divider()
                 Button { copyContent() } label: {
                     Label("Kopieer tekst", systemImage: "doc.on.doc")
@@ -1734,27 +1812,54 @@ struct TranscriptDetailView: View {
                 ContextSuggestionBar(taskId: fullTranscript.taskId, profileName: fullTranscript.profileName ?? "", scope: correctionProfileId,
                                      profiles: recordingVM.availableProfiles, applyCorrection: applyWordCorrection)
             }
+            if fullTranscript.profileName == "Prospectflow offerte", ProspectFlowService.hasVerifiedKey {
+                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                    Text("Beoordeel de woordenboekvoorstellen en pas de notule aan waar nodig.")
+                        .font(TS.Font.footnote).foregroundStyle(Color.labelSecondary)
+                    Button("Notule accorderen en naar Prospect Flow") { showProspectFlowSheet = true }
+                        .buttonStyle(.borderedProminent).tint(Color.brandPrimary)
+                        .disabled(isEditingNotule)
+                }
+                .padding(TS.Spacing.md).frame(maxWidth: .infinity, alignment: .leading)
+            }
             if isEditingNotule {
                 FormattingToolbar(webView: editableWebViewRef)
                     .padding(.horizontal, TS.Spacing.md)
                     .padding(.vertical, TS.Spacing.xs)
             }
 
-            EditableHTMLWebView(
-                htmlContent: html,
-                editedHTML: $editedHTML,
-                isEditing: isEditingNotule,
-                isDarkMode: colorScheme == .dark,
-                onWebViewReady: { ref in
-                    Task { @MainActor in editableWebViewRef = ref }
+            DocumentBrandingPicker(taskId: fullTranscript.taskId) { json in
+                fullTranscript.documentBrandingJSON = json
+            }
+            if let snapshot = fullTranscript.documentBrandingJSON {
+                DocumentWebView(html: isEditingNotule ? prepareNotuleContent(html) : html,
+                                title: isEditingNotule ? "" : fullTranscript.title,
+                                snapshot: snapshot, editable: isEditingNotule,
+                                onContent: { editedHTML = $0 },
+                                onWebViewReady: { ref in Task { @MainActor in editableWebViewRef = ref } })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                EditableHTMLWebView(
+                    htmlContent: html,
+                    editedHTML: $editedHTML,
+                    isEditing: isEditingNotule,
+                    isDarkMode: colorScheme == .dark,
+                    onWebViewReady: { ref in
+                        Task { @MainActor in editableWebViewRef = ref }
+                    }
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay {
+                    if isEditingNotule {
+                        RoundedRectangle(cornerRadius: 0)
+                            .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
+                    }
                 }
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-                if isEditingNotule {
-                    RoundedRectangle(cornerRadius: 0)
-                        .stroke(Color.brandPrimary.opacity(0.3), lineWidth: 2)
-                }
+            }
+            if !isEditingNotule {
+                NotuleUsageFooter(taskId: fullTranscript.taskId, html: html)
+                    .padding(.horizontal, TS.Spacing.md)
+                    .padding(.vertical, TS.Spacing.xs)
             }
 
             if isEditingNotule {
@@ -1806,7 +1911,7 @@ struct TranscriptDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: TS.Spacing.md) {
                     HStack(alignment: .center) {
-                        Label("Ruwe transcriptie", systemImage: "waveform")
+                        Label(transcript.mergeSourcesJSON == nil ? "Ruwe transcriptie" : "Bronnotulen", systemImage: "doc.text")
                             .font(TS.Font.captionSemibold)
                             .foregroundStyle(Color.labelTertiary)
                         Spacer()
@@ -2040,13 +2145,20 @@ struct TranscriptDetailView: View {
         let entries = try PersonalCorrections.load()
         try PersonalCorrections.validate(CorrectionDocument(entries: remember ? PersonalCorrections.upsert(entries, entry: entry) : [entry]))
         let original = isEditingNotule ? restoreNotuleMarkup(original: fullTranscript.notuleHtml ?? "", editedBody: editedHTML) : fullTranscript.notuleHtml ?? ""
-        let html = PersonalCorrections.html(original, entries: [entry], profileId: entry.scope)
+        let (html, correctedTranscript, title) = PersonalCorrections.apply(entry, notule: original, transcript: fullTranscript.rawTranscription, title: fullTranscript.title)
+        let transcript = fullTranscript.mergeSourcesJSON == nil ? correctedTranscript : fullTranscript.rawTranscription
         if isLocalTranscript(fullTranscript.taskId) {
-            try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html)
+            try LocalTranscriptStore.shared.updateNotule(taskId: fullTranscript.taskId, html: html, transcription: transcript, title: title)
         } else {
             try await APIService.shared.updateNotuleHTML(taskId: fullTranscript.taskId, html: html)
+            if title != fullTranscript.title { try await APIService.shared.updateTranscriptTitle(taskId: fullTranscript.taskId, title: title) }
+            if let transcript, transcript != fullTranscript.rawTranscription {
+                try await APIService.shared.updateTranscription(taskId: fullTranscript.taskId, text: transcript)
+            }
         }
         fullTranscript.notuleHtml = html
+        fullTranscript.rawTranscription = transcript
+        fullTranscript.title = title
         if isEditingNotule { editedHTML = prepareNotuleContent(html); isEditingNotule = false }
         if remember {
             do { try PersonalCorrections.saveRecording(entry, source: "handmatig") }
@@ -2054,6 +2166,7 @@ struct TranscriptDetailView: View {
         }
         if ObsidianService.isEnabled {
             do { try await ObsidianService.tryExport(title: fullTranscript.title, html: html, date: fullTranscript.date, participants: [], profileName: fullTranscript.profileName, tags: fullTranscript.tags, noteID: fullTranscript.taskId) }
+            catch ObsidianService.ObsidianError.vaultLinkBroken {}   // shown once by ObsidianLinkBanner
             catch { errorMessage = "Notule opgeslagen, maar Obsidian-sync mislukt: " + error.localizedDescription }
         }
     }
@@ -2078,6 +2191,8 @@ struct TranscriptDetailView: View {
                         title: fullTranscript.title, html: html, date: fullTranscript.date,
                         participants: [], profileName: fullTranscript.profileName,
                         tags: fullTranscript.tags, noteID: fullTranscript.taskId)
+                } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                    // Shown once by ObsidianLinkBanner.
                 } catch {
                     errorMessage = "Notule opgeslagen, maar Obsidian-sync mislukt: \(error.localizedDescription)"
                 }
@@ -2088,7 +2203,7 @@ struct TranscriptDetailView: View {
         }
     }
 
-    private func startRegenerate(profileId: String, usePremium: Bool = false) async {
+    private func startRegenerate(profileId: String, usePremium: Bool = false, detailLevel: NotuleDetailLevel? = nil) async {
         isRegenerating = true
         regeneratingMessage = "Notule wordt lokaal geregenereerd..."
 
@@ -2097,7 +2212,7 @@ struct TranscriptDetailView: View {
             defer { isRegenerating = false; regeneratingMessage = "" }
             do {
                 let result = try await recordingVM.regenerateNotuleLocally(
-                    taskId: fullTranscript.taskId, profileId: profileId
+                    taskId: fullTranscript.taskId, profileId: profileId, detailLevel: detailLevel
                 )
                 fullTranscript.notuleHtml = result.html
                 fullTranscript.title = result.title
@@ -2162,11 +2277,11 @@ struct TranscriptDetailView: View {
         regeneratingMessage = ""
     }
 
-    private func startRetranscribe(profileId: String) async {
+    private func startRetranscribe(profileId: String, optimizeAudio: Bool) async {
         isRetranscribing = true
         retranscribeMessage = "Controleren op lokale audio..."
 
-        let hasLocal = recordingVM.hasLocalAudio(for: fullTranscript.id)
+        let hasLocal = recordingVM.hasLocalAudio(for: fullTranscript.taskId)
         guard hasLocal else {
             retranscribeMessage = ""
             isRetranscribing = false
@@ -2174,9 +2289,17 @@ struct TranscriptDetailView: View {
             return
         }
 
-        // Retranscription requires RecordingViewModel.retranscribe(), planned for v1.1
-        retranscribeMessage = ""
-        errorMessage = "Hertranscriptie is nog niet beschikbaar"
+        let path = UserDefaults.standard.string(forKey: "localAudio_\(fullTranscript.taskId)")
+            ?? LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId)?.localAudioPath
+        if let path, FileManager.default.fileExists(atPath: path) {
+            if recordingVM.isLocalMode {
+                await recordingVM.processLocally(url: URL(fileURLWithPath: path), profileId: profileId, optimizeAudio: optimizeAudio)
+            } else {
+                await recordingVM.uploadFile(URL(fileURLWithPath: path), profileId: profileId, optimizeAudio: optimizeAudio)
+            }
+        } else {
+            errorMessage = "Geen lokale audio gevonden voor hertranscriptie"
+        }
 
         isRetranscribing = false
         retranscribeMessage = ""
@@ -2184,7 +2307,7 @@ struct TranscriptDetailView: View {
 
     func copyContent() {
         let content: String
-        if selectedTab == .notule, let html = fullTranscript.notuleHtml {
+        if selectedTab == .notule, let html = exportNotuleHTML {
             content = HTMLPlainText.from(html)
         } else {
             content = fullTranscript.rawTranscription ?? ""
@@ -2198,51 +2321,21 @@ struct TranscriptDetailView: View {
         #endif
     }
 
-    func exportAsPDF() {
-        guard let html = fullTranscript.notuleHtml
-                ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
+    func exportAsPDF() { exportDocument("pdf") }
 
-        let styledHTML = """
-        <!DOCTYPE html>
-        <html><head><meta charset="utf-8">
-        <style>
-        body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; font-size: 11.5pt; line-height: 1.65; color: #2c2c30; margin: 0; padding: 28pt 36pt; }
-        h1 { font-size: 18pt; font-weight: 700; color: #7830D8; margin-bottom: 14pt; padding-bottom: 8pt; border-bottom: 1.5pt solid rgba(120,48,216,0.15); }
-        h2 { font-size: 14pt; font-weight: 650; margin-top: 20pt; margin-bottom: 8pt; }
-        h3 { font-size: 12pt; font-weight: 600; color: #555; margin-top: 16pt; margin-bottom: 6pt; }
-        p { margin: 7pt 0; }
-        ul, ol { margin: 7pt 0; padding-left: 22pt; }
-        li { margin: 4pt 0; }
-        strong { font-weight: 600; }
-        table { border-collapse: collapse; width: 100%; margin: 14pt 0; }
-        th, td { border: 1px solid #e0e0e0; padding: 7pt 10pt; text-align: left; font-size: 10.5pt; }
-        th { background: #f8f8fa; font-weight: 600; font-size: 9.5pt; text-transform: uppercase; letter-spacing: 0.4pt; color: #666; }
-        blockquote { border-left: 2.5pt solid #7830D8; margin: 12pt 0; padding: 8pt 16pt; background: #f8f5fe; }
-        </style>
-        </head><body>\(html)</body></html>
-        """
-
-        #if os(macOS)
-        NotulePrinter.print(html: styledHTML) { printWebView = $0 }
-        #else
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(ExportFile.filename(title: fullTranscript.title, ext: "html"))
-        do {
-            try styledHTML.write(to: tempURL, atomically: true, encoding: .utf8)
-        } catch {
-            errorMessage = "Exporteren mislukt: \(error.localizedDescription)"
-            return
+    func exportDocument(_ ext: String) {
+        guard let html = exportNotuleHTML
+            ?? fullTranscript.rawTranscription.map(ExportFile.transcriptHTML) else { return }
+        Task { @MainActor in
+            do { try await DocumentExporter.export(html: html, title: fullTranscript.title,
+                                                   snapshot: fullTranscript.documentBrandingJSON, ext: ext) }
+            catch { errorMessage = "Exporteren mislukt: \(error.localizedDescription)" }
         }
-        let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.present(activityVC, animated: true)
-        }
-        #endif
     }
 
     func exportAsTXT() {
         // Raw transcripts are already plain text; only notule HTML is converted.
-        let stripped = fullTranscript.notuleHtml.map(HTMLPlainText.from) ?? fullTranscript.rawTranscription ?? ""
+        let stripped = exportNotuleHTML.map(HTMLPlainText.from) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()
@@ -2273,7 +2366,7 @@ struct TranscriptDetailView: View {
 
     func exportAsMarkdown() {
         // A raw transcript is plain text: never run it through the HTML converter.
-        let md = fullTranscript.notuleHtml.map(htmlToMarkdown) ?? fullTranscript.rawTranscription ?? ""
+        let md = exportNotuleHTML.map(htmlToMarkdown) ?? fullTranscript.rawTranscription ?? ""
 
         #if os(macOS)
         let panel = NSSavePanel()
@@ -2305,21 +2398,15 @@ struct TranscriptDetailView: View {
     func exportToObsidian() {
         Task { @MainActor in
             do {
-                if let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId) {
-                    try await ObsidianService.tryExport(record)
-                } else {
-                    let html = fullTranscript.notuleHtml ?? ""
-                    guard !html.isEmpty else {
-                        errorMessage = "Geen notule om te exporteren."
-                        return
-                    }
-                    try await ObsidianService.tryExport(
-                        title: fullTranscript.title, html: html, date: fullTranscript.date,
-                        participants: [], profileName: fullTranscript.profileName,
-                        tags: fullTranscript.tags, noteID: fullTranscript.taskId
-                    )
-                }
+                let html = exportNotuleHTML ?? ""
+                guard !html.isEmpty else { errorMessage = "Geen notule om te exporteren."; return }
+                let record = LocalTranscriptStore.shared.record(forTaskId: fullTranscript.taskId)
+                try await ObsidianService.tryExport(title: fullTranscript.title, html: html, date: fullTranscript.date,
+                    participants: record?.participants ?? [], profileName: fullTranscript.profileName,
+                    tags: fullTranscript.tags, noteID: fullTranscript.taskId)
                 errorMessage = nil
+            } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                // Shown once by ObsidianLinkBanner.
             } catch {
                 errorMessage = "Obsidian-export mislukt: \(error.localizedDescription)"
             }
@@ -2332,6 +2419,8 @@ struct TranscriptDetailView: View {
                 let note = try await ObsidianService.readNote(
                     title: fullTranscript.title, date: fullTranscript.date, noteID: fullTranscript.taskId)
                 if note.html != fullTranscript.notuleHtml { pendingObsidianImport = note }
+            } catch ObsidianService.ObsidianError.vaultLinkBroken {
+                // Shown once by ObsidianLinkBanner.
             } catch {
                 errorMessage = "Obsidian ophalen mislukt: \(error.localizedDescription)"
             }
@@ -2357,8 +2446,9 @@ struct TranscriptDetailView: View {
     }
 
     func shareContent() {
-        let text = fullTranscript.rawTranscription
-            ?? HTMLPlainText.from(fullTranscript.notuleHtml ?? "")
+        // The screen shows the notule, so that is what Delen sends; the transcript only when there is no notule.
+        let notule = HTMLPlainText.from(exportNotuleHTML ?? "")
+        let text = notule.isEmpty ? (fullTranscript.rawTranscription ?? "") : notule
         #if os(macOS)
         let picker = NSSharingServicePicker(items: [text])
         picker.show(relativeTo: .zero, of: NSApp.keyWindow?.contentView ?? NSView(), preferredEdge: .minY)
@@ -2372,92 +2462,98 @@ struct TranscriptDetailView: View {
     }
 }
 
-// MARK: - ProfileSelectionSheet
-
-private struct ProfileSelectionSheet: View {
-
-    @Environment(RecordingViewModel.self) var recordingVM
-    @Environment(\.dismiss) private var dismiss
-
-    let mode: TranscriptDetailView.ProfileSheetMode
-    let onSelect: (Profile, Bool) -> Void
-
-    @State private var usePremium = false
-
-    private var displayProfiles: [Profile] {
-        recordingVM.availableProfiles.isEmpty
-            ? Profile.defaults
-            : recordingVM.availableProfiles
-    }
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    ForEach(displayProfiles) { profile in
-                        Button {
-                            onSelect(profile, usePremium)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(profile.name)
-                                    .font(TS.Font.bodyMedium)
-                                    .foregroundStyle(Color.labelPrimary)
-                                if let prompt = profile.description ?? profile.notulePrompt, !prompt.isEmpty {
-                                    Text(prompt)
-                                        .font(TS.Font.caption)
-                                        .foregroundStyle(Color.labelSecondary)
-                                        .lineLimit(2)
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                } header: {
-                    Text("Kies een profiel")
-                }
-
-                Section {
-                    Toggle(isOn: $usePremium) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Premium model")
-                                .font(TS.Font.bodyMedium)
-                                .foregroundStyle(Color.labelPrimary)
-                            Text("Claude: betere kwaliteit, langzamer")
-                                .font(TS.Font.caption)
-                                .foregroundStyle(Color.labelSecondary)
-                        }
-                    }
-                    .tint(Color.brandPrimary)
-                }
-            }
-            .navigationTitle(
-                mode == .regenerate
-                ? "Notule regenereren"
-                : "Hertranscriberen"
-            )
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Annuleren") { dismiss() }
-                }
-            }
-            .task {
-                if recordingVM.availableProfiles.isEmpty {
-                    await recordingVM.reloadProfiles()
-                }
-            }
-        }
-        #if os(macOS)
-        .frame(width: 520, height: 560)
-        #endif
-    }
-}
-
 // MARK: - Preview
 
 #Preview {
     TranscriptsView(transcriptsNavPath: .constant(NavigationPath()))
         .environment(RecordingViewModel())
+}
+
+
+private struct MergeNotulenSheet: View {
+    @Environment(RecordingViewModel.self) private var recordingVM
+    @Environment(\.dismiss) private var dismiss
+    let sources: [Transcript]
+    let onMerge: (String) -> Void
+    @State private var profileId = ""
+
+    private var profiles: [Profile] {
+        recordingVM.availableProfiles.isEmpty ? Profile.defaults : recordingVM.availableProfiles
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: TS.Spacing.lg) {
+                    HStack(spacing: TS.Spacing.md) {
+                        Image(systemName: "doc.on.doc.fill")
+                            .font(TS.Font.title2)
+                            .foregroundStyle(Color.brandPrimary)
+                            .padding(TS.Spacing.sm)
+                            .background(Color.brandPrimary.opacity(0.12), in: RoundedRectangle(cornerRadius: TS.Radius.sm))
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: TS.Spacing.xs) {
+                            Text("\(sources.count) bronnotulen")
+                                .font(TS.Font.title3Semibold)
+                        }
+                    }
+
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: TS.Spacing.sm)], alignment: .leading, spacing: TS.Spacing.sm) {
+                        ForEach(sources.sorted { $0.date == $1.date ? $0.taskId < $1.taskId : $0.date < $1.date }) { source in
+                            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                                HStack {
+                                    Image(systemName: "doc.text")
+                                        .font(TS.Font.title3)
+                                        .foregroundStyle(Color.brandPrimary)
+                                        .accessibilityHidden(true)
+                                    Spacer(minLength: TS.Spacing.sm)
+                                    Text(source.date, style: .date)
+                                        .font(TS.Font.caption)
+                                        .foregroundStyle(Color.labelSecondary)
+                                }
+                                Text(source.title)
+                                    .font(TS.Font.bodyMedium)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .foregroundStyle(Color.labelPrimary)
+                            }
+                            .padding(TS.Spacing.md)
+                            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+                            .background(Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: TS.Radius.md))
+                            .overlay(RoundedRectangle(cornerRadius: TS.Radius.md).strokeBorder(Color.borderPrimary.opacity(0.6)))
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: TS.Spacing.sm) {
+                        Picker("Notulenprofiel", selection: $profileId) {
+                            ForEach(profiles) { Text($0.name).tag($0.id) }
+                        }
+                        Text("Originelen blijven bewaard.")
+                            .font(TS.Font.caption)
+                            .foregroundStyle(Color.labelSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(TS.Spacing.md)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.surfaceSecondary, in: RoundedRectangle(cornerRadius: TS.Radius.md))
+                }
+                .padding(TS.Spacing.lg)
+            }
+            .navigationTitle("Notulen samenvoegen")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuleren") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Samenvoegen") { onMerge(profileId) }
+                        .keyboardShortcut(.defaultAction)
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.brandPrimary)
+                        .disabled(recordingVM.isMerging || sources.count < 2 || !profiles.contains { $0.id == profileId })
+                }
+            }
+            .onAppear { profileId = recordingVM.selectedProfile?.id ?? profiles.first?.id ?? "" }
+        }
+        #if os(macOS)
+        .frame(minWidth: 480, idealWidth: 600, maxWidth: 720, minHeight: 440, idealHeight: 580, maxHeight: 800)
+        #endif
+    }
 }

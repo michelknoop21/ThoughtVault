@@ -22,6 +22,17 @@ extension SettingsView {
                 IOSScreenTitle(title: "Instellingen", subtitle: "Maak ThoughtVault helemaal van jou.")
                     .padding(.top, -4)
 
+                group("Support") {
+                    link(icon: "bubble.left.and.bubble.right", title: "Mijn meldingen",
+                         subtitle: String(format: String(localized: "support.unread.summary"), supportVM.unreadCount)) {
+                        SupportSettingsTicketsView()
+                    }
+                }
+                Text(String(localized: "support.badge.explanation"))
+                    .font(.caption)
+                    .foregroundStyle(IOSColor.text2)
+                    .padding(.top, 8)
+
                 group("Opname") {
                     if !isLocalProcessing && OnDeviceTranscriber.shared.isAvailable() {
                         IOSRow(icon: "mic", title: "Transcriptie op apparaat", subtitle: "Sneller, geen audiodata naar server") {
@@ -38,17 +49,13 @@ extension SettingsView {
                 }
 
                 group("Notulen generatie") {
+                    link(icon: "paintpalette", title: "Huisstijlen", subtitle: "Logo, opmaak en documentexports.") {
+                        DocumentBrandingView()
+                    }
+                    IOSDivider()
                     link(icon: "sparkles", title: "Verwerking",
                          subtitle: isLocalProcessing ? "Lokaal op dit apparaat" : "Cloud (server)") {
-                        subpage("Verwerking") {
-                            verwerkingsmodusSection
-                            if isLocalProcessing {
-                                transcriptieSection
-                                lokaleNotulenSection
-                            } else {
-                                cloudNotulenSection
-                            }
-                        }
+                        verwerkingIOSPage
                     }
                     IOSDivider()
                     link(icon: "character.book.closed", title: "Woordenlijst", subtitle: "Namen en termen voor betere notulen.") {
@@ -67,8 +74,16 @@ extension SettingsView {
                 }
 
                 group("Integraties") {
+                    link(icon: "icloud", title: "iCloud", subtitle: "Je notulen op Mac en iPhone.") {
+                        subpage("iCloud") { Section { NotuleSyncSettingsView() } }
+                    }
+                    IOSDivider()
                     link(icon: "tray.and.arrow.down", title: "Obsidian", subtitle: "Notulen automatisch naar je vault.") {
                         subpage("Obsidian") { obsidianSection }
+                    }
+                    IOSDivider()
+                    link(icon: "eurosign.square", title: "Prospect Flow", subtitle: "Conceptofferte uit een klantgesprek.") {
+                        subpage("Prospect Flow") { ProspectFlowSettingsSection() }
                     }
                 }
 
@@ -113,6 +128,7 @@ extension SettingsView {
         // Screenshot hooks (debug builds only, see IOSDebug).
         .navigationDestination(isPresented: .constant(IOSDebug.open == "profiles")) { ProfilesView() }
         .navigationDestination(isPresented: .constant(IOSDebug.open == "account")) { AccountView() }
+        .navigationDestination(isPresented: .constant(IOSDebug.open?.hasPrefix("verwerking") == true)) { verwerkingIOSPage }
     }
 
     // MARK: Building blocks

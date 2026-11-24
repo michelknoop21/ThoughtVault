@@ -44,15 +44,19 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
     }
 
     /// Model ids available to this key; empty when the key is missing or rejected.
-    func fetchModels() async -> [String] {
-        guard var request = request("/v1/models?limit=100") else { return [] }
+    func fetchModels() async -> [String] { await fetchModelList().models }
+
+    /// Models plus the HTTP status (nil without an answer), so a 401/403 shows up as a refused key.
+    func fetchModelList() async -> (models: [String], status: Int?) {
+        guard var request = request("/v1/models?limit=100") else { return ([], nil) }
         request.timeoutInterval = 10
-        guard let (data, response) = try? await URLSession.shared.data(for: request),
-              (response as? HTTPURLResponse)?.statusCode == 200,
+        guard let (data, response) = try? await session.data(for: request) else { return ([], nil) }
+        let status = (response as? HTTPURLResponse)?.statusCode
+        guard status == 200,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let items = json["data"] as? [[String: Any]]
-        else { return [] }
-        return items.compactMap { $0["id"] as? String }
+        else { return ([], status) }
+        return (items.compactMap { $0["id"] as? String }, status)
     }
 
     // MARK: - Generate Notulen
@@ -63,6 +67,7 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         notulePrompt: String,
         outputTemplate: String?,
         constraints: [String],
+        detailBlock: String,
         onProgress: @Sendable (String) -> Void
     ) async throws -> String {
         guard var request = request("/v1/messages") else {
@@ -75,7 +80,8 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
             complete: { try await self.complete(system: $0, user: $1) }
         )
         let userContent = buildNotuleUserContent(notulePrompt: notulePrompt, transcription: transcription,
-                                                 outputTemplate: outputTemplate, constraints: constraints)
+                                                 outputTemplate: outputTemplate, constraints: constraints,
+                                                 detailBlock: detailBlock)
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 16_000,
@@ -108,12 +114,16 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
                     else { continue }
                     switch json["type"] as? String {
+                    case "message_start":
+                        if let usage = TokenUsage.anthropic((json["message"] as? [String: Any])?["usage"]) { ModelRequestLog.report(usage) }
                     case "content_block_delta":
                         if let delta = json["delta"] as? [String: Any], let text = delta["text"] as? String {
                             fullText += text
                             onProgress(text)
                         }
                     case "message_delta":
+                        // Output tokens here are cumulative, so the last report is the total.
+                        if let usage = TokenUsage.anthropic(json["usage"]) { ModelRequestLog.report(usage) }
                         // A capped answer is incomplete; never parse it as a short one.
                         if (json["delta"] as? [String: Any])?["stop_reason"] as? String == "max_tokens" { throw LLMError.truncated }
                     case "error":
@@ -151,9 +161,12 @@ final class AnthropicLLMService: LLMService, @unchecked Sendable {
         request.timeoutInterval = 300
 
         let (data, response) = try await ModelRequestLog.run(provider: "anthropic", model: model, system: system, user: user) {
-            try await mappingTimeout {
+            let (data, response) = try await mappingTimeout {
                 try await sendRetryingRateLimit(session: session, sleep: rateLimitSleep) { try await $0.data(for: request) }
             }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let usage = TokenUsage.anthropic(json["usage"]) { ModelRequestLog.report(usage) }
+            return (data, response)
         }
         guard let http = response as? HTTPURLResponse else {
             throw LLMError.generationFailed("Ongeldig serverantwoord.")

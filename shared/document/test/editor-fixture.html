@@ -1,0 +1,24 @@
+<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Huisstijlbeheer controleren</title><body><main id="editor"></main><script src="../dist/document.js"></script><script>
+window.runEditorTest=async()=>{
+ const trace=[];let library={schemaVersion:1,defaultId:null,styles:[]},exported,failSave=false;
+ window.confirm=()=>true;
+ const editor=TVDocument.mountEditor(document.getElementById('editor'),{library,onSave:async next=>{if(failSave)throw Error('Proef: schijf vol');library=JSON.parse(JSON.stringify(next));},onExport:async payload=>{exported=payload;}});
+ const wait=async predicate=>{const end=performance.now()+8000;while(!predicate()){if(performance.now()>end)throw Error('Editor check timed out: '+trace.join(', '));await new Promise(requestAnimationFrame);}};
+ const click=text=>{const button=[...document.querySelectorAll('button')].find(b=>b.textContent===text);if(!button||button.disabled)throw Error('Unavailable button: '+text);button.click();};
+ const field=(name,value)=>{const input=document.querySelector(`[aria-label="${name}"]`);input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));};
+ click('Yinga toevoegen');await wait(()=>library.styles.length===1);await wait(()=>!document.querySelector('button').disabled);trace.push('Yinga toegevoegd');
+ const snapshot=JSON.stringify(library.styles[0]);
+ field('Naam huisstijl','Yinga aangepast');click('Opslaan');await wait(()=>library.styles[0].revision===2);await wait(()=>!document.querySelector('button').disabled);trace.push('hernoemd en versie 2');
+ click('Standaard maken');await wait(()=>library.defaultId==='yinga');await wait(()=>!document.querySelector('button').disabled);trace.push('standaard');
+ click('Exporteren');await wait(()=>!!exported);if(TVDocument.parseBranding(exported.text).name!=='Yinga aangepast')throw Error('Wrong export');trace.push('export');
+ click('Dupliceren');click('Opslaan');await wait(()=>library.styles.length===2);await wait(()=>!document.querySelector('button').disabled);trace.push('duplicaat');
+ click('Verwijderen');await wait(()=>library.styles.length===1);await wait(()=>!document.querySelector('button').disabled);trace.push('verwijderd');
+ const file=document.querySelector('input[type=file]');
+ const upload=text=>{const transfer=new DataTransfer();transfer.items.add(new File([text],'Yinga.tvhuisstijl',{type:'application/json'}));file.files=transfer.files;file.dispatchEvent(new Event('change',{bubbles:true}));};
+ upload(exported.text);await wait(()=>library.styles[0].revision===3);await wait(()=>!document.querySelector('button').disabled);trace.push('import als nieuwe versie');
+ upload('{"schemaVersion":999}');await wait(()=>document.querySelector('[role=status]').textContent.includes('Ongeldige'));if(library.styles[0].revision!==3)throw Error('Invalid import changed library');trace.push('foutieve import afgewezen');
+ failSave=true;field('Naam huisstijl','Niet opgeslagen');click('Opslaan');await wait(()=>document.querySelector('[role=status]').textContent.includes('schijf vol'));if(library.styles[0].name!=='Yinga aangepast')throw Error('Disk failure replaced library');trace.push('schijffout behoudt bibliotheek');
+ failSave=false;click('Verwijderen');await wait(()=>library.styles.length===0);await wait(()=>!document.querySelector('button').disabled);if(library.defaultId!==null||TVDocument.parseBranding(snapshot).name!=='Yinga')throw Error('Snapshot or default lost');trace.push('snapshot behouden');
+ editor.destroy();return trace;
+};
+</script></body></html>

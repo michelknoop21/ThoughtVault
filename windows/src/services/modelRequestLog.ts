@@ -1,4 +1,5 @@
 import { log } from "./appLog";
+import type { Usage, UsageMeter } from "./usageMeter";
 
 export const TIME_LIMIT_MESSAGE = "Tijdslimiet bereikt: de AI-provider gaf niet op tijd een volledig antwoord. Probeer het opnieuw of kies een sneller model.";
 export const TRUNCATED_MESSAGE = "Het antwoord van de AI-provider is afgebroken omdat het de maximale lengte bereikte.";
@@ -32,18 +33,30 @@ function logLabel(step: ModelStep | undefined): string {
 
 /** Metadata of one model request. `status` is set by the request once the provider answered. */
 export interface RequestTrace {
+  signal?: AbortSignal;
   step?: ModelStep;
   provider: string;
   model: string;
   system: string;
   user: string;
   status?: number;
+  /** Counts every request of one notule run; set by the caller. */
+  meter?: UsageMeter;
+  /** What the provider reported for this request; stays unset when no body arrived. */
+  usage?: Usage;
 }
 
 /** Only metadata: the log tail is attached to support reports (DEC-064), so prompt, transcript and notule
  * text never reach it. */
 function head(trace: RequestTrace): string {
   return `step=${logLabel(trace.step)} provider=${trace.provider} model=${trace.model} input_chars=${trace.system.length + trace.user.length}`;
+}
+
+/** Token and cost numbers only, when the provider reported usage. */
+function usageFields(trace: RequestTrace): string {
+  const u = trace.usage;
+  if (!u) return "";
+  return ` in_tok=${u.input ?? 0} out_tok=${u.output ?? 0} reason_tok=${u.reasoning ?? 0}${u.cost === undefined ? "" : ` cost=${u.cost}`}`;
 }
 
 function outcome(error: unknown, status: number | undefined): string {
@@ -60,10 +73,12 @@ export async function logModelRequest<T>(trace: RequestTrace, run: () => Promise
   const started = Date.now();
   try {
     const result = await run();
-    log.info("ModelRequest", `model request end ${head(trace)} ms=${Date.now() - started} outcome=ok`);
+    trace.meter?.record(trace.step?.kind, trace.usage);
+    log.info("ModelRequest", `model request end ${head(trace)} ms=${Date.now() - started} outcome=ok${usageFields(trace)}`);
     return result;
   } catch (error) {
-    log.warn("ModelRequest", `model request end ${head(trace)} ms=${Date.now() - started} outcome=${outcome(error, trace.status)}`);
+    trace.meter?.record(trace.step?.kind, trace.usage);
+    log.warn("ModelRequest", `model request end ${head(trace)} ms=${Date.now() - started} outcome=${outcome(error, trace.status)}${usageFields(trace)}`);
     throw error;
   }
 }

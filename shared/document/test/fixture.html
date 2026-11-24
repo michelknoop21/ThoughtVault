@@ -1,0 +1,31 @@
+<!doctype html><html lang="nl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Documentcontroles</title><body><h1>Documentcontroles</h1><p id="result" role="status">Gereed</p><script src="../dist/document.js"></script><script>
+window.runFixture=async function(kind='short'){
+ const fixture=(await fetch('./fixtures.json').then(r=>r.json()))[kind];
+ const branding=await fetch('../dist/Yinga.tvhuisstijl').then(r=>r.json());
+ const options={...fixture,branding};
+ const html=await TVDocument.standalone(options);
+ const save=async(name,body)=>{const r=await fetch('/__evidence/'+name,{method:'POST',body});if(!r.ok)throw Error('Evidence write failed');};
+ await save('yinga-'+kind+'.html',html);
+ await save('yinga-'+kind+'.docx',await TVDocument.wordDocument(options));
+ const parsed=new DOMParser().parseFromString(html,'text/html');
+ if(kind==='long' && parsed.querySelectorAll('.tv-page').length<8)throw Error('Long document was not paginated');
+ const text=parsed.body.textContent;
+ const comparable = d => {d.querySelectorAll('thead').forEach(n=>n.remove());return d.body.textContent;};
+ const actual = new DOMParser().parseFromString([...parsed.querySelectorAll('.tv-content')].map(n=>n.innerHTML).join(''),'text/html');
+ const wanted = new DOMParser().parseFromString('<h1>'+fixture.title+'</h1>'+fixture.html,'text/html');
+ if(kind==='oversizedRow') {
+   const cells=[...wanted.querySelector('tbody tr').cells];
+   cells.forEach((cell,index)=>{const joined=[...actual.querySelectorAll('tbody tr')].map(row=>row.cells[index]?.textContent??'').join('');if(joined!==cell.textContent)throw Error('Cell content changed: '+index);});
+ } else if(comparable(actual)!==comparable(wanted))throw Error('Content changed during pagination');
+ if(kind==='oversizedItem') {
+   const starts=[...actual.querySelectorAll('ol>li')].filter(li=>li.style.listStyleType!=='none').map(li=>li.value);
+   if(JSON.stringify(starts)!=='[3,4]')throw Error('List numbering changed');
+ }
+ const expected=new DOMParser().parseFromString(TVDocument.sanitizeContent(fixture.html),'text/html').body.textContent;
+ for(const word of ['Besluiten','Acties','Openstaande punten','Één'])if(kind==='long'&&!text.includes(word))throw Error('Lost text: '+word);
+ if(kind==='long' && parsed.querySelectorAll('tbody tr').length!==120)throw Error('Lost table rows');
+ const result={kind,pages:parsed.querySelectorAll('.tv-page').length,rows:parsed.querySelectorAll('tbody tr').length,items:parsed.querySelectorAll('li').length,expectedChars:expected.length,textChars:text.length};
+ document.getElementById('result').textContent=JSON.stringify(result);
+ return result;
+};
+</script></body></html>

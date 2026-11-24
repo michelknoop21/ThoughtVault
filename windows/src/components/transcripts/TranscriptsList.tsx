@@ -13,6 +13,7 @@ import { htmlToPlainText } from "../../utils/htmlToMarkdown";
 type TimeFilter = "alles" | "vandaag" | "week" | "maand";
 
 interface TranscriptsListProps {
+  organization?: (ids: string[]) => React.ReactNode;
   transcripts: Transcript[];
   selectedId: string | null;
   searchQuery: string;
@@ -23,7 +24,10 @@ interface TranscriptsListProps {
   onTagToggle: (tag: string) => void;
   onRefresh: () => void;
   onContextMenu: (e: React.MouseEvent, transcript: Transcript) => void;
-  onBulkDelete: (ids: string[]) => void;
+  /** Resolves true once the items are deleted; false when the user cancels or it fails. */
+  onBulkDelete: (ids: string[]) => Promise<boolean>;
+  onMerge?: (ids: string[]) => void;
+  merging?: boolean;
 }
 
 const TIME_FILTERS: { key: TimeFilter; label: string }[] = [
@@ -95,6 +99,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function TranscriptsList({
+  organization,
   transcripts,
   selectedId,
   searchQuery,
@@ -106,6 +111,8 @@ export function TranscriptsList({
   onRefresh,
   onContextMenu,
   onBulkDelete,
+  onMerge,
+  merging,
 }: TranscriptsListProps) {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("alles");
   const [bulkMode, setBulkMode] = useState(false);
@@ -163,6 +170,7 @@ export function TranscriptsList({
           </div>
         </div>
     <div className={`tl-panel${!selectedId ? " tl-panel-full" : ""}`}>
+      {organization?.(bulkMode ? [...bulkSelected] : selectedId ? [selectedId] : [])}
       {/* Header */}
       <div className="tl-header">
 
@@ -216,9 +224,10 @@ export function TranscriptsList({
           </button>
           {bulkSelected.size > 0 && (
             <>
+              {onMerge && <button className="btn btn-sm" disabled={bulkSelected.size < 2 || merging} onClick={() => onMerge([...bulkSelected])}>Samenvoegen</button>}
               <span className="tl-bulk-count">{bulkSelected.size} geselecteerd</span>
-              <button className="btn btn-sm tl-bulk-delete" onClick={() => {
-                onBulkDelete(Array.from(bulkSelected));
+              <button className="btn btn-sm tl-bulk-delete" onClick={async () => {
+                if (!await onBulkDelete(Array.from(bulkSelected))) return;
                 setBulkSelected(new Set());
                 setBulkMode(false);
               }}>
@@ -253,10 +262,13 @@ export function TranscriptsList({
               {group.items.map((t) => (
                 <div
                   key={t.id}
+                  draggable
+                  onDragStart={event => event.dataTransfer.setData("application/x-thoughtvault-notes", JSON.stringify(bulkMode && bulkSelected.has(t.id) ? [...bulkSelected] : [t.id]))}
                   className={`tl-item${selectedId === t.id ? " active" : ""}`}
                   role="button"
                   tabIndex={0}
                   aria-label={t.title || "Naamloze opname"}
+                  aria-pressed={bulkMode ? bulkSelected.has(t.id) : undefined}
                   onKeyDown={(event) => {
                     if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
                     event.preventDefault();

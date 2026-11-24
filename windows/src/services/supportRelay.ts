@@ -2,6 +2,13 @@ import { invoke } from "@tauri-apps/api/core";
 
 export const SUPPORT_BASE_URL = "https://thoughtvault.yinga.ai/support";
 export const PRIVACY_URL = "https://thoughtvault.yinga.ai/privacy.html";
+/** Help centre link from the build-time base URL; null (button hidden) when there is none. */
+export function helpUrl(base: string | undefined, platform = "windows"): string | null {
+  const trimmed = base?.trim();
+  if (!trimmed) return null;
+  return `${trimmed.endsWith("/") ? trimmed : `${trimmed}/`}?platform=${platform}`;
+}
+export const HELP_URL = helpUrl(import.meta.env.VITE_HELP_URL);
 export type ReportCategory = "BUG" | "FEATURE_REQUEST" | "QUESTION";
 export type ReportStage = "opnemen" | "transcriberen" | "notule" | "crash";
 export type HubStatus = "NEW" | "IN_PROGRESS" | "WAITING_FOR_USER" | "RESOLVED" | "CLOSED";
@@ -132,6 +139,9 @@ export async function unreadCount(inst: Installation): Promise<number> {
   const { data } = await call("GET", "/unread-count", inst);
   if (!object(data) || !object(data.data) || !count(data.data.count)) return invalidResponse();
   return data.data.count;
+}
+export async function markAllRead(inst: Installation): Promise<void> {
+  await call("POST", "/tickets/read-all", inst, {});
 }
 export async function ticketMessages(inst: Installation, ticketId: string): Promise<SupportMessage[]> {
   requireInput(ticketIdValid(ticketId));

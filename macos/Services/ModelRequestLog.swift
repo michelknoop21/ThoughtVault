@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// One step of notule generation: names model requests in the log and the running task in the UI.
 /// In the log `index` is the request's 1-based position; in a progress report it is the number of finished requests.
@@ -55,19 +56,42 @@ enum ModelRequestLog {
         let head = "step=\(ModelStep.current?.logLabel ?? "other") provider=\(provider) model=\(model) input_chars=\(system.utf16.count + user.utf16.count)"
         write("model request start \(head)", failed: false)
         let started = Date()
+        let usage = OSAllocatedUnfairLock(initialState: TokenUsage())
+        // A failed or cancelled request still counts; without reported tokens its usage is unknown.
+        defer { UsageMeter.current?.add(step: ModelStep.current?.kind, model: model, usage: usage.withLock { $0 }) }
         do {
-            let result = try await body()
-            write("model request end \(head) ms=\(milliseconds(since: started)) outcome=ok", failed: false)
+            let result = try await $currentUsage.withValue(usage) { try await body() }
+            write("model request end \(head) ms=\(milliseconds(since: started))\(fields(usage.withLock { $0 })) outcome=ok", failed: false)
             return result
         } catch {
-            write("model request end \(head) ms=\(milliseconds(since: started)) outcome=\(outcome(error))", failed: true)
+            write("model request end \(head) ms=\(milliseconds(since: started))\(fields(usage.withLock { $0 })) outcome=\(outcome(error))", failed: true)
             throw error
         }
+    }
+
+    /// Usage of the running request; set by `run`, filled by the provider through `report`.
+    @TaskLocal private static var currentUsage: OSAllocatedUnfairLock<TokenUsage>?
+
+    /// The provider read token counts or cost from its answer.
+    static func report(_ reported: TokenUsage) {
+        currentUsage?.withLock { $0.merge(reported) }
+    }
+
+    /// Numbers only, like the rest of the line; nothing when the provider reported nothing.
+    private static func fields(_ usage: TokenUsage) -> String {
+        [("in_tok", usage.input.map(String.init)), ("out_tok", usage.output.map(String.init)),
+         ("reason_tok", usage.reasoning.map(String.init)), ("cost", usage.costUSD.map { String(format: "%.6f", $0) })]
+            .compactMap { name, value in value.map { " \(name)=\($0)" } }.joined()
     }
 
     /// The request got HTTP 429 and is sent again after `wait` seconds.
     static func retry(wait: TimeInterval) {
         write("model request retry step=\(ModelStep.current?.logLabel ?? "other") after HTTP 429 wait_ms=\(Int(wait * 1000))", failed: false)
+    }
+
+    /// The request lost its connection and is sent once more now that the app is active again.
+    static func retryAfterDrop(_ error: URLError) {
+        write("model request retry step=\(ModelStep.current?.logLabel ?? "other") after \(LogRedact.describe(error)) app=active", failed: false)
     }
 
     static func outcome(_ error: any Error) -> String {
@@ -77,7 +101,7 @@ enum ModelRequestLog {
         if case LLMError.truncated = error { return "truncated" }
         if case LLMError.emptyResponse = error { return "empty" }
         if error is CancellationError || (error as? URLError)?.code == .cancelled { return "cancelled" }
-        return "error"
+        return "error " + LogRedact.describe(error)
     }
 
     private static func milliseconds(since start: Date) -> Int { Int(Date().timeIntervalSince(start) * 1000) }

@@ -17,7 +17,7 @@ interface State {
   addDismissed: (key: string) => Promise<void>;
 }
 type Change = { entries: PersonalCorrection[]; dismissed?: string[]; history?: PersonalCorrection[] };
-const comparable = (e: PersonalCorrection) => JSON.stringify([e.id, e.canonical, e.variants, e.scope, e.enabled, e.note ?? null]);
+const comparable = (e: PersonalCorrection) => JSON.stringify([e.id, e.canonical, e.variants, e.scope, e.enabled, e.note ?? null, e.learned ?? null]);
 let loaded = false;
 let loading: Promise<void> | undefined;
 let queue: Promise<unknown> = Promise.resolve();

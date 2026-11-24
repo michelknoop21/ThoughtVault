@@ -58,6 +58,7 @@ final class WhisperSilenceTests: XCTestCase {
         let url = try makeAudio(name: "silence.wav", silenceSeconds: 60, appending: nil)
         do {
             let text = try await transcribe(url)
+            XCTAssertFalse(text.contains("*"), "Asterisks in: \(text)")
             assertNoRepeats(text)
             XCTAssertLessThan(text.filter { $0.isLetter || $0.isNumber }.count, 20, "Hallucinated: \(text)")
         } catch LocalTranscriberError.emptyResult {
@@ -68,6 +69,7 @@ final class WhisperSilenceTests: XCTestCase {
     func testDutchClipStillTranscribes() async throws {
         let text = try await transcribe(fixtureURL)
         XCTAssertFalse(text.isEmpty)
+        XCTAssertFalse(text.contains("*"), "Asterisks in: \(text)")
         let hits = ["alex", "maandag", "installatie", "notulen"].filter { text.lowercased().contains($0) }
         XCTAssertGreaterThanOrEqual(hits.count, 2, "Got: \(text)")
     }
@@ -75,8 +77,21 @@ final class WhisperSilenceTests: XCTestCase {
     func testSilenceThenSpeechHasNoTextBeforeSpeech() async throws {
         let url = try makeAudio(name: "silence-speech.wav", silenceSeconds: 60, appending: fixtureURL)
         let text = try await transcribe(url)
+        XCTAssertFalse(text.contains("*"), "Asterisks in: \(text)")
         let head = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80)).lowercased()
         XCTAssertTrue(["begincontrole", "thoughtvault", "alex"].contains { head.contains($0) }, "Head: \(head)")
         assertNoRepeats(text)
+    }
+}
+
+/// Offline: no model needed.
+final class CleanedTranscriptTests: XCTestCase {
+    func testCleanedTranscript() {
+        let clean = WhisperKitTranscriber.cleanedTranscript
+        XCTAssertEqual(clean(["*** *** ***"]), "")
+        XCTAssertEqual(clean(["***", " Begincontrole van ThoughtVault."]), "Begincontrole van ThoughtVault.")
+        XCTAssertEqual(clean(["Alex *** zegt maandag"]), "Alex zegt maandag")
+        XCTAssertEqual(clean(["Gewone tekst, ongewijzigd."]), "Gewone tekst, ongewijzigd.")
+        XCTAssertEqual(clean(["  veel   spaties \n hier ", "en meer"]), "veel spaties hier en meer")
     }
 }

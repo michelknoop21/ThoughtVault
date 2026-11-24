@@ -21,13 +21,56 @@ enum DebugScreenshotSeed {
     }
 
     static func run() {
-        guard isEnabled, LocalTranscriptStore.shared.allTranscripts().isEmpty else { return }
+        guard isEnabled else { return }
+        seedStore()
+        if TaskHistoryStore.shared.entries.isEmpty {
+            let notule = LocalTranscriptStore.shared.allRecords().first { $0.title == "Schadebezoek Keizersgracht" }
+            seedTaskHistory(notuleTaskId: notule?.taskId ?? "local-debug-1")
+        }
+    }
+
+    private static func seedStore() {
+        guard LocalTranscriptStore.shared.allTranscripts().isEmpty else { return }
         seedPeople()
         seedGlossary()
-        try? LocalTranscriptStore.shared.save(TranscriptRecord(
-            title: "Schadebezoek Keizersgracht", rawTranscription: "Jan de Vries neemt het rapport op zich.",
+        // A "local-" task id like processLocally mints, so local-only actions (regenerate with a detail level) apply.
+        let record = TranscriptRecord(
+            taskId: "local-debug-seed", title: "Schadebezoek Keizersgracht", rawTranscription: "Jan de Vries neemt het rapport op zich.",
             notuleHtml: "<h1>Schadebezoek Keizersgracht</h1><h2>Besluiten</h2><ul><li>Jan de Vries stelt het rapport op voor vrijdag.</li><li>Contra-expertise wordt ingepland door Jan Smit.</li></ul>",
-            profileId: "meeting", profileName: "Meeting"))
+            profileId: "meeting", profileName: "Meeting")
+        try? LocalTranscriptStore.shared.save(record)
+    }
+
+    /// Three finished tasks for the Geschiedenis section of Taken.
+    private static func seedTaskHistory(notuleTaskId: String) {
+        let store = TaskHistoryStore.shared
+        let now = Date()
+        func add(_ id: String, title: String, status: TaskStatus, error: String? = nil, hoursAgo: Double,
+                 steps: [(String, Double)], recording: Double, deleted: Bool = false) {
+            let start = now.addingTimeInterval(-hoursAgo * 3600)
+            store.track(TranscriptTask(id: id, taskId: id, filename: "recording_\(Int(start.timeIntervalSince1970)).wav",
+                                       status: status, errorMessage: error, profileId: "meeting", createdAt: start),
+                        context: TaskHistoryContext(transcriptionEngine: "WhisperKit · large-v3", notuleProvider: "Ollama Cloud",
+                                                    notuleModel: "mistral-large-4", profileName: "Meeting"))
+            store.update(id) { entry in
+                entry.title = title
+                entry.recordingSeconds = recording
+                entry.recordingDeleted = deleted
+                var at = start
+                entry.steps = steps.map { label, seconds in
+                    defer { at = at.addingTimeInterval(seconds) }
+                    return TaskHistoryStep(label: label, startedAt: at, finishedAt: at.addingTimeInterval(seconds))
+                }
+                entry.finishedAt = at
+            }
+        }
+        add("local-debug-3", title: "Klantgesprek Bouwbedrijf Noord", status: .error, error: TaskHistoryEntry.cancelledMessage,
+            hoursAgo: 50, steps: [("Transcriberen", 95)], recording: 2280)
+        add("local-debug-2", title: "Weekstart team Schade", status: .error,
+            error: "Transcriptie opgeslagen, notule mislukt: geen lokale AI bereikbaar.",
+            hoursAgo: 26, steps: [("Transcriberen", 210), ("Concept schrijven", 34)], recording: 1500)
+        add(notuleTaskId, title: "Schadebezoek Keizersgracht", status: .completed, hoursAgo: 3,
+            steps: [("Transcriberen", 252), ("Concept schrijven", 100), ("Inhoudscontrole", 55)], recording: 1860, deleted: true)
     }
 
     static func seedSupport(_ support: SupportViewModel) {
@@ -74,6 +117,7 @@ enum DebugScreenshotSeed {
                                note: index % 2 == 0 ? "Voorbeeldterm \(index + 1) voor de schermafbeelding" : nil)
         }
         entries[30].note = "Schaderegelingscentrum van de verzekeraar"
+        entries[11].learned = ["Kuber netes", "Kubernetis"]
         try? PersonalCorrections.save(entries)
         _ = try? PersonalCorrections.saveRecording(PersonalCorrection(id: entries[30].id, canonical: "SRC", variants: ["S R C"], note: "Schaderegelingscentrum"), source: "handmatig")
     }

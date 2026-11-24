@@ -1,6 +1,28 @@
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex, atomic::{AtomicU64, Ordering}};
+use futures_util::future::{AbortHandle, AbortRegistration, Abortable};
+
+static MODEL_REQUESTS: LazyLock<Mutex<HashMap<String, (AbortHandle, Option<AbortRegistration>)>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Register before sending HTTP, so cancellation during IPC setup cannot be lost.
+#[tauri::command]
+pub fn register_proxy_request() -> Result<String, String> {
+    let id = NEXT_REQUEST_ID.fetch_add(1, Ordering::Relaxed).to_string();
+    let (handle, registration) = AbortHandle::new_pair();
+    MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?.insert(id.clone(), (handle, Some(registration)));
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn cancel_proxy_request(request_id: String) -> Result<(), String> {
+    if let Some((handle, _)) = MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?.remove(&request_id) {
+        handle.abort();
+    }
+    Ok(())
+}
 
 use tauri::{AppHandle, Emitter};
 use tokio_util::io::ReaderStream;
@@ -12,6 +34,8 @@ pub struct HttpRequest {
     pub headers: Option<HashMap<String, String>>,
     pub body: Option<String>,
     pub timeout_seconds: Option<u64>,
+    /// Ends the request after this much silence instead of only at the total limit; for streamed model answers.
+    pub idle_timeout_seconds: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,18 +45,40 @@ pub struct HttpResponse {
     pub headers: HashMap<String, String>,
 }
 
+/// Total limit in seconds: 30 by default, at most an hour (a streamed answer with an idle limit).
+fn total_timeout(requested: Option<u64>) -> u64 {
+    requested.unwrap_or(30).min(3600)
+}
+
 /// Generic HTTP proxy — bypasses WebView CORS restrictions.
 #[tauri::command]
-pub async fn proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
-    let timeout = request.timeout_seconds.unwrap_or(30).min(900);
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(timeout))
-        .build()
-        .map_err(|e| e.to_string())?;
+pub async fn proxy_request(request: HttpRequest, request_id: Option<String>) -> Result<HttpResponse, String> {
+    let Some(id) = request_id else { return do_proxy_request(request).await; };
+    let registration = MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?
+        .get_mut(&id).and_then(|(_, registration)| registration.take()).ok_or("Geannuleerd")?;
+    let result = Abortable::new(do_proxy_request(request), registration).await;
+    MODEL_REQUESTS.lock().map_err(|_| "Aanvraagregistratie niet beschikbaar")?.remove(&id);
+    result.map_err(|_| "Geannuleerd".to_string())?
+}
+
+async fn do_proxy_request(request: HttpRequest) -> Result<HttpResponse, String> {
+    let timeout = total_timeout(request.timeout_seconds);
+    let idle = request.idle_timeout_seconds;
+    let mut builder = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(timeout));
+    if let Some(idle) = idle {
+        // Resets on every received chunk, so a steady stream is not cut off.
+        builder = builder.read_timeout(std::time::Duration::from_secs(idle));
+    }
+    let client = builder.build().map_err(|e| e.to_string())?;
     // llm.ts recognises a timeout by this prefix (PROXY_TIMEOUT).
     let request_error = |e: reqwest::Error| {
         if e.is_timeout() {
-            format!("Tijdslimiet bereikt: geen volledig antwoord binnen {} seconden.", timeout)
+            match idle {
+                Some(idle) => format!("Tijdslimiet bereikt: {} seconden geen antwoord of geen volledig antwoord binnen {} seconden.", idle, timeout),
+                None => format!("Tijdslimiet bereikt: geen volledig antwoord binnen {} seconden.", timeout),
+            }
         } else {
             e.to_string()
         }
@@ -447,40 +493,6 @@ pub async fn obsidian_test(base_url: String, api_key: String) -> Result<HttpResp
     Ok(HttpResponse { status, body, headers: resp_headers })
 }
 
-/// Probe a running Ollama/OpenAI-compatible server (GET /api/tags) to verify it
-/// is reachable. Bearer auth only over HTTPS (Ollama Cloud); never leak a token
-/// to a plain http://localhost endpoint. 200 = connected.
-#[tauri::command]
-pub async fn ollama_test(base_url: String, api_key: Option<String>) -> Result<HttpResponse, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
-
-    let base = base_url.trim_end_matches('/');
-    let url = format!("{}/api/tags", base);
-
-    let mut req = client.get(&url);
-    if let Some(key) = api_key.filter(|k| !k.is_empty()) {
-        if base.starts_with("https://") {
-            req = req.header("Authorization", format!("Bearer {}", key));
-        }
-    }
-
-    let response = req.send().await.map_err(|e| e.to_string())?;
-
-    let status = response.status().as_u16();
-    let mut resp_headers = HashMap::new();
-    for (k, v) in response.headers() {
-        if let Ok(val) = v.to_str() {
-            resp_headers.insert(k.to_string(), val.to_string());
-        }
-    }
-    let body = response.text().await.map_err(|e| e.to_string())?;
-
-    Ok(HttpResponse { status, body, headers: resp_headers })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -644,6 +656,109 @@ mod tests {
     }
 
     // -- Tests --
+
+    /// Serves one response: headers, then `lines` lines `gap` apart, then closes (no Content-Length).
+    async fn start_trickle_server(lines: usize, gap: std::time::Duration) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/v1/chat/completions", listener.local_addr().unwrap().port());
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut bytes = [0_u8; 4096];
+            let _ = stream.read(&mut bytes).await;
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n").await.unwrap();
+            for index in 0..lines {
+                tokio::time::sleep(gap).await;
+                if stream.write_all(format!("data: {index}\n\n").as_bytes()).await.is_err() { return; }
+            }
+            let _ = stream.shutdown().await;
+        });
+        url
+    }
+
+    fn post(url: String, timeout_seconds: u64, idle_timeout_seconds: Option<u64>) -> HttpRequest {
+        HttpRequest { url, method: "POST".into(), headers: None, body: Some("{}".into()),
+            timeout_seconds: Some(timeout_seconds), idle_timeout_seconds }
+    }
+
+    #[tokio::test]
+    async fn cancellation_before_send_does_not_connect() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/", listener.local_addr().unwrap().port());
+        let id = register_proxy_request().unwrap();
+        cancel_proxy_request(id.clone()).unwrap();
+        assert_eq!(proxy_request(post(url, 10, None), Some(id)).await.unwrap_err(), "Geannuleerd");
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(50), listener.accept()).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn cancellation_drops_the_inflight_http_connection() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/", listener.local_addr().unwrap().port());
+        let id = register_proxy_request().unwrap();
+        let request = tokio::spawn(proxy_request(post(url, 10, None), Some(id.clone())));
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut bytes = [0_u8; 4096];
+        assert!(socket.read(&mut bytes).await.unwrap() > 0);
+        cancel_proxy_request(id.clone()).unwrap();
+        assert_eq!(request.await.unwrap().unwrap_err(), "Geannuleerd");
+        let closed = tokio::time::timeout(std::time::Duration::from_secs(2), socket.read(&mut bytes)).await;
+        assert_eq!(closed.unwrap().unwrap(), 0, "HTTP connection must close after cancellation");
+        assert!(!MODEL_REQUESTS.lock().unwrap().contains_key(&id));
+    }
+
+    #[test]
+    fn streamed_requests_may_run_up_to_an_hour() {
+        assert_eq!(total_timeout(None), 30);
+        assert_eq!(total_timeout(Some(3600)), 3600);
+        assert_eq!(total_timeout(Some(7200)), 3600);
+    }
+
+    #[tokio::test]
+    async fn idle_limit_lets_a_steady_stream_run_longer_than_the_limit() {
+        let url = start_trickle_server(5, std::time::Duration::from_millis(400)).await;
+        let response = proxy_request(post(url, 10, Some(1)), None).await.unwrap();
+        assert_eq!(response.status, 200);
+        assert!(response.body.contains("data: 4"), "{}", response.body);
+    }
+
+    #[tokio::test]
+    async fn idle_limit_ends_a_stalled_stream_as_a_timeout() {
+        let url = start_trickle_server(1, std::time::Duration::from_secs(3)).await;
+        let started = std::time::Instant::now();
+        let error = proxy_request(post(url, 10, Some(1)), None).await.unwrap_err();
+        assert!(error.starts_with("Tijdslimiet bereikt"), "{error}");
+        assert!(started.elapsed() < std::time::Duration::from_secs(3), "{:?}", started.elapsed());
+    }
+
+    #[tokio::test]
+    async fn proxy_does_not_forward_credentials_or_content_to_redirect_target() {
+        let target = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let target_url = format!("http://localhost:{}/capture", target.local_addr().unwrap().port());
+        let origin = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://127.0.0.1:{}/offer", origin.local_addr().unwrap().port());
+        let redirect = tokio::spawn(async move {
+            let (mut stream, _) = origin.accept().await.unwrap();
+            let mut bytes = [0_u8; 4096];
+            let _ = stream.read(&mut bytes).await.unwrap();
+            stream.write_all(format!("HTTP/1.1 307 Temporary Redirect\r\nLocation: {target_url}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+        });
+        let received = tokio::spawn(async move {
+            if let Ok(Ok((mut stream, _))) = tokio::time::timeout(std::time::Duration::from_secs(2), target.accept()).await {
+                let mut bytes = [0_u8; 4096];
+                let _ = stream.read(&mut bytes).await;
+                stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}").await.unwrap();
+                true
+            } else { false }
+        });
+        let response = proxy_request(HttpRequest { url, method: "POST".into(),
+            headers: Some(HashMap::from([("X-API-Key".into(), "fixture-secret".into())])),
+            body: Some("FICTITIOUS_TRANSCRIPT".into()), timeout_seconds: Some(10), idle_timeout_seconds: None,
+        }, None).await.unwrap();
+        redirect.await.unwrap();
+        assert!(!received.await.unwrap(), "redirect target received a credential-bearing request");
+        assert_eq!(response.status, 307);
+    }
+
 
     #[tokio::test]
     async fn test_upload_nonexistent_file() {

@@ -10,6 +10,9 @@ use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Listener, Manager};
 
+#[tauri::command]
+fn app_architecture() -> &'static str { std::env::consts::ARCH }
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let recording_state: SharedRecordingState = Arc::new(Mutex::new(Default::default()));
@@ -91,12 +94,14 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            app_architecture,
             applog::log_write,
             applog::log_tail,
             applog::log_reveal,
             applog::log_scrub,
             applog::session_begin,
             applog::session_stage,
+            applog::session_end,
             // Audio
             commands::audio::get_audio_devices,
             commands::audio::recording_active,
@@ -119,12 +124,13 @@ pub fn run() {
             commands::filesystem::concatenate_wav_files,
             // HTTP
             commands::http::proxy_request,
+            commands::http::register_proxy_request,
+            commands::http::cancel_proxy_request,
             commands::http::proxy_upload,
             commands::http::http_sse_stream,
             commands::http::obsidian_put,
             commands::http::obsidian_get,
             commands::http::obsidian_test,
-            commands::http::ollama_test,
             // System
             commands::system::get_network_status,
             commands::system::detect_meeting_apps,
@@ -140,6 +146,8 @@ pub fn run() {
             transcribe::remove_whisper_model,
             transcribe::show_whisper_model,
             transcribe::transcribe_local,
+            transcribe::cancel_audio_optimization,
+            transcribe::cloud::transcribe_cloud,
             personal_corrections::load_personal_corrections,
             personal_corrections::save_personal_corrections,
             personal_corrections::read_context_file,

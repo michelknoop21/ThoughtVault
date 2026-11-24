@@ -70,6 +70,7 @@ export function CallAlertOverlay() {
     setAutoStart(true);
     // Store attendee emails so SeedReviewSheet can filter new people on stop (D-07/D-10)
     setPendingSeedAttendees(event.attendees?.filter(Boolean) ?? []);
+    useRecordingStore.setState({ activeMeeting: event, recordingTitleMode: "meeting" });
     // Signal that main window should minimize after recording starts
     useRecordingStore.getState().setMinimizeOnAutoStart(true);
     handleDismiss();

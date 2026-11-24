@@ -44,6 +44,11 @@ struct PersonEditView: View {
     @State private var conversations: [TranscriptRecord] = []
 
     @Environment(\.dismiss) private var dismiss
+    #if os(macOS)
+    @State private var sheetWidth: CGFloat = 880
+    @State private var maxBodyHeight: CGFloat = 640
+    @State private var bodyHeight: CGFloat = 400
+    #endif
 
     private var isNewPerson: Bool { person == nil }
 
@@ -60,9 +65,14 @@ struct PersonEditView: View {
     var body: some View {
         Group {
         #if os(macOS)
-        content
-            .frame(width: 520)
-            .fixedSize(horizontal: false, vertical: true)
+        macContent
+            .onAppear {
+                // A sheet does not shrink to its window; size it from the window instead.
+                if let rect = (NSApp.mainWindow ?? NSApp.windows.first { $0.isVisible && $0.canBecomeMain })?.contentLayoutRect {
+                    sheetWidth = min(880, max(520, rect.width - 40))
+                    maxBodyHeight = max(220, rect.height - 230)
+                }
+            }
         #else
         NavigationStack {
             content
@@ -85,27 +95,6 @@ struct PersonEditView: View {
                 .font(TS.Font.title3Semibold)
                 .foregroundStyle(Color.labelPrimary)
 
-            #if os(macOS)
-            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                personFields
-            }
-            .labelsHidden()
-
-            VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                Text("Taken en verantwoordelijkheden").font(TS.Font.headline)
-                takenEditor
-            }
-            if let person {
-                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                    Text("Geschiedenis").font(TS.Font.headline)
-                    ScrollView { historyList(person) }.frame(maxHeight: 120)
-                }
-                VStack(alignment: .leading, spacing: TS.Spacing.sm) {
-                    Text("Gesprekken").font(TS.Font.headline)
-                    ScrollView { conversationList }.frame(maxHeight: 120)
-                }
-            }
-            #else
             Form {
                 personFields
                 Section("Taken en verantwoordelijkheden") { takenEditor }
@@ -113,7 +102,6 @@ struct PersonEditView: View {
                 if person != nil { Section("Gesprekken") { conversationList } }
             }
             .formStyle(.grouped)
-            #endif
 
             // Save button + feedback
             VStack(alignment: .leading, spacing: TS.Spacing.xs) {
@@ -124,41 +112,130 @@ struct PersonEditView: View {
                 }
 
                 HStack {
-                    #if os(macOS)
-                    Button("Annuleer") { dismiss() }
-                        .buttonStyle(SecondaryButtonStyle())
-                        .keyboardShortcut(.cancelAction)
-                    Spacer()
-                    #endif
-                    Button {
-                        savePerson()
-                    } label: {
-                        if showSaved {
-                            HStack(spacing: TS.Spacing.xs) {
-                                Image(systemName: "checkmark")
-                                Text("Opgeslagen")
-                            }
-                        } else if isSaving {
-                            HStack(spacing: TS.Spacing.xs) {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text(saveLabel)
-                            }
-                        } else {
-                            Text(saveLabel)
-                        }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(!canSave)
+                    saveButton
                 }
             }
 
-            #if !os(macOS)
             Spacer()
-            #endif
         }
         .padding(TS.Spacing.lg)
     }
+
+    private var saveButton: some View {
+        Button {
+            savePerson()
+        } label: {
+            if showSaved {
+                HStack(spacing: TS.Spacing.xs) {
+                    Image(systemName: "checkmark")
+                    Text("Opgeslagen")
+                }
+            } else if isSaving {
+                HStack(spacing: TS.Spacing.xs) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(saveLabel)
+                }
+            } else {
+                Text(saveLabel)
+            }
+        }
+        .buttonStyle(PrimaryButtonStyle())
+        .disabled(!canSave)
+    }
+
+    #if os(macOS)
+    // MARK: - macOS sheet
+
+    /// Header, two columns (fields | tasks, history, conversations) that become
+    /// one column when the sheet is narrow, and the buttons bottom right.
+    private var macContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 16) {
+                PersonInitials(name: naam, color: HomeColor.lavender, size: 52)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isNewPerson ? "Persoon toevoegen" : "Persoon bewerken")
+                        .font(.system(size: 22, weight: .bold))
+                        .accessibilityAddTraits(.isHeader)
+                    let subtitle = [naam, rol, organisatie]
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }.joined(separator: " · ")
+                    if !subtitle.isEmpty {
+                        Text(subtitle).font(.system(size: 14)).foregroundStyle(HomeColor.text2).lineLimit(1)
+                    }
+                }
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 24)
+            .padding(.bottom, 20)
+
+            ScrollView(.vertical) {
+                Group {
+                    if sheetWidth >= 816 {
+                        HStack(alignment: .top, spacing: 28) {
+                            fieldsColumn.frame(maxWidth: .infinity, alignment: .topLeading)
+                            sideColumn.frame(maxWidth: .infinity, alignment: .topLeading)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 22) {
+                            fieldsColumn
+                            sideColumn
+                        }
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 24)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { bodyHeight = $0 }
+            }
+            .frame(height: min(bodyHeight, maxBodyHeight))
+
+            Divider().overlay(HomeColor.divider)
+            HStack(spacing: 12) {
+                if let error = saveError {
+                    Text(error)
+                        .font(TS.Font.caption)
+                        .foregroundStyle(Color.statusError)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 12)
+                Button("Annuleer") { dismiss() }
+                    .buttonStyle(StudioQuietButtonStyle(height: 40))
+                    .keyboardShortcut(.cancelAction)
+                saveButton
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 16)
+            .padding(.bottom, 22)
+        }
+        .frame(width: sheetWidth)
+        .foregroundStyle(HomeColor.text)
+        .background(HomeColor.backgroundTop)
+    }
+
+    private var fieldsColumn: some View {
+        VStack(alignment: .leading, spacing: 10) { personFields }
+            .labelsHidden()
+    }
+
+    private var sideColumn: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Taken en verantwoordelijkheden").font(.system(size: 15, weight: .semibold))
+                takenEditor
+            }
+            if let person {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Geschiedenis").font(.system(size: 15, weight: .semibold))
+                    historyList(person, timeline: true)
+                }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Gesprekken").font(.system(size: 15, weight: .semibold))
+                    conversationList
+                }
+            }
+        }
+    }
+    #endif
 
     private var personFields: some View {
         PersonFormFields(
@@ -172,16 +249,16 @@ struct PersonEditView: View {
 
     private var takenEditor: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.xs) {
-            #if os(macOS)
-            ScrollView { takenRows }.frame(maxHeight: 120)
-            #else
+            // The macOS sheet body scrolls as a whole.
             takenRows
-            #endif
             HStack {
                 TextField("Nieuwe taak", text: $nieuweTaak)
-                    .textFieldStyle(.roundedBorder)
+                    .personFieldStyle()
                     .onSubmit(addTaak)
                 Button("Toevoegen", action: addTaak)
+                    #if os(macOS)
+                    .buttonStyle(StudioQuietButtonStyle(height: 38))
+                    #endif
                     .disabled(nieuweTaak.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
@@ -193,9 +270,17 @@ struct PersonEditView: View {
                 HStack {
                     Text(taak).font(TS.Font.body).foregroundStyle(Color.labelPrimary)
                     Spacer()
+                    #if os(macOS)
+                    Button { taken.remove(at: index) } label: {
+                        Image(systemName: "xmark").font(.system(size: 10, weight: .semibold)).frame(width: 26, height: 26)
+                    }
+                    .buttonStyle(StudioIconButtonStyle())
+                    .accessibilityLabel("Verwijder \(taak)")
+                    #else
                     Button { taken.remove(at: index) } label: { Image(systemName: "minus.circle") }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Verwijder \(taak)")
+                    #endif
                 }
             }
         }
@@ -209,8 +294,8 @@ struct PersonEditView: View {
         nieuweTaak = ""
     }
 
-    private func historyList(_ person: PersonProfile) -> some View {
-        HistoryListView(kind: .person, itemId: person.id) { entry in
+    private func historyList(_ person: PersonProfile, timeline: Bool = false) -> some View {
+        HistoryListView(kind: .person, itemId: person.id, timeline: timeline) { entry in
             do {
                 try PersonDirectoryService.shared.restore(entry, to: person)
                 loadFields()

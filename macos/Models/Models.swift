@@ -170,7 +170,7 @@ struct CloudAIConfiguration: Codable, Identifiable, Equatable {
 // MARK: - NotulenProvider
 
 enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
-    case cloud          // N8N + Claude (server-side)
+    case cloud          // generated on the ThoughtVault server
     case ollama         // Local Ollama instance
     case lmStudio       // Local LM Studio instance
     case appleIntelligence  // Apple Intelligence (macOS 26+ / iOS 26+)
@@ -178,13 +178,14 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     case anthropic      // Hosted, user's own API key
     case ollamaCloud    // Hosted Ollama (https://ollama.com), user's own API key
     case openAICompatible  // Any HTTPS endpoint with the OpenAI chat API
+    case openRouter     // Hosted (https://openrouter.ai), user's own API key
 
     var id: String { rawValue }
 
     /// Dutch display name.
     var displayName: String {
         switch self {
-        case .cloud:             return "Cloud (N8N + Claude)"
+        case .cloud:             return "Cloud (ThoughtVault-server)"
         case .ollama:            return "Ollama (lokaal)"
         case .lmStudio:          return "LM Studio (lokaal)"
         case .appleIntelligence: return "Apple Intelligence"
@@ -192,6 +193,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .anthropic:         return "Claude"
         case .ollamaCloud:       return "Ollama Cloud"
         case .openAICompatible:  return "OpenAI-compatibel"
+        case .openRouter:        return "OpenRouter"
         }
     }
 
@@ -201,6 +203,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         case .openAI:    return "openAIApiKey"
         case .anthropic: return "anthropicApiKey"
         case .ollamaCloud: return "ollamaApiKey"
+        case .openRouter: return "openRouterApiKey"
         case .openAICompatible:
             let id = UserDefaults.standard.string(forKey: CloudAIConfiguration.selectedKey) ?? ""
             return id.isEmpty ? nil : CloudAIConfiguration.keychainKey(for: id)
@@ -222,7 +225,7 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     var auditNoteConcurrency: Int {
         let hosted: Bool
         switch self {
-        case .openAI, .anthropic, .ollamaCloud, .openAICompatible: hosted = true
+        case .openAI, .anthropic, .ollamaCloud, .openAICompatible, .openRouter: hosted = true
         case .ollama: hosted = isHostedURL(UserDefaults.standard.string(forKey: "ollamaURL") ?? "")
         case .lmStudio: hosted = isHostedURL(UserDefaults.standard.string(forKey: "lmStudioURL") ?? "")
         case .cloud, .appleIntelligence: hosted = false
@@ -245,6 +248,27 @@ enum NotulenProvider: String, Codable, Sendable, CaseIterable, Identifiable {
         #else
         return .ollama
         #endif
+    }
+
+    /// Local, unsynced flag: true for installs that existed before OpenRouter became the default.
+    static let legacyDefaultKey = "notulenLegacyDefault"
+
+    /// Fallback when no provider is stored: existing installs keep the platform default, new ones start on OpenRouter.
+    static func installDefault(defaults: UserDefaults = .standard) -> NotulenProvider {
+        defaults.bool(forKey: legacyDefaultKey) ? platformDefault : .openRouter
+    }
+
+    /// The stored provider (an unknown value reads as Ollama), else the install default.
+    static func configured(defaults: UserDefaults = .standard) -> NotulenProvider {
+        guard let raw = defaults.string(forKey: "notulenProvider") else { return installDefault(defaults: defaults) }
+        return NotulenProvider(rawValue: raw) ?? .ollama
+    }
+
+    /// Decides once whether this install predates the OpenRouter default. Runs before settings
+    /// sync starts and never writes `notulenProvider`, which would be pushed to iCloud.
+    static func decideLegacyDefault(defaults: UserDefaults, storeExists: Bool) {
+        guard defaults.object(forKey: legacyDefaultKey) == nil else { return }
+        defaults.set(storeExists || defaults.object(forKey: "hasCompletedOnboarding") != nil, forKey: legacyDefaultKey)
     }
 }
 
@@ -327,6 +351,8 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
     var notulePrompt: String?
     var template: String?
     var isDefault: Bool?
+    /// Default `NotuleDetailLevel` raw value from the bundled templates; nil means volledig.
+    var detailLevel: String? = nil
 
     // MARK: Default profiles
 
@@ -399,11 +425,11 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
     /// Only current built-ins appear for new recordings. The static legacy
     /// definitions above remain available when reading old document IDs.
     static var defaults: [Profile] {
-        ProfileTemplates.entries.map { entry in
+        ProfileTemplates.entries.filter { $0.id != "prospectflow_offerte" || ProspectFlowService.hasVerifiedKey }.map { entry in
             Profile(id: entry.id, name: entry.name, description: entry.description,
                     icon: entry.icon, systemPrompt: entry.systemPrompt,
                     notulePrompt: entry.notulePrompt, template: entry.template,
-                    isDefault: true)
+                    isDefault: true, detailLevel: entry.detailLevel)
         }
     }
 
@@ -421,7 +447,7 @@ struct Profile: Identifiable, Codable, Hashable, Sendable {
         let legacyIds: Set<String> = ["zakelijk", "informeel", "technisch", "handleiding", "blog_samenvatting", "notitie"]
         let currentIds = Set(defaults.map(\.id))
         return defaults + remote.filter {
-            $0.isDefault != true && !legacyIds.contains($0.id) && !currentIds.contains($0.id)
+            $0.isDefault != true && !legacyIds.contains($0.id) && !currentIds.contains($0.id) && $0.id != "prospectflow_offerte"
         }
     }
 
@@ -436,7 +462,7 @@ enum LocalProfileStore {
     }
 
     static func choices(defaults: UserDefaults = .standard) -> [Profile] {
-        Profile.defaults + load(defaults: defaults)
+        Profile.defaults + load(defaults: defaults).filter { $0.id != "prospectflow_offerte" }
     }
 
     static func save(_ profile: Profile, defaults: UserDefaults = .standard) throws {
@@ -591,6 +617,8 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
     var createdAt: String?
     var duration: Double?
     var profileName: String?
+    var mergeSourcesJSON: String?
+    var documentBrandingJSON: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -603,6 +631,8 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         case createdAt = "created_at"
         case duration
         case profileName = "profile_name"
+        case mergeSourcesJSON = "merge_sources_json"
+        case documentBrandingJSON = "document_branding_json"
         // Backend sometimes returns these alternative field names
         case transcription
         case result
@@ -659,6 +689,8 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         createdAt = rawCreatedAt
         duration = try container.decodeIfPresent(Double.self, forKey: .duration)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
+        mergeSourcesJSON = try container.decodeIfPresent(String.self, forKey: .mergeSourcesJSON)
+        documentBrandingJSON = try container.decodeIfPresent(String.self, forKey: .documentBrandingJSON)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -675,6 +707,8 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(duration, forKey: .duration)
         try container.encodeIfPresent(profileName, forKey: .profileName)
+        try container.encodeIfPresent(mergeSourcesJSON, forKey: .mergeSourcesJSON)
+        try container.encodeIfPresent(documentBrandingJSON, forKey: .documentBrandingJSON)
     }
 
     init(
@@ -687,7 +721,9 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         tags: [String] = [],
         createdAt: String? = nil,
         duration: Double? = nil,
-        profileName: String? = nil
+        profileName: String? = nil,
+        mergeSourcesJSON: String? = nil,
+        documentBrandingJSON: String? = nil
     ) {
         self.id = id
         self.taskId = taskId.isEmpty ? id : taskId
@@ -699,6 +735,8 @@ struct Transcript: Identifiable, Codable, Hashable, Sendable {
         self.createdAt = createdAt
         self.duration = duration
         self.profileName = profileName
+        self.mergeSourcesJSON = mergeSourcesJSON
+        self.documentBrandingJSON = documentBrandingJSON
     }
 }
 

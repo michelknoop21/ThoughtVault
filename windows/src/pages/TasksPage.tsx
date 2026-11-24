@@ -1,4 +1,4 @@
-import { DesktopDialog } from "../components/ui/DesktopDialog";
+import { ConfirmDialog } from "../components/tasks/ConfirmDialog";
 import { useEffect, useState } from "react";
 import {
   ArrowSync24Regular,
@@ -14,6 +14,8 @@ import { useTasksStore } from "../stores/tasksStore";
 import { useRecordingStore } from "../stores/recordingStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { processLocally } from "../services/localPipeline";
+import { isFinished, useTaskHistory } from "../services/taskHistory";
+import { TaskHistoryList, historyEntries } from "../components/tasks/TaskHistoryList";
 import { TaskStatusLabels } from "../types";
 import type { TranscriptTask, TaskStatus } from "../types";
 
@@ -61,54 +63,6 @@ function timeAgo(dateString: string): string {
 
 function isActiveStatus(status: TaskStatus): boolean {
   return ["pending", "queued", "uploading", "converting", "transcribing", "generating", "paused"].includes(status);
-}
-
-// --- Confirmation dialog ---
-
-function ConfirmDialog({
-  title,
-  message,
-  confirmLabel,
-  danger,
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  danger?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <DesktopDialog label={title} onClose={onCancel}>
-      <div
-        className="card"
-        style={{
-          maxWidth: 400,
-          padding: 24,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <p style={{ font: "var(--type-subtitle)", color: "var(--text-primary)", margin: 0 }}>{title}</p>
-        <p style={{ font: "var(--type-body)", color: "var(--text-secondary)", margin: 0 }}>{message}</p>
-        <div className="flex-row gap-8" style={{ justifyContent: "flex-end" }}>
-          <button className="btn" onClick={onCancel}>
-            Terug
-          </button>
-          <button
-            className={danger ? "btn btn-danger" : "btn btn-accent"}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </DesktopDialog>
-  );
 }
 
 // --- Task card ---
@@ -261,9 +215,13 @@ export function TasksPage() {
   const isLocal = useSettingsStore((s) => s.processing_mode === "local");
   const localTasks = useRecordingStore((s) => s.backgroundTasks);
   const removeLocalTask = useRecordingStore((s) => s.removeBackgroundTask);
+  const history = useTaskHistory((s) => s.entries);
+  // A finished task with a history entry is shown once, under Geschiedenis.
   const visibleTasks = [...localTasks, ...(isLocal ? [] : activeTasks.filter(
     (task) => !localTasks.some((local) => local.task_id === task.task_id),
-  ))];
+  ))].filter((task) => !isFinished(task.status) || !history.some((entry) => entry.id === task.task_id));
+  const shownIds = new Set(visibleTasks.map((task) => task.task_id));
+  const hasHistory = historyEntries(history, shownIds).length > 0;
 
   const [confirmAction, setConfirmAction] = useState<{
     type: "cancel" | "delete";
@@ -345,7 +303,7 @@ export function TasksPage() {
         )}
 
         {/* Content */}
-        {!isLocal && isLoading && visibleTasks.length === 0 ? (
+        {!isLocal && isLoading && visibleTasks.length === 0 && !hasHistory ? (
           <div className="empty-state">
             <ArrowClockwise24Regular
               style={{
@@ -356,7 +314,7 @@ export function TasksPage() {
             />
             <p className="empty-state-text" style={{ marginTop: 12 }}>Taken laden...</p>
           </div>
-        ) : visibleTasks.length === 0 ? (
+        ) : visibleTasks.length === 0 && !hasHistory ? (
           <div className="empty-state">
             <TaskListLtr24Regular
               style={{ width: 56, height: 56, color: "#9293b7" }}
@@ -384,6 +342,7 @@ export function TasksPage() {
             </div>
           </section>
         )}
+        <TaskHistoryList shownIds={shownIds} />
       </div>
 
       {/* Confirmation dialog */}

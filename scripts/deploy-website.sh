@@ -9,6 +9,8 @@ trap 'rm -rf "$SITE_STAGE"' EXIT
 mkdir -p "$SITE_STAGE/docs/design/high-end-yinga/assets" "$SITE_STAGE/deploy"
 cp -R "$ROOT_DIR/deploy/website" "$SITE_STAGE/deploy/website"
 cp "$ROOT_DIR/deploy/website/compose.yaml" "$SITE_STAGE/compose.yaml"
+# Help centre (docs/handleiding + docs/RELEASE-NOTES.md), served under /d-<token>/help/.
+python3 "$ROOT_DIR/scripts/build-helpcentrum.py" "$SITE_STAGE/deploy/website/help-site"
 for file in index.html privacy.html landing.css landing.js; do
     cp "$ROOT_DIR/docs/design/high-end-yinga/$file" "$SITE_STAGE/docs/design/high-end-yinga/"
 done

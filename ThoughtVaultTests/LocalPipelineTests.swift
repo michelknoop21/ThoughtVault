@@ -6,6 +6,17 @@ import AVFoundation
 // reaches the task, and a missing speech model fails clearly instead of downloading.
 
 final class LocalPipelineTests: XCTestCase {
+    @MainActor
+    func testSyncedRecordWithServerIDUsesLocalStorage() throws {
+        let id = "synced-" + UUID().uuidString
+        let record = TranscriptRecord(taskId: id, title: "Lokale gesynchroniseerde notule", rawTranscription: "Besluit", notuleHtml: "<p>Besluit</p>")
+        try LocalTranscriptStore.shared.save(record)
+        defer { try? LocalTranscriptStore.shared.delete(taskId: id) }
+        XCTAssertTrue(isLocalTranscript(id))
+        XCTAssertTrue(isLocalTranscript("local-test"))
+        XCTAssertFalse(isLocalTranscript("unknown-" + UUID().uuidString))
+    }
+
 
     func testMissingModelThrowsWithoutDownload() async {
         let transcriber = WhisperKitTranscriber(model: "openai_whisper-test", isInstalled: { _ in false })
@@ -20,6 +31,28 @@ final class LocalPipelineTests: XCTestCase {
         } catch {
             XCTFail("Wrong error type: \(error)")
         }
+    }
+
+    func testParakeetWithoutModelThrowsModelNotInstalled() async {
+        let transcriber = ParakeetTranscriber(model: "ultra", isInstalled: { _ in false })
+        do {
+            _ = try await transcriber.transcribe(url: URL(fileURLWithPath: "/nonexistent.wav"), profileId: nil) { _ in }
+            XCTFail("Expected modelNotInstalled")
+        } catch LocalTranscriberError.modelNotInstalled(let model) {
+            XCTAssertEqual(model, "ultra")
+        } catch {
+            XCTFail("Wrong error: \(error)")
+        }
+    }
+
+    func testFactoryBuildsParakeet() throws {
+        let suite = "LocalPipelineTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(LocalTranscriberEngine.parakeet.rawValue, forKey: "localTranscriber")
+        defaults.set("redux", forKey: ParakeetCatalog.defaultsKey)
+        let transcriber = try XCTUnwrap(LocalTranscriberFactory.make(defaults: defaults) as? ParakeetTranscriber)
+        XCTAssertEqual(transcriber.model, "redux")
     }
 
     func testImportStoresDuration() async throws {

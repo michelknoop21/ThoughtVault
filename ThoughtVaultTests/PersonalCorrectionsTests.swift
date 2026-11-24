@@ -33,6 +33,25 @@ final class PersonalCorrectionsTests: XCTestCase {
         XCTAssertEqual(doc.dismissed, [])
     }
 
+    func testLearnedNotReplacedButInContextBlock() throws {
+        var entry = PersonalCorrection(canonical: "Yinga", variants: ["Jengo"])
+        entry.learned = ["Django"]
+        XCTAssertEqual(PersonalCorrections.text("Jengo en Django", entries: [entry], profileId: nil), "Yinga en Django")
+        let block = PersonalCorrections.contextBlock(entries: [entry], people: [], transcript: "Django", profileId: nil, maxCharacters: 6000)
+        XCTAssertTrue(block.hasSuffix("- Yinga (ook gehoord als: Jengo, Django)"))
+        // Round trip keeps the field; a learned spelling that became a variant is dropped on upsert.
+        try PersonalCorrections.save([entry], to: tmp)
+        XCTAssertEqual(try PersonalCorrections.load(from: tmp), [entry])
+        var fixed = entry; fixed.id = "other"; fixed.variants = ["Django"]; fixed.learned = nil
+        let merged = PersonalCorrections.upsert([entry], entry: fixed)
+        XCTAssertEqual(merged.count, 1)
+        XCTAssertEqual(merged[0].variants, ["Jengo", "Django"])
+        XCTAssertNil(merged[0].learned)
+        // Old files without the field still decode, and it is not written when absent.
+        try PersonalCorrections.save([PersonalCorrection(canonical: "Prezent", variants: [])], to: tmp)
+        XCTAssertFalse(try String(contentsOf: tmp, encoding: .utf8).contains("learned"))
+    }
+
     func testEntryWithoutVariantsIsValid() throws {
         let entry = PersonalCorrection(canonical: "Prezent", variants: [])
         try PersonalCorrections.save([entry], to: tmp)
@@ -129,5 +148,23 @@ final class PersonalCorrectionsTests: XCTestCase {
     func testTestHostNeverResolvesToRealAppSupport() {
         XCTAssertTrue(AppEnvironment.isRunningTests)
         XCTAssertFalse(PersonalCorrections.url.path.hasPrefix(URL.applicationSupportDirectory.path))
+    }
+
+    func testApplyCorrectsNotuleAndTranscript() {
+        let entry = PersonalCorrection(canonical: "Maikel", variants: ["Michael"], scope: nil)
+        let result = PersonalCorrections.apply(entry, notule: "<p>Michael belt.</p>", transcript: "Michael zegt: michael belt.")
+        XCTAssertEqual(result.notule, "<p>Maikel belt.</p>")
+        XCTAssertEqual(result.transcript, "Maikel zegt: Maikel belt.")
+        XCTAssertNil(PersonalCorrections.apply(entry, notule: "", transcript: nil).transcript)
+    }
+
+    func testPersonCorrectionSkipsPartOfNameAndName() throws {
+        let entry = try XCTUnwrap(PersonalCorrections.personCorrection(name: "Sanne Bakker", heardAs: ["Sanne", " ", "sanne bakker", "Sanne Backer", "sanne backer", "Bakker"], scope: "p1"))
+        XCTAssertEqual(entry.variants, ["Sanne Backer"])
+        XCTAssertEqual(entry.scope, "p1")
+        let result = PersonalCorrections.apply(entry, notule: "<p>Sanne Backer en Sanne</p>", transcript: "Sanne zei tegen Sanne Backer")
+        XCTAssertEqual(result.notule, "<p>Sanne Bakker en Sanne</p>")
+        XCTAssertEqual(result.transcript, "Sanne zei tegen Sanne Bakker")
+        XCTAssertNil(PersonalCorrections.personCorrection(name: "Sanne Bakker", heardAs: ["Sanne", "SANNE BAKKER", ""], scope: nil))
     }
 }

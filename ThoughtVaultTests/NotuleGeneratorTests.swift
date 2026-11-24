@@ -1,5 +1,8 @@
 import XCTest
+import CryptoKit
+import os
 import SwiftData
+import SwiftUI
 @testable import ThoughtVault
 
 // Flow assertions ported from windows/src/services/__tests__/llm.audit-integration.test.ts
@@ -8,7 +11,7 @@ import SwiftData
 
 /// Scripted provider: `generateNotulen` returns a fixed draft, `complete` answers the audits.
 private final class StubLLM: LLMService, @unchecked Sendable {
-    struct Generation { let transcription, systemPrompt, notulePrompt: String; let constraints: [String] }
+    struct Generation { let transcription, systemPrompt, notulePrompt: String; let constraints: [String]; var detailBlock = "" }
 
     private let lock = NSLock()
     private let draft: String
@@ -29,9 +32,9 @@ private final class StubLLM: LLMService, @unchecked Sendable {
     var isAvailable: Bool { true }
 
     func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?,
-                         constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String {
+                         constraints: [String], detailBlock: String, onProgress: @Sendable (String) -> Void) async throws -> String {
         lock.withLock { _generations.append(Generation(transcription: transcription, systemPrompt: systemPrompt,
-                                                         notulePrompt: notulePrompt, constraints: constraints)) }
+                                                         notulePrompt: notulePrompt, constraints: constraints, detailBlock: detailBlock)) }
         // Stream the draft like a real provider; the generator must not forward it anywhere.
         onProgress(draft)
         lock.withLock { _progressChunks += 1 }
@@ -75,7 +78,7 @@ private final class OverlapLLM: LLMService, @unchecked Sendable {
     var isAvailable: Bool { true }
 
     func generateNotulen(transcription: String, systemPrompt: String, notulePrompt: String, outputTemplate: String?,
-                         constraints: [String], onProgress: @Sendable (String) -> Void) async throws -> String {
+                         constraints: [String], detailBlock: String, onProgress: @Sendable (String) -> Void) async throws -> String {
         var waited = 0
         while !lock.withLock({ _sourceStarted }), waited < 200 { try await Task.sleep(nanoseconds: 10_000_000); waited += 1 }
         lock.withLock { _startedDuringDraft = _sourceStarted }
@@ -329,7 +332,7 @@ final class NotuleGeneratorTests: XCTestCase {
 final class RejectedDraftStoreTests: XCTestCase {
     private func makeStore(notuleHtml: String = "") throws -> LocalTranscriptStore {
         let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
-                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none))
         let store = LocalTranscriptStore(container: container)
         try store.save(TranscriptRecord(id: "t1", taskId: "t1", title: "Overleg", rawTranscription: "Sam belt vrijdag.", notuleHtml: notuleHtml))
         return store
@@ -366,4 +369,411 @@ final class RejectedDraftStoreTests: XCTestCase {
         let store = try makeStore()
         XCTAssertThrowsError(try store.saveRejectedDraft(taskId: "onbekend", html: "<p>x</p>", reason: "r"))
     }
+}
+
+final class NotuleFallbackTests: XCTestCase {
+    private struct Down: Error {}
+
+    func testFallbackDeliversWhenPrimaryFails() async throws {
+        let html = try await NotuleGenerator.withFallback({ "<p>terugval</p>" }) { throw Down() }
+        XCTAssertEqual(html, "<p>terugval</p>")
+    }
+
+    func testWithoutFallbackOriginalErrorSurfaces() async {
+        do {
+            _ = try await NotuleGenerator.withFallback(nil) { throw Down() }
+            XCTFail("expected the primary error")
+        } catch {
+            XCTAssertTrue(error is Down)
+        }
+    }
+
+    func testRejectedDraftAndCancellationSkipFallback() async {
+        for thrown: Error in [NotuleReviewError(reason: "r", draftHtml: "<p>x</p>"), CancellationError()] {
+            do {
+                _ = try await NotuleGenerator.withFallback({ XCTFail("fallback ran"); return "" }) { throw thrown }
+                XCTFail("expected an error")
+            } catch {
+                XCTAssertEqual(String(describing: type(of: error)), String(describing: type(of: thrown)))
+            }
+        }
+    }
+}
+
+final class NotuleFallbackProviderTests: XCTestCase {
+    private let key = NotuleGenerator.fallbackProviderKey
+    private var originalValue: Any?
+
+    override func setUp() {
+        super.setUp()
+        originalValue = UserDefaults.standard.object(forKey: key)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.set(originalValue, forKey: key)
+        super.tearDown()
+    }
+
+    func testFallbackGuards() {
+        UserDefaults.standard.removeObject(forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "unset means no fallback")
+        UserDefaults.standard.set(NotulenProvider.ollama.rawValue, forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "same as primary")
+        UserDefaults.standard.set(NotulenProvider.cloud.rawValue, forKey: key)
+        XCTAssertNil(NotuleGenerator.fallbackProvider(for: .ollama), "cloud is never a local fallback")
+        UserDefaults.standard.set(NotulenProvider.anthropic.rawValue, forKey: key)
+        XCTAssertEqual(NotuleGenerator.fallbackProvider(for: .ollama), .anthropic)
+    }
+
+    func testOfferResultDecodesServerShape() throws {
+        let json = #"{"offer_id":5,"number":"20261110-1","url":"/offers/5/build","klant":{"id":3,"naam":"X","nieuw":true},"regels":3,"te_controleren":2,"bestaand":false,"model":"hoofd","terugval_gebruikt":true}"#
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let r = try decoder.decode(ProspectFlowService.OfferResult.self, from: Data(json.utf8))
+        XCTAssertEqual(r.offerId, 5)
+        XCTAssertEqual(r.teControleren, 2)
+        XCTAssertTrue(r.terugvalGebruikt)
+        XCTAssertEqual(r.klant.naam, "X")
+    }
+
+}
+
+final class ProspectFlowReferenceTests: XCTestCase {
+    func testOfferBodyNamesTheColleague() {
+        let suite = "ProspectFlowMaker-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        XCTAssertNil(ProspectFlowService.makerEmail(defaults: defaults))
+        defaults.set("  collega@example.com ", forKey: SupportIdentity.emailKey)
+        XCTAssertEqual(ProspectFlowService.makerEmail(defaults: defaults), "collega@example.com")
+    }
+
+    func testOfferReferencesStayWithinConfiguredInstance() {
+        let suiteName = "ProspectFlowTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let taskId = "instance-test-" + UUID().uuidString
+        let first = "https://first.example.test"
+        let second = "https://second.example.test"
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(first, forKey: ProspectFlowService.baseURLKey)
+        let pending = ProspectFlowService.OfferRef(pendingRequestId: "pending-first", pendingCustomer: "id:12")
+        ProspectFlowService.setOfferRef(pending, for: taskId, defaults: defaults)
+        defaults.set(second, forKey: ProspectFlowService.baseURLKey)
+        XCTAssertNil(ProspectFlowService.offerRef(for: taskId, defaults: defaults))
+        ProspectFlowService.setOfferRef(.init(id: 42, number: "second", url: "/offers/42/build"), for: taskId, defaults: defaults)
+        defaults.set(first + "/", forKey: ProspectFlowService.baseURLKey)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, defaults: defaults), pending)
+        defaults.set(second, forKey: ProspectFlowService.baseURLKey)
+        ProspectFlowService.setOfferRef(.init(id: 43), for: taskId, baseURL: first, defaults: defaults)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, defaults: defaults)?.id, 42)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: taskId, baseURL: first, defaults: defaults)?.id, 43)
+    }
+
+    func testLegacyReferencesOnlyBelongToYinga() throws {
+        let suiteName = "ProspectFlowLegacyTests-" + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let reference = ProspectFlowService.OfferRef(id: 3, url: "/offers/3/build")
+        defaults.set(try JSONEncoder().encode(reference), forKey: "prospectFlowOffer-test")
+        defaults.set("https://other.example.test", forKey: ProspectFlowService.baseURLKey)
+        XCTAssertNil(ProspectFlowService.offerRef(for: "test", defaults: defaults))
+        defaults.set(ProspectFlowService.defaultBaseURL, forKey: ProspectFlowService.baseURLKey)
+        XCTAssertEqual(ProspectFlowService.offerRef(for: "test", defaults: defaults), reference)
+        ProspectFlowService.setOfferRef(nil, for: "test", defaults: defaults)
+        XCTAssertNil(ProspectFlowService.offerRef(for: "test", defaults: defaults))
+    }
+    func testPendingCustomerChoiceKeepsOriginalNewCustomerAfterReopening() {
+        let ref = ProspectFlowService.OfferRef(pendingRequestId: "lost-reply", pendingCustomer: "new:nieuw bv", pendingNewCustomerName: "Nieuw BV")
+        guard case .new(let name) = ref.pendingChoice else { return XCTFail("Pending choice lost") }
+        XCTAssertEqual(name, "Nieuw BV")
+        XCTAssertEqual(ProspectFlowService.Customer.new(name).key, ref.pendingCustomer)
+        let legacy = ProspectFlowService.OfferRef(pendingRequestId: "legacy", pendingCustomer: "new:nieuw bv")
+        XCTAssertEqual(legacy.pendingChoice?.key, "new:nieuw bv")
+        let existing = ProspectFlowService.OfferRef(pendingRequestId: "existing", pendingCustomer: "id:12")
+        XCTAssertEqual(existing.pendingChoice?.key, "id:12")
+        XCTAssertNotEqual(existing.pendingChoice?.key, ref.pendingChoice?.key)
+        XCTAssertNil(ProspectFlowService.OfferRef(pendingCustomer: "new:nieuw bv").pendingChoice)
+        for key in ["new:", "new:  ", "id:0", "id:-1", "id:bad", "other"] {
+            XCTAssertNil(ProspectFlowService.OfferRef(pendingRequestId: "invalid", pendingCustomer: key).pendingChoice)
+        }
+    }
+
+    @MainActor
+    func testOfferOpeningReportsRefusalAndInvalidURL() async {
+        for url in [URL(string: "https://pf.example.test/offers/1/build"), nil] {
+            let error: String? = await withCheckedContinuation { continuation in
+                openProspectFlowOffer(url, using: OpenURLAction { _ in .discarded },
+                                      onFailure: { continuation.resume(returning: $0) },
+                                      onSuccess: { continuation.resume(returning: nil) })
+            }
+            XCTAssertNotNil(error)
+        }
+    }
+
+    @MainActor
+    func testOfferOpeningCompletesOnlyWhenBrowserAccepts() async {
+        let opened: Bool = await withCheckedContinuation { continuation in
+            openProspectFlowOffer(URL(string: "https://pf.example.test/offers/1/build"),
+                                  using: OpenURLAction { _ in .handled },
+                                  onFailure: { _ in continuation.resume(returning: false) },
+                                  onSuccess: { continuation.resume(returning: true) })
+        }
+        XCTAssertTrue(opened)
+    }
+
+    func testOfferLinksCannotLeaveTheirInstance() {
+        let service = ProspectFlowService(baseURL: "https://pf.example.test", apiKey: "fixture")
+        XCTAssertEqual(service.openURL("/offers/1/build")?.absoluteString, "https://pf.example.test/offers/1/build")
+        for path in ["@other.example.test/path", "//other.example.test/path", "https://other.example.test/path", "javascript:alert(1)"] {
+            XCTAssertNil(service.openURL(path), path)
+        }
+    }
+
+}
+
+final class NotuleMergeTests: XCTestCase {
+    private func note(_ id: String, _ day: TimeInterval = 0, html: String = "<p>Sam controleert vrijdag de definitieve planning.</p>") -> Transcript {
+        Transcript(id: id, title: "Overleg \(id)", date: Date(timeIntervalSince1970: day),
+                   rawTranscription: "Deze oude transcriptie mag niet worden gebruikt.", notuleHtml: html)
+    }
+
+    func testUsesEditedNotesAndStableChronologicalOrder() throws {
+        let a = note("a", 10, html: "<style>geheim</style><p>Gewijzigd besluit &amp; unieke actie voor Sam.</p>")
+        let b = note("b", 20)
+        let c = note("c", 20)
+        let first = try NotuleMerge.prepare([c, a, b, a])
+        let second = try NotuleMerge.prepare([b, c, a])
+        XCTAssertEqual(first.text, second.text)
+        XCTAssertEqual(first.metadata, second.metadata)
+        XCTAssertTrue(first.text.contains("Gewijzigd besluit & unieke actie"))
+        XCTAssertFalse(first.text.contains("oude transcriptie"))
+        XCTAssertFalse(first.text.contains("<p>"))
+        XCTAssertFalse(first.text.contains("geheim"))
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        XCTAssertEqual(try decoder.decode([NotuleMergeSource].self, from: Data(first.metadata.utf8)).map(\.id), ["a", "b", "c"])
+    }
+
+    func testRequiresTwoDistinctUsableNotesAndRejectsOversizeWithoutTruncating() throws {
+        XCTAssertThrowsError(try NotuleMerge.prepare([note("a"), note("a")]))
+        XCTAssertThrowsError(try NotuleMerge.prepare([note("a"), note("b", html: "<p></p>")]))
+        XCTAssertThrowsError(try NotuleMerge.prepare([note("a"), note("b", html: String(repeating: "Inhoud ", count: 160_000))]))
+        XCTAssertNoThrow(try NotuleMerge.prepare([note("a"), note("b")]))
+    }
+
+    func testMergeGenerationKeepsChecksAndAvoidsInventedMeetingDate() async throws {
+        let llm = StubLLM(draft: "<h1>Besluiten bij planning</h1><p>Sam controleert vrijdag de planning. {{DATE}}</p>")
+        let snapshot = try NotuleMerge.prepare([note("a"), note("b")])
+        let html = try await NotuleGenerator(service: llm, merging: true).generate(transcription: snapshot.text,
+            profile: profile, participants: [], quickNote: nil, createdAt: Date(), corrections: [])
+        XCTAssertEqual(llm.generations.first?.transcription, snapshot.text)
+        XCTAssertTrue(llm.generations.first?.systemPrompt.contains(NotuleMerge.instructions) == true)
+        XCTAssertTrue(html.contains("Zie bronnotulen"))
+        XCTAssertFalse(html.contains("{{DATE}}"))
+        XCTAssertFalse(llm.audits.isEmpty)
+    }
+
+    @MainActor func testSnapshotAndMetadataSurviveLocalStorageAndSyncAndOldPayload() throws {
+        let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none))
+        let store = try LocalTranscriptStore(container: container)
+        let snapshot = try NotuleMerge.prepare([note("a"), note("b")])
+        let merged = TranscriptRecord(id: "local-merged", title: "Samengevoegd", rawTranscription: snapshot.text)
+        merged.mergeSourcesJSON = snapshot.metadata
+        try store.save(merged)
+        try store.updateNotule(taskId: merged.taskId, html: "<p>Handmatig bijgewerkt.</p>", transcription: "Mag de bronmomentopname niet vervangen")
+        XCTAssertEqual(merged.rawTranscription, snapshot.text)
+        XCTAssertEqual(merged.notuleHtml, "<p>Handmatig bijgewerkt.</p>")
+        XCTAssertNil(merged.localAudioPath)
+        XCTAssertNil(merged.durationSeconds)
+        let saved = try XCTUnwrap(store.record(forTaskId: "local-merged"))
+        let encoded = try SyncedNotule(saved).encoded()
+        let incoming = try JSONDecoder().decode(SyncedNotule.self, from: encoded)
+        let copy = TranscriptRecord(title: "Kopie")
+        incoming.apply(to: copy)
+        XCTAssertEqual(copy.rawTranscription, snapshot.text)
+        XCTAssertEqual(copy.mergeSourcesJSON, snapshot.metadata)
+        XCTAssertEqual(copy.asTranscript.mergeSourcesJSON, snapshot.metadata)
+        let value = try JSONDecoder().decode(Transcript.self, from: JSONEncoder().encode(copy.asTranscript))
+        XCTAssertEqual(value.mergeSourcesJSON, snapshot.metadata)
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        legacy.removeValue(forKey: "mergeSourcesJSON")
+        let old = try JSONDecoder().decode(SyncedNotule.self, from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertNil(old.mergeSourcesJSON)
+        XCTAssertNil(try JSONDecoder().decode(Transcript.self, from: Data(#"{"id":"old","title":"Oud"}"#.utf8)).mergeSourcesJSON)
+    }
+}
+
+private enum PreMergeSchema {
+@Model
+final class TranscriptRecord {
+
+    /// Stable local identifier (also used as the task id for locally processed items).
+    @Attribute(.unique) var id: String
+    var taskId: String
+    var title: String
+    var filename: String
+    var rawTranscription: String
+    var notuleHtml: String
+    var profileId: String
+    var profileName: String?
+    var tags: [String]
+    var createdAt: Date
+    var localAudioPath: String?
+    /// "local" for on-device processed records, "cloud" for server-synced records.
+    var source: String
+    /// JSON-encoded [Participant] captured at record time, so local notule
+    /// regeneration (other profile) can re-inject the deelnemerslijst. Optional →
+    /// lightweight-migration safe for existing stores.
+    var participantsJSON: String?
+    /// A generated notule that failed the fact audit, kept apart from `notuleHtml`
+    /// for manual review. Optional → lightweight-migration safe.
+    var notuleDraftHtml: String?
+    /// Why that draft was not approved (Dutch, shown to the user).
+    var notuleReviewReason: String?
+    /// Audio length in seconds, set on record/import. Optional → lightweight-migration safe.
+    var durationSeconds: Double?
+    /// JSON-encoded `NotuleUsage` of the run that generated `notuleHtml`. Optional → lightweight-migration safe.
+    var notuleUsageJSON: String?
+
+    init(
+        id: String = UUID().uuidString,
+        taskId: String = "",
+        title: String,
+        filename: String = "",
+        rawTranscription: String = "",
+        notuleHtml: String = "",
+        profileId: String = "",
+        profileName: String? = nil,
+        tags: [String] = [],
+        createdAt: Date = Date(),
+        localAudioPath: String? = nil,
+        source: String = "local",
+        participantsJSON: String? = nil
+    ) {
+        self.id = id
+        self.taskId = taskId.isEmpty ? id : taskId
+        self.title = title
+        self.filename = filename
+        self.rawTranscription = rawTranscription
+        self.notuleHtml = notuleHtml
+        self.profileId = profileId
+        self.profileName = profileName
+        self.tags = tags
+        self.createdAt = createdAt
+        self.localAudioPath = localAudioPath
+        self.source = source
+        self.participantsJSON = participantsJSON
+    }
+
+}
+}
+
+@MainActor
+extension NotuleMergeTests {
+    func testExistingDiskStoreMigratesWithoutMergeMetadata() throws {
+        let directory = AppEnvironment.supportDirectory.appending(path: "pre-merge-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appending(path: "Local.store")
+        try autoreleasepool {
+            let container = try ModelContainer(for: PreMergeSchema.TranscriptRecord.self, PersonProfile.self,
+                configurations: ModelConfiguration(url: url, cloudKitDatabase: .none))
+            let note = PreMergeSchema.TranscriptRecord(id: "legacy", title: "Handmatig bewaard", rawTranscription: "Originele transcriptie", notuleHtml: "<p>Mijn gewijzigde notule blijft bewaard.</p>")
+            container.mainContext.insert(note)
+            try container.mainContext.save()
+        }
+        let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
+            configurations: ModelConfiguration(url: url, cloudKitDatabase: .none))
+        let record = try XCTUnwrap(container.mainContext.fetch(FetchDescriptor<TranscriptRecord>()).first)
+        XCTAssertEqual(record.id, "legacy")
+        XCTAssertEqual(record.notuleHtml, "<p>Mijn gewijzigde notule blijft bewaard.</p>")
+        XCTAssertEqual(record.rawTranscription, "Originele transcriptie")
+        XCTAssertNil(record.mergeSourcesJSON)
+    }
+}
+
+final class ProspectFlowCustomerSuggestionTests: XCTestCase {
+    func testNameMustBeGroundedInTheNamedSource() {
+        let sources = ProspectFlowService.customerSources(title: "Offerte Friese Installatietechniek", notes: "Sanne is contactpersoon bij Friese Installatietechniek.", transcript: "", meeting: "")
+        let raw = #"{"name":"Friese Installatietechniek","source":"notes","quote":"Sanne is contactpersoon bij Friese Installatietechniek."}"#
+        XCTAssertEqual(ProspectFlowService.parseCustomerSuggestion(raw, sources: sources)?.name, "Friese Installatietechniek")
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion(raw.replacingOccurrences(of: "\"notes\"", with: "\"meeting\""), sources: sources))
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion(#"{"name":"Verzonnen BV","source":"notes","quote":"Verzonnen BV"}"#, sources: sources))
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion("{}", sources: sources))
+        XCTAssertNil(ProspectFlowService.parseCustomerSuggestion("not JSON", sources: sources))
+        XCTAssertNotNil(ProspectFlowService.parseCustomerSuggestion("<think>{ reasoning }</think>```json\n" + raw + "\n```", sources: sources))
+    }
+
+    func testInputIsBoundedAndOfferProfileIsGated() {
+        let sources = ProspectFlowService.customerSources(title: "", notes: String(repeating: "x", count: 20_000), transcript: String(repeating: "y", count: 50_000), meeting: "")
+        XCTAssertEqual(sources["notes"]?.count, 16_000)
+        XCTAssertEqual(sources["transcript"]?.count, 48_000)
+        XCTAssertEqual(Profile.defaults.contains { $0.id == "prospectflow_offerte" }, ProspectFlowService.hasVerifiedKey)
+    }
+}
+
+// MARK: - Detail level
+
+final class NotuleGeneratorDetailLevelTests: XCTestCase {
+    /// Same input as tests/fixtures/notule-detail/draft-volledig.json, recorded from the Windows code before
+    /// detail levels existed; prompts are byte-identical on both platforms.
+    private let transcription = "Sam belt vrijdag de klant over de planning. We besluiten dat het budget 12.450 euro wordt. Er gaan geen klantgegevens naar leveranciers. Ik denk niet dat het morgen regent. De vorige afspraak vervalt."
+    private let fixtureProfile = Profile(id: "detail-fixture", name: "Fixture", systemPrompt: "Je bent notulist.", notulePrompt: "Maak notulen.")
+    private let html = "<p>Sam belt vrijdag de klant over de planning en het budget wordt 12.450 euro.</p>"
+
+    private func run(_ level: NotuleDetailLevel?) async throws -> (StubLLM.Generation, NotuleUsage?) {
+        let service = StubLLM(draft: html)
+        let usage = OSAllocatedUnfairLock<NotuleUsage?>(initialState: nil)
+        let generator = NotuleGenerator(service: service)
+        if let level {
+            _ = try await generator.generate(transcription: transcription, profile: fixtureProfile, participants: [], quickNote: nil,
+                                             createdAt: Date(timeIntervalSince1970: 0), corrections: [], detailLevel: level,
+                                             onUsage: { run in usage.withLock { $0 = run } })
+        } else {
+            _ = try await generator.generate(transcription: transcription, profile: fixtureProfile, participants: [], quickNote: nil,
+                                             createdAt: Date(timeIntervalSince1970: 0), corrections: [],
+                                             onUsage: { run in usage.withLock { $0 = run } })
+        }
+        return (try XCTUnwrap(service.generations.first), usage.withLock { $0 })
+    }
+
+    private func userMessage(_ call: StubLLM.Generation) -> String {
+        buildNotuleUserContent(notulePrompt: call.notulePrompt, transcription: call.transcription, outputTemplate: nil,
+                               constraints: call.constraints, detailBlock: call.detailBlock)
+    }
+
+    private func sha256(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    func testDefaultIsVolledigWithTheDraftOfBefore() async throws {
+        let (call, usage) = try await run(nil)
+        XCTAssertEqual(call.detailBlock, "")
+        XCTAssertEqual(call.constraints, NotuleAudit.constraintSentences(transcription))
+        XCTAssertEqual(sha256(notuleSystemPrompt("Je bent notulist.")), Self.fixtureSystemSha256)
+        XCTAssertEqual(sha256(userMessage(call)), Self.fixtureUserSha256)
+        XCTAssertEqual(usage?.detailLevel, "volledig")
+        let (explicit, _) = try await run(.volledig)
+        XCTAssertEqual(userMessage(explicit), userMessage(call))
+    }
+
+    func testKortAppendsItsBlockAndKeepsOnlyEssentialConstraints() async throws {
+        let (call, usage) = try await run(.kort)
+        XCTAssertEqual(NotuleAudit.constraintSentences(transcription), ["Er gaan geen klantgegevens naar leveranciers.", "De vorige afspraak vervalt."])
+        XCTAssertEqual(call.constraints, ["De vorige afspraak vervalt."])
+        XCTAssertEqual(call.detailBlock, NotuleDetailLevel.kort.draftBlock(transcriptCharacters: transcription.utf16.count))
+        XCTAssertTrue(userMessage(call).hasSuffix("\n1. De vorige afspraak vervalt." + call.detailBlock))
+        XCTAssertTrue(call.detailBlock.contains("ongeveer 1.500 tekens, hooguit 2.000."))
+        XCTAssertEqual(usage?.detailLevel, "kort")
+    }
+
+    func testNormaalAppendsItsBlock() async throws {
+        let (call, usage) = try await run(.normaal)
+        XCTAssertTrue(call.detailBlock.hasPrefix("\n\nDetailniveau Normaal: schrijf een notule van ongeveer 2.500 tekens, hooguit 3.300."))
+        XCTAssertEqual(usage?.detailLevel, "normaal")
+    }
+
+    // SHA-256 of `system` and `user` in tests/fixtures/notule-detail/draft-volledig.json.
+    static let fixtureSystemSha256 = "37bd9bf3f46b319cb8dc0c83d5e7a411cfb1da3c597b47e665b64084ecbc80b8"
+    static let fixtureUserSha256 = "be9c1c4a735a98388848eaeda37b3312ce178a34af34b2ede3bba68c7c143539"
 }

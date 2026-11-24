@@ -3,15 +3,16 @@
 //
 // macOS Instellingen shell reconstructed from the approved NorthStar
 // (docs/design/settings/thoughtvault-settings-verwerking-northstar.png):
-// large title, pill tab bar and the Verwerking page. The other tabs keep their
-// existing forms on the same background. Shared building blocks live here; the
-// Verwerking cards are in SettingsView+Verwerking and +VerwerkingSide.
+// large title, pill tab bar and the Verwerking page. The building blocks shared
+// with iOS live in Components/StudioComponents.swift; the Verwerking cards are in
+// SettingsView+Verwerking and +VerwerkingSide, the cards of the other tabs in
+// SettingsView+Cards.
 
 #if os(macOS)
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case algemeen, verwerking, woordenlijst, notulen, agenda, obsidian, account, geavanceerd
+    case algemeen, verwerking, woordenlijst, notulen, huisstijlen, agenda, obsidian, account, geavanceerd
 
     var id: String { rawValue }
 
@@ -21,6 +22,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .verwerking:  return "Verwerking"
         case .woordenlijst: return "Woordenlijst"
         case .notulen:     return "Notulen"
+        case .huisstijlen: return "Huisstijlen"
         case .agenda:      return "Agenda"
         case .obsidian:    return "Obsidian"
         case .account:     return "Account"
@@ -34,6 +36,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .verwerking:  return "waveform"
         case .woordenlijst: return "character.book.closed"
         case .notulen:     return "doc.text"
+        case .huisstijlen: return "paintpalette"
         case .agenda:      return "calendar"
         case .obsidian:    return "tray.and.arrow.down"
         case .account:     return "person"
@@ -94,12 +97,13 @@ extension SettingsView {
             PersonalCorrectionsView(profiles: profiles)
                 .padding(.leading, layout.leading).padding(.trailing, layout.trailing)
                 .padding(.vertical, 24)
-        case .algemeen:    algemeenTab.scrollContentBackground(.hidden)
-        case .notulen:     profielTab.scrollContentBackground(.hidden)
-        case .agenda:      agendaTab.scrollContentBackground(.hidden)
-        case .obsidian:    obsidianTab.scrollContentBackground(.hidden)
-        case .account:     accountTab.scrollContentBackground(.hidden)
-        case .geavanceerd: geavanceerdTab.scrollContentBackground(.hidden)
+        case .algemeen:    algemeenCards(layout)
+        case .notulen:     notulenCards(layout)
+        case .huisstijlen: DocumentBrandingView()
+        case .agenda:      agendaCards(layout)
+        case .obsidian:    obsidianCards(layout)
+        case .account:     accountCards(layout)
+        case .geavanceerd: geavanceerdCards(layout)
         }
     }
 
@@ -140,153 +144,52 @@ extension SettingsView {
 
 }
 
-// MARK: - Building blocks
+// MARK: - Building blocks (macOS only: StudioSwitchStyle is in RecordingView+Studio)
 
-extension NotulenProvider {
-    /// Tile title on the Verwerking page.
-    var studioName: String {
-        switch self {
-        case .openAI:            return "ChatGPT"
-        case .anthropic:         return "Claude"
-        case .ollamaCloud:       return "Ollama Cloud"
-        case .openAICompatible:  return "OpenAI-compatibel"
-        case .ollama:            return "Ollama"
-        case .lmStudio:          return "LM Studio"
-        case .appleIntelligence: return "Apple Intelligence"
-        case .cloud:             return "Server"
-        }
-    }
-
-    var studioSubtitle: String {
-        switch self {
-        case .openAI, .anthropic, .ollamaCloud: return "Eigen API-sleutel"
-        case .openAICompatible:   return "Eigen HTTPS-adres"
-        case .ollama:             return "Lokaal of cloud"
-        case .lmStudio:           return "Lokale server"
-        case .appleIntelligence:  return "Op dit apparaat"
-        case .cloud:              return "Via de ThoughtVault-server"
-        }
-    }
-
-    var studioIcon: String {
-        switch self {
-        case .openAI:            return "bubble.left.and.text.bubble.right"
-        case .anthropic:         return "asterisk"
-        case .ollamaCloud:       return "cloud"
-        case .openAICompatible:  return "network"
-        case .ollama:            return "shippingbox"
-        case .lmStudio:          return "server.rack"
-        case .appleIntelligence: return "apple.intelligence"
-        case .cloud:             return "cloud"
-        }
-    }
-
-    /// Providers offered as tiles, in display order.
-    static let studioChoices: [NotulenProvider] = [.openAI, .anthropic, .ollama, .openAICompatible, .lmStudio, .appleIntelligence]
-}
-
-extension View {
-    /// Card surface of the Settings NorthStar.
-    func studioCard(fill: Color = HomeColor.card, border: Color = HomeColor.cardBorder, padding: CGFloat = 20) -> some View {
-        self
-            .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(fill))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(border, lineWidth: 1))
-    }
-}
-
-struct StudioIconTile: View {
-    let systemName: String
-    var size: CGFloat = 46
-    var tint: Color = HomeColor.lavender
-
-    var body: some View {
-        Image(systemName: systemName)
-            .font(.system(size: size * 0.42, weight: .regular))
-            .foregroundStyle(tint)
-            .frame(width: size, height: size)
-            .background(RoundedRectangle(cornerRadius: size * 0.26, style: .continuous).fill(HomeColor.control))
-            .accessibilityHidden(true)
-    }
-}
-
-struct StudioBadge: View {
-    let text: String
-    var color: Color = HomeColor.ready
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(color)
-            .padding(.horizontal, 10)
-            .frame(height: 24)
-            .background(Capsule().fill(color.opacity(0.14)))
-            .overlay(Capsule().strokeBorder(color.opacity(0.35), lineWidth: 1))
-    }
-}
-
-struct StudioRadio: View {
-    let selected: Bool
-
-    var body: some View {
-        ZStack {
-            Circle().strokeBorder(selected ? HomeColor.violet : HomeColor.controlBorder, lineWidth: selected ? 2 : 1.5)
-            if selected { Circle().fill(Color.white).frame(width: 7, height: 7) }
-        }
-        .frame(width: 20, height: 20)
-        .background(Circle().fill(selected ? HomeColor.violet : .clear))
-        .accessibilityHidden(true)
-    }
-}
-
-/// Selectable option tile (location and provider choices).
-struct StudioChoiceTile: View {
-    let selected: Bool
+/// Settings card with an icon tile and a heading, as on the Verwerking page.
+/// Rows inside get the card switch style; long text wraps.
+struct SettingsCard<Content: View>: View {
     let icon: String
-    let title: String
-    let subtitle: String
-    var badge: String?
-    var vertical = false
-    let action: () -> Void
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey?
+    @ViewBuilder let content: Content
 
     var body: some View {
-        Button(action: action) {
-            Group {
-                if vertical {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: icon).font(.system(size: 20)).foregroundStyle(HomeColor.text)
-                            Spacer(minLength: 4)
-                            StudioRadio(selected: selected)
-                        }
-                        Text(title).font(.system(size: 14.5, weight: .semibold)).foregroundStyle(HomeColor.text)
-                        Text(subtitle).font(.system(size: 12)).foregroundStyle(HomeColor.text3)
-                            .lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                    }
-                } else {
-                    HStack(alignment: .top, spacing: 14) {
-                        Image(systemName: icon).font(.system(size: 22)).foregroundStyle(HomeColor.text).frame(width: 34)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(title).font(.system(size: 14.5, weight: .medium)).foregroundStyle(HomeColor.text)
-                            Text(subtitle).font(.system(size: 12.5)).foregroundStyle(HomeColor.text3)
-                        }
-                        Spacer(minLength: 6)
-                        StudioRadio(selected: selected)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 14) {
+                StudioIconTile(systemName: icon, size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(HomeColor.text)
+                        .accessibilityAddTraits(.isHeader)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.system(size: 13.5))
+                            .foregroundStyle(HomeColor.text2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: vertical ? 88 : 62, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(selected ? HomeColor.violet.opacity(0.14) : HomeColor.field.opacity(0.5)))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(selected ? HomeColor.violet : HomeColor.controlBorder, lineWidth: selected ? 1.5 : 1))
-            .contentShape(Rectangle())
+            VStack(alignment: .leading, spacing: 14) { content }
+                .toggleStyle(StudioRowSwitchStyle())
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .studioCard()
+    }
+}
+
+/// Label on the left, the violet switch on the right, for toggles inside cards.
+struct StudioRowSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .center, spacing: 14) {
+            configuration.label
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityHidden(true)
+            Toggle(isOn: configuration.$isOn) { configuration.label }
+                .toggleStyle(StudioSwitchStyle())
+        }
     }
 }
 #endif

@@ -8,7 +8,7 @@ import { processLocally } from "../services/localPipeline";
 import { resolveParticipants } from "../services/participants";
 import { closeWidgetWindow } from "./useWidgetWindow";
 import { useToast } from "../components/ui/InfoBar";
-import { saveQuickNote } from "../services/quickNotes";
+import { saveRecordingIdentity, saveQuickNote } from "../services/quickNotes";
 import { reportFailure } from "../services/crashReporter";
 
 /**
@@ -31,7 +31,19 @@ export function useGlobalRecordingHandler() {
       void emit("widget-sync-timer", { phase, recordingStartedAt, pausedAt, pausedDuration }).catch(console.error);
     };
     const unsubscribe = useRecordingStore.subscribe((state, previous) => {
+      if (state.filePath && state.phase !== "idle" && (state.filePath !== previous.filePath || state.recordingTitle !== previous.recordingTitle || state.recordingTitleMode !== previous.recordingTitleMode || state.activeMeeting !== previous.activeMeeting)) {
+        try {
+          saveRecordingIdentity(state.filePath, {
+            title: state.recordingTitleMode === "meeting" ? state.activeMeeting?.title : state.recordingTitleMode === "manual" ? state.recordingTitle.trim() || undefined : undefined,
+            calendar: state.recordingTitleMode === "meeting" ? state.activeMeeting ?? undefined : undefined,
+          });
+        } catch { useToast.getState().show("De titel kon niet lokaal worden bewaard. Probeer opnieuw.", "error"); }
+      }
       if (state.phase !== previous.phase || state.pausedAt !== previous.pausedAt || state.pausedDuration !== previous.pausedDuration) syncWidget();
+    });
+    const warning = listen<string>("recording-warning", (event) => {
+      if (disposed) return;
+      useToast.getState().show(event.payload, "warning");
     });
     const ready = listen("widget-ready", syncWidget);
     const paused = listen("recording-paused", () => {
@@ -96,7 +108,7 @@ export function useGlobalRecordingHandler() {
       void reportFailure("opnemen", shown, code);
     });
     // Register every handler before native recording or widget creation can begin.
-    void Promise.all([ready, paused, resumed, stopping, stopped, error, diagnostic].map(listener => listener.then(retain)))
+    void Promise.all([ready, paused, resumed, stopping, stopped, error, diagnostic, warning].map(listener => listener.then(retain)))
       .then(() => { if (!disposed) registration.activate(); })
       .catch(error => { dispose(); console.error(error); });
 
@@ -123,6 +135,10 @@ async function handleUpload(
     store.selectedParticipantIds,
   );
   saveQuickNote(filePath, store.quickNote);
+  saveRecordingIdentity(filePath, {
+    title: store.recordingTitleMode === "meeting" ? store.activeMeeting?.title : store.recordingTitleMode === "manual" ? store.recordingTitle.trim() || undefined : undefined,
+    calendar: store.recordingTitleMode === "meeting" ? store.activeMeeting ?? undefined : undefined,
+  });
   store.reset();
   if (useSettingsStore.getState().processing_mode === "local") {
     await processLocally(filePath, selectedProfileId, mode, participants, durationSeconds);

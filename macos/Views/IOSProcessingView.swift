@@ -37,6 +37,13 @@ struct IOSProcessingView: View {
                 if let task {
                     currentCard(task)
                         .padding(.top, 20)
+                    // Only when nothing keeps a local run alive in the background (below iOS 26, or task refused).
+                    if task.status.isActive, ContinuedProcessing.shared?.needsAppOpen == true {
+                        Text("Houd ThoughtVault open tot de verwerking klaar is.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(IOSColor.text2)
+                            .padding(.top, 12)
+                    }
                 } else if lastStatus == .error {
                     failedCard
                         .padding(.top, 20)

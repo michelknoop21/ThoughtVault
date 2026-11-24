@@ -24,18 +24,22 @@ def build_entries(source):
             template = item['template']
         elif sections:
             template = '<h1>[Doel of uitkomst van dit gesprek in 4-10 woorden]</h1>\n' + '\n'.join(
-                f'<section><h2>{section}</h2><p>[Alleen brongebonden inhoud]</p></section>' for section in sections
+                ('<!-- Alleen opnemen bij concrete inhoud uit de bron; anders deze hele sectie weglaten. -->\n' if ' (alleen bij' in section else '') + f'<section><h2>{section.split(" (alleen bij")[0]}</h2><p>[Alleen brongebonden inhoud]</p></section>' for section in sections
             )
         else:
             template = '<h1>[Waar de prompt voor dient, 4-10 woorden]</h1>\n<p>[Kopieerbare prompttekst]</p>'
-        entries.append({
+        entry = {
             'id': item['id'], 'name': item['name'], 'description': item['description'], 'icon': item['icon'], 'emoji': item['emoji'],
             'systemPrompt': common, 'notulePrompt': prompt, 'template': template,
-        })
+        }
+        # Default notule detail level (kort, normaal, volledig); absent means volledig.
+        if item.get('detailLevel'):
+            entry['detailLevel'] = item['detailLevel']
+        entries.append(entry)
     return entries
 
 
-def outputs(entries):
+def outputs(entries, backend_path=BACKEND):
     bundled = json.dumps(entries, ensure_ascii=False, indent=2) + '\n'
     definitions = {
         entry['id']: {**entry, 'outputTemplate': entry['template']} for entry in entries
@@ -51,18 +55,19 @@ def outputs(entries):
         ROOT / 'macos/Resources/ProfileTemplates.json': bundled,
         ROOT / 'windows/src/data/profileTemplates.json': bundled,
     }
-    if BACKEND.parent.is_dir():
-        targets[BACKEND] = backend
+    if backend_path.parent.is_dir():
+        targets[backend_path] = backend
     return targets
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--backend', type=Path, default=BACKEND, help='Backend output file (defaults to the sibling checkout)')
     args = parser.parse_args()
     entries = build_entries(json.loads(SOURCE.read_text()))
     stale = []
-    for path, content in outputs(entries).items():
+    for path, content in outputs(entries, args.backend).items():
         if args.check:
             if not path.exists() or path.read_text() != content:
                 stale.append(str(path))

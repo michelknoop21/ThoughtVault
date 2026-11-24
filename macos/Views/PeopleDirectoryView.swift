@@ -13,20 +13,21 @@ struct PeopleDirectoryView: View {
 
     // MARK: - State
 
-    private let service = PersonDirectoryService.shared
-    @State private var people: [PersonProfile] = []
-    @State private var searchText: String = ""
-    @State private var isLoading: Bool = true
-    @State private var loadError: String? = nil
+    // Internal, not private: the macOS layout lives in PeopleDirectoryView+Mac.swift.
+    let service = PersonDirectoryService.shared
+    @State var people: [PersonProfile] = []
+    @State var searchText: String = ""
+    @State var isLoading: Bool = true
+    @State var loadError: String? = nil
 
-    @State private var showAddSheet = false
-    @State private var personToEdit: PersonProfile? = nil
-    @State private var personToDelete: PersonProfile? = nil
-    @State private var showDeleteConfirmation = false
+    @State var showAddSheet = false
+    @State var personToEdit: PersonProfile? = nil
+    @State var personToDelete: PersonProfile? = nil
+    @State var showDeleteConfirmation = false
 
     // MARK: - Computed
 
-    private var filteredPeople: [PersonProfile] {
+    var filteredPeople: [PersonProfile] {
         guard !searchText.isEmpty else { return people }
         let query = searchText.lowercased()
         return people.filter { person in
@@ -39,6 +40,14 @@ struct PeopleDirectoryView: View {
     // MARK: - Body
 
     var body: some View {
+        #if os(macOS)
+        withPeopleActions(macBody)
+        #else
+        withPeopleActions(listBody)
+        #endif
+    }
+
+    private var listBody: some View {
         GeometryReader { geo in
             // Width-tier responsive layout: compact stacks the person row so the
             // status tag drops under the name instead of overflowing trailing.
@@ -67,11 +76,19 @@ struct PeopleDirectoryView: View {
                 .help("Persoon toevoegen")
             }
         }
+    }
+
+    /// Loading, the debug hook, the add and edit sheets and the delete confirmation.
+    private func withPeopleActions<Content: View>(_ content: Content) -> some View {
+        content
         .onAppear {
             loadPeople()
             #if DEBUG
             // Screenshot hook: `-TVDebugOpen person` opens the first person's editor.
-            if UserDefaults.standard.string(forKey: "TVDebugOpen") == "person" { personToEdit = people.first }
+            // Opened after the debug window sizing, so the sheet measures the final window.
+            if UserDefaults.standard.string(forKey: "TVDebugOpen") == "person" {
+                Task { try? await Task.sleep(for: .seconds(2)); personToEdit = people.first }
+            }
             #endif
         }
         .sheet(isPresented: $showAddSheet, onDismiss: loadPeople) {
@@ -119,7 +136,7 @@ struct PeopleDirectoryView: View {
 
     // MARK: - Loading View
 
-    private var loadingView: some View {
+    var loadingView: some View {
         VStack {
             ProgressView()
                 .controlSize(.large)
@@ -129,7 +146,7 @@ struct PeopleDirectoryView: View {
 
     // MARK: - Error View
 
-    private func errorView(message: String) -> some View {
+    func errorView(message: String) -> some View {
         VStack(spacing: TS.Spacing.sm) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 32))
@@ -145,7 +162,7 @@ struct PeopleDirectoryView: View {
 
     // MARK: - Empty State
 
-    private var emptyStateView: some View {
+    var emptyStateView: some View {
         VStack(spacing: TS.Spacing.md) {
             Image(systemName: "person.2")
                 .font(.system(size: 48))
@@ -191,7 +208,7 @@ struct PeopleDirectoryView: View {
 
     // MARK: - No Search Results
 
-    private var noSearchResultsView: some View {
+    var noSearchResultsView: some View {
         HStack {
             Spacer()
             Text("Geen resultaten voor '\(searchText)'")
@@ -321,7 +338,7 @@ struct PeopleDirectoryView: View {
 
     // MARK: - Load
 
-    private func loadPeople() {
+    func loadPeople() {
         isLoading = false
         people = service.directoryPeople()
         loadError = nil

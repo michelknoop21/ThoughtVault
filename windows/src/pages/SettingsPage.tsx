@@ -1,3 +1,4 @@
+import {BrandingTab} from "../components/settings/BrandingTab";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Settings24Regular, WaveformIcon, AdvancedIcon, DocumentText24Regular, Calendar24Regular, VaultIcon, Person24Regular } from "../components/ui/StudioIcons";
@@ -6,31 +7,36 @@ import { ProcessingTab } from "../components/settings/ProcessingTab";
 import { NotulenTab } from "../components/settings/NotulenTab";
 import { CalendarTab } from "../components/settings/CalendarTab";
 import { ObsidianTab } from "../components/settings/ObsidianTab";
+import { ProspectFlowTab } from "../components/settings/ProspectFlowTab";
 import { AccountTab } from "../components/settings/AccountTab";
 import { AdvancedTab } from "../components/settings/AdvancedTab";
 
 const TABS = [
+  { name: "Huisstijlen", icon: <DocumentText24Regular /> },
   { name: "Algemeen", icon: <Settings24Regular /> },
   { name: "Verwerking", icon: <WaveformIcon /> },
   { name: "Notulen", icon: <DocumentText24Regular /> },
   { name: "Agenda", icon: <Calendar24Regular /> },
   { name: "Obsidian", icon: <VaultIcon /> },
+  { name: "Prospect Flow", icon: <DocumentText24Regular /> },
   { name: "Account", icon: <Person24Regular /> },
   { name: "Geavanceerd", icon: <AdvancedIcon /> },
 ];
 
 export function SettingsPage() {
   const [params] = useSearchParams();
-  const [tab, setTab] = useState(params.get("tab") === "notulen" ? "Notulen" : "Verwerking");
+  const [tab, setTab] = useState(params.get("tab") === "huisstijlen" ? "Huisstijlen" : params.get("tab") === "notulen" ? "Notulen" : params.get("tab") === "obsidian" ? "Obsidian" : "Verwerking");
 
   return <div className="page-scroll northstar-settings">
     <h1>Instellingen</h1>
     <nav className="settings-tabs" aria-label="Instellingen">{TABS.map(({ name, icon }) => <button key={name} aria-current={tab === name ? "page" : undefined} className={tab === name ? "active" : ""} onClick={() => setTab(name)}>{icon}{name}</button>)}</nav>
+    {tab === "Huisstijlen" && <BrandingTab />}
     {tab === "Algemeen" && <GeneralTab />}
     {tab === "Verwerking" && <ProcessingTab />}
     {tab === "Notulen" && <NotulenTab />}
     {tab === "Agenda" && <CalendarTab />}
     {tab === "Obsidian" && <ObsidianTab />}
+    {tab === "Prospect Flow" && <ProspectFlowTab />}
     {tab === "Account" && <AccountTab />}
     {tab === "Geavanceerd" && <AdvancedTab />}
   </div>;

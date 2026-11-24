@@ -19,7 +19,7 @@ The private URL is provided to the owner separately. Back up the server's `.env`
 
 `/home/michelk/tstudio-releases` is mounted read-only at `/srv/releases`. Existing GitLab CI, GitHub Windows fallback and `scripts/upload.sh` / `scripts/upload.ps1` already upload installers and update `releases.json` in this same directory. No second copy or cron job is needed. The private page fetches the manifest without caching and builds links inside its private route. Production macOS, Windows x64 and Windows ARM64 appear per platform; a platform not built keeps its last available version. Native releases continue using their established manifest and endpoints for compatibility.
 
-The old `n8n.prezent.nl/tstudio/download/` endpoint is outside this website container and remains available for existing native update clients. No public `/releases/` alias remains on `thoughtvault.yinga.ai`. If legacy downloads must also become private, native update authentication must first be migrated.
+The updater feeds (`/releases/windows/{stable,dev}.json`, `/releases/macos/{stable,dev}.xml`) are served by this container from `/srv/releases`; Caddy passes those four paths through. The old `n8n.prezent.nl/tstudio/download/` and `/tstudio/` routes were removed on 24 November 2026. No other public `/releases/` path exists on `thoughtvault.yinga.ai`.
 
 ## SEO
 

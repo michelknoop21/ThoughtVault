@@ -52,6 +52,13 @@ server {
         add_header Referrer-Policy no-referrer always;
         add_header X-Content-Type-Options nosniff always;
     }
+    # Updater feeds for installed apps, served straight from the releases directory.
+    location ~ ^/releases/(windows/(?:stable|dev)\.json|macos/(?:stable|dev)\.xml)$ {
+        alias /srv/releases/$1;
+        add_header Cache-Control 'no-cache, no-store, must-revalidate' always;
+        add_header Access-Control-Allow-Origin '*' always;
+        add_header X-Content-Type-Options nosniff always;
+    }
     location /assets/ {
         add_header Cache-Control 'public, max-age=604800' always;
         add_header X-Content-Type-Options nosniff always;

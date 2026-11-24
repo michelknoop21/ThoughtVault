@@ -39,6 +39,9 @@ assert b'[INVULLEN' not in privacy and b'[BESLUIT' not in privacy
 assert b'private' not in get('/sitemap.xml')[2]
 for path in ['/download/', '/releases/', '/releases/releases.json', '/releases.json', '/d-'+'0'*64+'/']:
     assert get(path)[0] == 404, 'Unexpected public download route: ' + path
+feed_status, feed_headers, feed_body = get('/releases/windows/stable.json')
+assert feed_status == 200 and b'"version"' in feed_body, 'Windows updater feed is not served'
+assert 'no-store' in feed_headers.get('Cache-Control','')
 private = '/d-' + secret + '/'
 status, headers, body = get(private)
 assert status == 200 and 'text/html' in headers.get('Content-Type','')

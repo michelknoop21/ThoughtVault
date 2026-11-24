@@ -1,14 +1,11 @@
-# Updater feeds stay stable; installers and release listings use the website download path.
+# Updater feeds stay stable and are served by the website container from the releases directory.
 thoughtvault.yinga.ai {
     @updater path /releases/windows/stable.json /releases/windows/dev.json /releases/macos/stable.xml /releases/macos/dev.xml
     handle @updater {
-        uri replace /releases/ /tstudio/download/
-        reverse_proxy 172.17.0.1:5678 {
-            header_up Host n8n.prezent.nl
-        }
+        reverse_proxy thoughtvault-website:80
     }
     @oldDownloads {
-        path /releases /releases/* /download /download/* /downloads /downloads/* /tstudio/download /tstudio/download/*
+        path /releases /releases/* /download /download/* /downloads /downloads/*
         not path /releases/windows/stable.json /releases/windows/dev.json /releases/macos/stable.xml /releases/macos/dev.xml
     }
     handle @oldDownloads {

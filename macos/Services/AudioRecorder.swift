@@ -21,7 +21,7 @@ enum AudioRecorderError: LocalizedError {
         case .failedToStart:
             return "Kon de opname niet starten. Probeer het opnieuw."
         case .recordingInterrupted:
-            return "De opname werd onderbroken door een telefoongesprek."
+            return "De opname kon na een onderbreking niet worden hervat."
         case .emptyRecording:
             return "De opname is leeg of te kort om te verwerken."
         }
@@ -60,6 +60,11 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
 
     /// Called when a silent/delegate error occurs that cannot be surfaced via throws.
     var onSilentFailure: ((AudioRecorderError) -> Void)?
+    /// Called when the system pauses (true) or resumes (false) the recording around an
+    /// interruption such as a phone call, Siri or an alarm.
+    var onInterruption: ((Bool) -> Void)?
+    /// Test seam: stands in for `AVAudioRecorder.record()` when resuming.
+    var recordAgain: (() -> Bool)?
 
     // MARK: - Private
 
@@ -76,7 +81,10 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
     /// Wall-clock start of the last recording; kept after stop for mix alignment.
     private(set) var startedAt: Date?
     private var pausedAt: Date?
-    private var accumulatedPauseDuration: TimeInterval = 0
+    private(set) var accumulatedPauseDuration: TimeInterval = 0
+    /// True while a system interruption holds the recording paused. A pause from the user
+    /// stays the user's: it never resumes by itself.
+    private(set) var interruptedBySystem = false
     /// The first metering sample of a recording is checked once for a silent (floor) input.
     private var checkedFirstMeter = false
 
@@ -134,21 +142,14 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         let reason = AudioRouteLog.interruptionReason(userInfo)
         switch type {
         case .began:
-            log.warning("[AudioRecorder] Interruption began reason=\(reason) recording=\(isRecording) \(AudioRouteLog.session())"
-                        + (isRecording ? " action=pause+onSilentFailure(recordingInterrupted)" : " action=none"))
-            if isRecording {
-                audioRecorder?.pause()
-                isPaused = true
-                onSilentFailure?(.recordingInterrupted)
-            }
+            let recording = isRecording
+            let paused = interruptionBegan()
+            log.warning("[AudioRecorder] Interruption began reason=\(reason) recording=\(recording) \(AudioRouteLog.session()) action=\(paused ? "pause" : "none")")
         case .ended:
             let options = (userInfo[AVAudioSessionInterruptionOptionKey] as? UInt).map(AVAudioSession.InterruptionOptions.init(rawValue:))
-            let resumes = options?.contains(.shouldResume) == true && isPaused
-            log.info("[AudioRecorder] Interruption ended reason=\(reason) shouldResume=\(options?.contains(.shouldResume) == true) paused=\(isPaused) action=\(resumes ? "resume" : "none")")
-            if resumes {
-                audioRecorder?.record()
-                isPaused = false
-            }
+            let shouldResume = options?.contains(.shouldResume) == true
+            let action = interruptionEnded(shouldResume: shouldResume)
+            log.info("[AudioRecorder] Interruption ended reason=\(reason) shouldResume=\(shouldResume) paused=\(isPaused) action=\(action)")
         @unknown default:
             log.info("[AudioRecorder] Interruption type=\(typeValue) reason=\(reason) action=none")
         }
@@ -242,6 +243,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
                 self.startedAt = self.recordingStartDate
                 self.pausedAt = nil
                 self.accumulatedPauseDuration = 0
+                self.interruptedBySystem = false
                 self.audioLevels = Array(repeating: 0, count: AudioEnvelopeConfig.historyLength)
                 self.envelope.reset()
                 self.lastMeterDate = nil
@@ -266,15 +268,52 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
         pausedAt = Date()
     }
 
-    func resumeRecording() {
-        guard isRecording, isPaused else { return }
-        audioRecorder?.record()
+    /// Returns false, and stays paused, when AVAudioRecorder refuses to record again:
+    /// iOS does that while a call or Siri still holds the audio session.
+    @discardableResult
+    func resumeRecording() -> Bool {
+        guard isRecording, isPaused else { return false }
+        guard recordAgain?() ?? (audioRecorder?.record() == true) else {
+            log.warning("[AudioRecorder] Resume refused: record() returned false, recording stays paused")
+            return false
+        }
         lastMeterDate = nil  // don't count paused time as envelope dt
         isPaused = false
+        interruptedBySystem = false  // a manual resume during an interruption ends the system's claim
         if let pauseStart = pausedAt {
             accumulatedPauseDuration += Date().timeIntervalSince(pauseStart)
             pausedAt = nil
         }
+        return true
+    }
+
+    // MARK: - System interruptions
+
+    // Kept outside `#if os(iOS)` so the macOS test run covers the transitions; only iOS
+    // delivers the notification that calls them.
+
+    /// An interruption is a pause, not a failure: the recorder can continue in the same file.
+    /// Returns whether it paused the recording.
+    @discardableResult
+    func interruptionBegan() -> Bool {
+        guard isRecording, !isPaused else { return false }
+        pauseRecording()
+        interruptedBySystem = true
+        onInterruption?(true)
+        return true
+    }
+
+    /// Without `shouldResume`, or when the resume is refused, the recording stays paused
+    /// and the user resumes or stops it: what was captured stays usable.
+    /// Returns what happened, for the log: "resume", "refused" or "none".
+    @discardableResult
+    func interruptionEnded(shouldResume: Bool) -> String {
+        guard interruptedBySystem else { return "none" }
+        interruptedBySystem = false
+        guard shouldResume, isRecording, isPaused else { return "none" }
+        guard resumeRecording() else { return "refused" }
+        onInterruption?(false)
+        return "resume"
     }
 
     /// Ends the session bookkeeping: returns the URL of the session that was recording
@@ -302,6 +341,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             self.recordingStartDate = nil
             self.pausedAt = nil
             self.accumulatedPauseDuration = 0
+            self.interruptedBySystem = false
         }
         finalizeTimers()
 

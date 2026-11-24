@@ -253,11 +253,12 @@ final class RecordingViewModel {
                 self.recordingState = .error(error.localizedDescription)
             }
         }
-        audioRecorder.onInterruption = { [weak self] paused in
+        audioRecorder.onInterruption = { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
-                // The recorder already paused or resumed itself; this follows with the UI state.
-                if paused { self.pauseRecording(byUser: false) } else { self.resumeRecording(byUser: false) }
+                // The recorder already paused or resumed itself. Follow its state as it is now,
+                // so two quick notifications cannot leave the screen behind.
+                if self.audioRecorder.isPaused { self.pauseRecording(byUser: false) } else { self.resumeRecording(byUser: false) }
             }
         }
 
@@ -402,13 +403,15 @@ final class RecordingViewModel {
             }
 
             await MainActor.run {
-                recordingState = .recording
+                // An interruption can pause the recorder before this state is set.
+                recordingState = audioRecorder.isPaused ? .paused : .recording
                 #if os(macOS)
                 sleepInterruptedFileURL = nil
                 #endif
             }
 
-            await startLiveTranscriptionIfEnabled()
+            // Paused by an interruption during start: resuming starts live transcription.
+            if recordingState == .recording { await startLiveTranscriptionIfEnabled() }
 
         } catch {
 #if os(macOS)
@@ -453,11 +456,19 @@ final class RecordingViewModel {
         if selectedMode != .systemAudio {
             audioRecorder.resumeRecording()
         }
+#else
+        audioRecorder.resumeRecording()
+#endif
+        // The recorder refused (a call or Siri still holds the session): stay paused, so the
+        // screen never shows a running recording while nothing is captured.
+        guard !(audioRecorder.isRecording && audioRecorder.isPaused) else {
+            log.warning("Resume refused by the recorder; recording stays paused")
+            return
+        }
+#if os(macOS)
         if selectedMode == .systemAudio || selectedMode == .combined {
             systemAudioCapture.resumeDurationTimer()
         }
-#else
-        audioRecorder.resumeRecording()
 #endif
         recordingState = .recording
         Task { await startLiveTranscriptionIfEnabled() }

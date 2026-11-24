@@ -60,7 +60,7 @@ Op iPhone en iPad neemt de app alleen de microfoon op. Het geluid van een videoc
 ### De opname is leeg of te kort
 
 ::: macos ios
-Bij "De opname is leeg of te kort om te verwerken." is er te weinig audio vastgelegd. Controleer of de juiste microfoon is gekozen en neem opnieuw op. De melding "De opname werd onderbroken door een telefoongesprek." betekent dat een inkomend gesprek de opname heeft gestopt.
+Bij "De opname is leeg of te kort om te verwerken." is er te weinig audio vastgelegd. Controleer of de juiste microfoon is gekozen en neem opnieuw op. Komt er tijdens een opname op de iPhone een telefoongesprek, Siri of een wekker tussendoor, dan zet ThoughtVault de opname op pauze. Na afloop gaat de opname vanzelf verder in hetzelfde bestand. Blijft hij op "Gepauzeerd" staan, tik dan op Hervat; zolang het gesprek nog loopt kan dat niet.
 :::
 
 ::: windows

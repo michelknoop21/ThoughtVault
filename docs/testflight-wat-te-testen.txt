@@ -1,4 +1,6 @@
-versie: 1.0.338
+versie: 1.0.339
+Onderbreking tijdens opnemen (iPhone, eerst testen): start een opname en laat je bellen. Neem op, zeg iets en hang op. De opname hoort op pauze te gaan zonder foutmelding en na het gesprek vanzelf verder te lopen. Tik bij een tweede gesprek tijdens het bellen op Hervat: de opname moet dan op pauze blijven en na het ophangen verdergaan. Stop daarna en controleer dat er één opname is met geluid van voor en na het gesprek, en dat de opnameduur de belpauze niet meetelt. Probeer het ook met Siri of een wekker.
+
 Mappen: maak in Notulen een map, verplaats er twee notulen naartoe (ook via slepen op de Mac) en hernoem en verwijder de map. Bij verwijderen blijven de notulen bestaan. Maak een slimme map op basis van een label en controleer welke notulen erin verschijnen. Werk eerst Mac en iPhone allebei bij voordat je mappen gebruikt; controleer daarna of de mappen via iCloud op het andere apparaat verschijnen.
 
 Automatisch labelen: geef een label een omschrijving, zet Automatisch toekennen aan en maak een nieuwe notule. Probeer ook bestaande notulen te labelen en annuleer halverwege. Handmatig toegevoegde labels moeten blijven staan.

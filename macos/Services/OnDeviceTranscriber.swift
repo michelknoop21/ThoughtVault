@@ -116,6 +116,18 @@ final class OnDeviceTranscriber {
     /// Transcribes an audio file at the given URL and returns the full transcription text.
     /// Uses on-device recognition where available, falls back to server if needed.
     func transcribe(url: URL, profileId: String? = nil) async throws -> String {
+        try await transcribeTimed(url: url, profileId: profileId).text
+    }
+
+    /// Recognizer segments as timed pieces. The recognizer sometimes reports no timings at all
+    /// (every duration zero); the transcript then stays plain instead of getting false times.
+    nonisolated static func pieces(_ segments: [(text: String, start: Double, duration: Double)]) -> [TimedPiece] {
+        guard segments.contains(where: { $0.duration > 0 }) else { return [] }
+        return segments.map { TimedPiece(start: $0.start, end: $0.start + $0.duration, text: $0.text) }
+    }
+
+    /// The same transcription with the recognizer's segment times.
+    func transcribeTimed(url: URL, profileId: String? = nil) async throws -> TimedTranscript {
         guard let recognizer = speechRecognizer, recognizer.isAvailable else {
             throw TranscriberError.recognizerUnavailable
         }
@@ -145,7 +157,7 @@ final class OnDeviceTranscriber {
         let watchdog = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
 
         return try await withCheckedThrowingContinuation { continuation in
-            let resumeOnce: @Sendable (Result<String, Error>) -> Void = { result in
+            let resumeOnce: @Sendable (Result<TimedTranscript, Error>) -> Void = { result in
                 let first = didResume.withLock { resumed -> Bool in
                     if resumed { return false }
                     resumed = true
@@ -175,7 +187,10 @@ final class OnDeviceTranscriber {
                     if text.isEmpty {
                         resumeOnce(.failure(TranscriberError.emptyResult))
                     } else {
-                        resumeOnce(.success(text))
+                        let pieces = Self.pieces(result.bestTranscription.segments.map {
+                            (text: $0.substring, start: $0.timestamp, duration: $0.duration)
+                        })
+                        resumeOnce(.success(TimedTranscript(text: text, pieces: pieces)))
                     }
                 }
             }

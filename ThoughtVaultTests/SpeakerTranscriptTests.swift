@@ -54,4 +54,33 @@ final class SpeakerTranscriptTests: XCTestCase {
         XCTAssertTrue(labelled.contains("koppel zelf geen naam uit deze lijst aan een sprekerlabel"))
         XCTAssertFalse(labelled.contains("op naam"))
     }
+
+    // MARK: Engine timings
+
+    func testChunkPiecesAreShiftedOntoOneTimeline() {
+        let a = TimedPiece(start: 1, end: 2, text: "een")
+        let b = TimedPiece(start: 0.5, end: 1, text: "twee")
+        XCTAssertEqual(TimedPiece.offset([[a], [], [b]], chunkDuration: 55),
+                       [a, TimedPiece(start: 110.5, end: 111, text: "twee")])
+    }
+
+    func testAppleSpeechSegmentsBecomePieces() {
+        XCTAssertEqual(OnDeviceTranscriber.pieces([(text: "Goedemorgen", start: 0.4, duration: 0.7), (text: "allemaal", start: 1.2, duration: 0.5)]),
+                       [TimedPiece(start: 0.4, end: 1.1, text: "Goedemorgen"), TimedPiece(start: 1.2, end: 1.7, text: "allemaal")])
+        // No timings at all: no pieces rather than every word at zero.
+        XCTAssertEqual(OnDeviceTranscriber.pieces([(text: "Hallo", start: 0, duration: 0), (text: "daar", start: 0, duration: 0)]), [])
+    }
+
+    #if canImport(WhisperKit)
+    /// Times are binary-exact (4.25, not 4.2): WhisperKit gives Float seconds.
+    func testWhisperKitSegmentsLoseSpecialTokensAndSilenceMarks() {
+        let pieces = WhisperKitTranscriber.pieces([
+            (start: 0, end: 4.25, text: "<|startoftranscript|><|nl|><|transcribe|><|0.00|> Het rapport gaat vrijdag weg.<|4.24|>"),
+            (start: 4.25, end: 6, text: "<|4.24|> ***<|6.00|>"),
+            (start: 6, end: 7.5, text: "<|6.00|> Dat pak ik op.<|7.50|><|endoftext|>"),
+        ])
+        XCTAssertEqual(pieces, [TimedPiece(start: 0, end: 4.25, text: "Het rapport gaat vrijdag weg."),
+                                TimedPiece(start: 6, end: 7.5, text: "Dat pak ik op.")])
+    }
+    #endif
 }

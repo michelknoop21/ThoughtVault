@@ -13,6 +13,15 @@ struct TimedPiece: Codable, Equatable, Sendable {
     var text: String
 }
 
+extension TimedPiece {
+    /// Joins the pieces of consecutive chunks onto one timeline: chunk `i` starts at `i * chunkDuration`.
+    static func offset(_ chunks: [[TimedPiece]], chunkDuration: TimeInterval) -> [TimedPiece] {
+        chunks.enumerated().flatMap { index, pieces in
+            pieces.map { TimedPiece(start: $0.start + Double(index) * chunkDuration, end: $0.end + Double(index) * chunkDuration, text: $0.text) }
+        }
+    }
+}
+
 /// What a transcription engine returns. `pieces` is empty when the engine gives no timings.
 struct TimedTranscript: Sendable {
     var text: String

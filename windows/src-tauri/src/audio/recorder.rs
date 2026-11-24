@@ -7,6 +7,7 @@ use hound::{SampleFormat as HoundSampleFormat, WavSpec, WavWriter};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::mpsc;
+use super::mix::mix_wav_files;
 use super::envelope::{EnvelopeConfig, EnvelopeProcessor, SpectrumProcessor};
 use super::types::{AudioDevice, RecordingCommand, RecordingEvent, RecordingMode, RecordingResult, RecordingDiagnosticCode, TerminalDiagnostic};
 
@@ -463,89 +464,6 @@ fn recording_thread_body(
     Ok(RecordingResult { file_path: output_path, duration_seconds: duration })
 }
 
-/// Resample audio using linear interpolation.
-fn resample(samples: &[i16], from_rate: u32, to_rate: u32) -> Vec<i16> {
-    if from_rate == to_rate || samples.is_empty() {
-        return samples.to_vec();
-    }
-    let ratio = from_rate as f64 / to_rate as f64;
-    let new_len = (samples.len() as f64 / ratio).ceil() as usize;
-    let mut result = Vec::with_capacity(new_len);
-    for i in 0..new_len {
-        let src_pos = i as f64 * ratio;
-        let idx = src_pos as usize;
-        let frac = src_pos - idx as f64;
-        if idx + 1 < samples.len() {
-            let s = samples[idx] as f64 * (1.0 - frac) + samples[idx + 1] as f64 * frac;
-            result.push(s.round() as i16);
-        } else if idx < samples.len() {
-            result.push(samples[idx]);
-        }
-    }
-    result
-}
-
-/// Mix two WAV files using element-wise max (matches macOS mixAudioFiles approach).
-/// The result overwrites the first file (mic_path).
-/// Handles different sample rates by resampling the higher-rate stream.
-fn mix_wav_files(mic_path: &str, loopback_path: &str) -> Result<(), String> {
-    let mic_reader = hound::WavReader::open(mic_path)
-        .map_err(|e| format!("Kan mic WAV niet lezen: {}", e))?;
-    let loopback_reader = hound::WavReader::open(loopback_path)
-        .map_err(|e| format!("Kan loopback WAV niet lezen: {}", e))?;
-
-    let mic_spec = mic_reader.spec();
-    let loopback_spec = loopback_reader.spec();
-
-    elog!("[Audio] Mix specs — mic: {}Hz {}ch, loopback: {}Hz {}ch",
-        mic_spec.sample_rate, mic_spec.channels, loopback_spec.sample_rate, loopback_spec.channels);
-
-    let mut mic_samples = mic_reader.into_samples::<i16>();
-    // Native recordings are both 16 kHz; stream them instead of allocating
-    // three complete recordings in memory when a multi-hour meeting stops.
-    let mut system_samples: Box<dyn Iterator<Item = Result<i16, hound::Error>>> =
-        if loopback_spec.sample_rate == mic_spec.sample_rate {
-            Box::new(loopback_reader.into_samples::<i16>())
-        } else {
-            let samples = loopback_reader.into_samples::<i16>()
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("Systeemaudio lezen mislukt: {e}"))?;
-            Box::new(resample(&samples, loopback_spec.sample_rate, mic_spec.sample_rate)
-                .into_iter().map(Ok))
-        };
-
-    // Keep both sources intact until the complete mixed WAV is safely written.
-    let parent = std::path::Path::new(mic_path).parent().ok_or("Opnamemap ontbreekt")?;
-    let mut mixed_file = tempfile::NamedTempFile::new_in(parent)
-        .map_err(|e| format!("Kan tijdelijk mixed WAV niet maken: {e}"))?;
-    let mut writer = WavWriter::new(std::io::BufWriter::new(mixed_file.as_file_mut()), mic_spec)
-        .map_err(|e| format!("Kan mixed WAV niet schrijven: {}", e))?;
-    let mut count = 0_u64;
-    loop {
-        let mic = mic_samples.next().transpose()
-            .map_err(|e| format!("Microfoonaudio lezen mislukt: {e}"))?;
-        let system = system_samples.next().transpose()
-            .map_err(|e| format!("Systeemaudio lezen mislukt: {e}"))?;
-        if mic.is_none() && system.is_none() { break; }
-        let mic = mic.unwrap_or(0);
-        let system = system.unwrap_or(0);
-        // Fixed headroom preserves both waveforms without overflowing PCM16.
-        let mixed = ((i32::from(mic) + i32::from(system)) / 2) as i16;
-        writer.write_sample(mixed)
-            .map_err(|e| format!("Fout bij schrijven mixed sample: {e}"))?;
-        count += 1;
-    }
-    writer.finalize()
-        .map_err(|e| format!("Fout bij finaliseren mixed WAV: {}", e))?;
-    // Windows cannot replace the destination while its reader handle is open.
-    drop(mic_samples);
-    drop(system_samples);
-    mixed_file.persist(mic_path).map_err(|e| format!("Mixed WAV vervangen mislukt: {e}"))?;
-
-    elog!("[Audio] Mixed output: {} samples", count);
-    Ok(())
-}
-
 #[cfg(test)]
 mod mix_tests {
     use super::*;
@@ -608,98 +526,6 @@ mod mix_tests {
             write_timed_chunk(&mut writer, &[1; 160], position, &mut written).unwrap();
         }
         assert_eq!(written, 640);
-    }
-
-    #[test]
-    fn simultaneous_sources_keep_both_waveforms_with_headroom() {
-        let dir = tempfile::tempdir().unwrap();
-        let mic = dir.path().join("mic.wav");
-        let system = dir.path().join("system.wav");
-        let spec = WavSpec { channels: 1, sample_rate: 16000, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
-        // Opposing signs must combine, rather than discard whichever source is quieter.
-        // The last two frames exercise full-scale overlap without overflow or clipping.
-        for (path, samples) in [
-            (&mic, [10000_i16, -10000, 5000, -5000, i16::MAX, i16::MIN]),
-            (&system, [8000_i16, 8000, -8000, -8000, i16::MAX, i16::MIN]),
-        ] {
-            let mut writer = WavWriter::create(path, spec).unwrap();
-            for sample in samples { writer.write_sample(sample).unwrap(); }
-            writer.finalize().unwrap();
-        }
-        mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
-        let mixed = hound::WavReader::open(mic).unwrap().into_samples::<i16>()
-            .collect::<Result<Vec<_>, _>>().unwrap();
-        assert_eq!(mixed, [9000, -1000, -1500, -6500, i16::MAX, i16::MIN]);
-    }
-
-    #[test]
-    fn mixed_file_keeps_system_audio_with_headroom_when_microphone_is_silent() {
-        let dir = tempfile::tempdir().unwrap();
-        let mic = dir.path().join("mic.wav");
-        let system = dir.path().join("system.wav");
-        let spec = WavSpec { channels: 1, sample_rate: 16000, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
-        for (path, samples) in [(&mic, vec![0_i16, 0, 0]), (&system, vec![2000_i16, -4000, 1000])] {
-            let mut writer = WavWriter::create(path, spec).unwrap();
-            for sample in samples { writer.write_sample(sample).unwrap(); }
-            writer.finalize().unwrap();
-        }
-        mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
-        let mut reader = hound::WavReader::open(mic).unwrap();
-        assert_eq!(reader.samples::<i16>().collect::<Result<Vec<_>, _>>().unwrap(), vec![1000, -2000, 500]);
-        assert!(system.is_file());
-    }
-
-    #[test]
-    #[ignore = "creates three hours of PCM to verify long-meeting processing"]
-    fn three_hour_mix_preserves_duration_and_timed_markers() {
-        let dir = tempfile::tempdir().unwrap();
-        let mic = dir.path().join("mic.wav");
-        let system = dir.path().join("system.wav");
-        let total = 3 * 60 * 60 * TARGET_SAMPLE_RATE;
-        let markers = [17 * TARGET_SAMPLE_RATE, total / 2, total - TARGET_SAMPLE_RATE];
-        let spec = WavSpec { channels: 1, sample_rate: TARGET_SAMPLE_RATE, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
-        for (path, is_system) in [(&mic, false), (&system, true)] {
-            let mut writer = WavWriter::create(path, spec).unwrap();
-            for index in 0..total {
-                let sample: i16 = if markers.contains(&index) { if is_system { -2000 } else { 1000 } } else { 0 };
-                writer.write_sample(sample).unwrap();
-            }
-            writer.finalize().unwrap();
-        }
-        mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
-        let mut reader = hound::WavReader::open(&mic).unwrap();
-        assert_eq!(reader.duration(), total);
-        for marker in markers {
-            reader.seek(marker - 1).unwrap();
-            let samples = reader.samples::<i16>().take(3).collect::<Result<Vec<_>, _>>().unwrap();
-            assert_eq!(samples, [0, -500, 0]);
-        }
-        assert!(system.is_file());
-    }
-
-    #[test]
-    fn streamed_mix_preserves_cancellation_tails_and_resampling() {
-        let dir = tempfile::tempdir().unwrap();
-        let mic = dir.path().join("mic.wav");
-        let system = dir.path().join("system.wav");
-        for system_rate in [16000, 32000] {
-            for (path, rate, samples) in [
-                (&mic, 16000, vec![i16::MIN, 1]),
-                (&system, system_rate, if system_rate == 16000 {
-                    vec![i16::MAX, -2, 3]
-                } else { vec![i16::MAX, 0, -2, 0, 3, 0] }),
-            ] {
-                let spec = WavSpec { channels: 1, sample_rate: rate, bits_per_sample: 16, sample_format: HoundSampleFormat::Int };
-                let mut writer = WavWriter::create(path, spec).unwrap();
-                for sample in samples { writer.write_sample(sample).unwrap(); }
-                writer.finalize().unwrap();
-            }
-            mix_wav_files(mic.to_str().unwrap(), system.to_str().unwrap()).unwrap();
-            let samples = hound::WavReader::open(&mic).unwrap().into_samples::<i16>()
-                .collect::<Result<Vec<_>, _>>().unwrap();
-            assert_eq!(samples, vec![0, 0, 1]);
-            assert!(system.is_file());
-        }
     }
 }
 

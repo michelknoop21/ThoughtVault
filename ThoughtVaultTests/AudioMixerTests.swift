@@ -43,30 +43,44 @@ final class AudioMixerTests: XCTestCase {
         return (frames, try samples(out))
     }
 
-    func testAverageOfTwoConstants() throws {
-        let r = try mix(wav("m.wav", [(rate, 0.5)]), wav("s.wav", [(rate, 0.5)]))
+    func testBothSourcesAreLevelledThenSummed() throws {
+        let r = try mix(wav("m.wav", [(rate, 0.3)]), wav("s.wav", [(rate, 0.02)]))
         XCTAssertEqual(r.out.count, rate)
-        XCTAssertEqual(r.out[100], 0.5, accuracy: tol)
+        XCTAssertEqual(r.out[100], 0.18, accuracy: tol)  // 0.09 from each source
     }
 
-    func testNoClipping() throws {
-        let hi = try mix(wav("m.wav", [(100, 1.0)]), wav("s.wav", [(100, 1.0)]))
-        XCTAssertEqual(hi.out[50], 1.0, accuracy: tol)
-        let lo = try mix(wav("m2.wav", [(100, -1.0)]), wav("s2.wav", [(100, -1.0)]))
-        XCTAssertEqual(lo.out[50], -1.0, accuracy: tol)
+    func testQuietSourceIsRaisedAndSilentSourceLeftAlone() throws {
+        let r = try mix(wav("m.wav", [(rate, 0.01)]), wav("s.wav", [(rate, 0.0)]))
+        XCTAssertEqual(r.out[100], 0.09, accuracy: tol)
+    }
+
+    func testGainIsCapped() {
+        XCTAssertEqual(AudioMixer.gain(forLevel: 0.002), 16)
+        XCTAssertEqual(AudioMixer.gain(forLevel: 1.0), 0.25)
+        XCTAssertEqual(AudioMixer.gain(forLevel: 0.0005), 1)
+    }
+
+    func testLoudClickDoesNotSetTheLevelAndIsClamped() throws {
+        // 20 blocks at 0.05 and one at full scale: the level stays 0.05, so the gain is 1.8.
+        let hi = try mix(wav("m.wav", [(2 * rate, 0.05), (1600, 1.0)]), wav("s.wav", [(rate, 0.0)]))
+        XCTAssertEqual(hi.out[100], 0.09, accuracy: tol)
+        XCTAssertEqual(hi.out[2 * rate + 100], 1.0, accuracy: tol)
+        let lo = try mix(wav("m2.wav", [(2 * rate, -0.05), (1600, -1.0)]), wav("s2.wav", [(rate, 0.0)]))
+        XCTAssertEqual(lo.out[2 * rate + 100], -1.0, accuracy: tol)
     }
 
     func testPositiveOffsetPadsSystem() throws {
-        let r = try mix(wav("m.wav", [(rate, 0.4)]), wav("s.wav", [(rate, 0.8)]), offset: 0.5)
-        XCTAssertEqual(r.out[0], 0.2, accuracy: tol)
-        XCTAssertEqual(r.out[7999], 0.2, accuracy: tol)
-        XCTAssertEqual(r.out[8000], 0.6, accuracy: tol)
+        let r = try mix(wav("m.wav", [(rate, 0.2)]), wav("s.wav", [(rate, 0.3)]), offset: 0.5)
+        XCTAssertEqual(r.out[0], 0.09, accuracy: tol)
+        XCTAssertEqual(r.out[7999], 0.09, accuracy: tol)
+        XCTAssertEqual(r.out[8000], 0.18, accuracy: tol)
     }
 
     func testNegativeOffsetDropsSystemLead() throws {
-        let r = try mix(wav("m.wav", [(rate, 0.0)]), wav("s.wav", [(4000, 0.8), (12_000, 0.2)]), offset: -0.25)
-        XCTAssertEqual(r.out[0], 0.1, accuracy: tol)
-        XCTAssertEqual(r.out[5000], 0.1, accuracy: tol)
+        let r = try mix(wav("m.wav", [(rate, 0.0)]), wav("s.wav", [(4000, 0.3), (12_000, 0.1)]), offset: -0.25)
+        // System level is 0.3 (the dropped lead counts), so its gain is 0.09 / 0.3.
+        XCTAssertEqual(r.out[0], 0.03, accuracy: tol)
+        XCTAssertEqual(r.out[5000], 0.03, accuracy: tol)
     }
 
     func testLengthIsMaxOfAlignedInputs() throws {

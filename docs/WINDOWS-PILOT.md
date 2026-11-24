@@ -15,6 +15,7 @@ herstelreferenties.
 | Download | `ThoughtVault_1.0.338_x64.msi` op de downloadpagina uit [AUTOMATISCHE-UPDATES.md](AUTOMATISCHE-UPDATES.md); `releases.json` in die map noemt dezelfde versie en hash |
 | SHA-256 MSI | `4cd609d6d19052e50e694848f2705662cbbe261dcc41d8236f3b230402f31b60`, gelijk aan het CI-artifact |
 | Updatefeed | `/releases/windows/stable.json` meldt 1.0.338, gepubliceerd 23 november 19:11 UTC. De signature is gelijk aan de `.sig` uit de CI |
+| Downloadpagina | Op 24 november live bekeken: de pagina biedt alleen `ThoughtVault_1.0.338_x64.msi` aan. Een Mac-bezoeker leest dat de Mac-versie via TestFlight loopt en dat hij een uitnodiging aanvraagt via **Stel ons een vraag** (een e-mail aan sales). Er staat geen macOS-installer meer op |
 | Acceptatie op Windows | Niet uitgevoerd. Zie hieronder |
 
 Controleer de download vóór installatie:
@@ -46,8 +47,9 @@ is dus verwacht en geen nieuwe fout.
 | Updatefeed | `/releases/windows/stable.json` meldt 1.0.322, gepubliceerd 13 november 16:34 UTC, met signature |
 | macOS en iOS | TestFlight staat op 1.0.321. De Prospect Flow-koppeling zit ook in de Mac-code van 1.0.322, maar die versie is niet naar TestFlight gestuurd |
 
-De downloadpagina biedt voor macOS nog `TranscriptStudio-1.0.242.dmg` aan. Stuur
-Mac-collega's daar niet heen: hun route is TestFlight.
+Op 13 november bood de downloadpagina voor macOS nog `TranscriptStudio-1.0.242.dmg`
+aan. Die staat er sinds de nieuwe downloadpagina niet meer (zie de stand van 1.0.338);
+de route voor Mac-collega's is TestFlight.
 
 ## Besluiten van 13 november
 

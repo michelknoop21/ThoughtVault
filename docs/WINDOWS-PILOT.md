@@ -192,6 +192,35 @@ stond in Mijn inbox van yinga-support met teller 1 op **Leads**, met één regel
 **Controleren** voor het genoemde budget. De proefofferte staat in de prullenbak;
 de proefklant staat nog in Prospect Flow.
 
+## AI-koppeling (MCP)
+
+Vanaf 1.0.346 kan een AI-programma op dezelfde pc de notities lezen en, als je dat
+toestaat, aanpassen. Aanzetten gaat via **Instellingen → AI-koppeling**: eerst
+**Koppeling aan**, daarna eventueel **Wijzigingen toestaan**. Met
+**Configuratie kopiëren** of **Opdracht voor Claude Code kopiëren** komt het pad naar
+`ThoughtVault.exe` met `--mcp` op het klembord. Werking en grenzen staan in
+[MCP.md](MCP.md).
+
+**Proef op de Parallels-VM** (25 november, Dev-build 1.0.346, run 45614694251,
+broncommit `3c603732`). Dalf38 was die middag niet bereikbaar. De MSI uit de
+dev-feed had dezelfde SHA-256 als die uit de CI (`0ad27733…c34abe`) en installeerde
+met `msiexec /qn` als "ThoughtVault Dev" naast de gewone 1.0.296, met een eigen
+datamap. De schakelaars zijn via het instellingenscherm bediend (muisklikken via de
+debugpoort van de webview), niet met de hand op de VM:
+
+- uitzetten haalde `mcp.json` weg en maakte de tweede schakelaar en beide knoppen
+  grijs; aanzetten startte de koppeling opnieuw (log: `[MCP] Koppeling luistert op
+  127.0.0.1:55275`);
+- `scripts/test-mcp-stdio.py --write`, vanaf de Mac via SSH naar
+  `ThoughtVault.exe --mcp`: 16 tools, alle leestools, een notitie maken, lezen en
+  hernoemen, een verouderde revisie geweigerd, exitcode 0;
+- beide kopieerknoppen gaven het pad
+  `C:\Program Files\ThoughtVault Dev\ThoughtVault.exe` met `--mcp`, gecontroleerd met
+  `Get-Clipboard` in de gebruikerssessie.
+
+Niet getest: een upgrade van een bestaande installatie (de CI slaat die stap voor
+het dev-kanaal over) en een gebruiker die de schakelaars zelf aanklikt.
+
 ## Historische kandidaat 1.0.296
 
 De nieuwe lokale MSI-kandidaat is **1.0.296**, broncommit

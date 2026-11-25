@@ -101,9 +101,9 @@ private func verdict(_ id: String, _ status: String, _ evidence: [String] = []) 
 
 final class NotuleAuditPartsTests: XCTestCase {
     private func audit(_ source: String, _ html: String, quickNote: String = "", _ recorder: LongRecorder, _ model: LongModel,
-                       noteConcurrency: Int = NotuleAudit.auditConcurrency) async throws {
+                       noteConcurrency: Int = NotuleAudit.auditConcurrency, sourceUnclear: Bool = false) async throws {
         try await NotuleAudit.auditNotule(source: source, html: html, quickNote: quickNote, request: longRequest(recorder, model),
-                                          noteConcurrency: noteConcurrency)
+                                          sourceUnclear: sourceUnclear, noteConcurrency: noteConcurrency)
     }
 
     private func rejection(_ body: () async throws -> Void) async -> (any Error)? {
@@ -338,6 +338,37 @@ final class NotuleAuditPartsTests: XCTestCase {
     }
 
     // "ignores evidence the model names for a source it does not call covered"
+    // DEC-083: with an unclear source the long path still reports an invented sentence that no source cites.
+    func testLongPathWithAnUnclearSource() async throws {
+        let unclearPart: @Sendable (String, inout LongReport) -> Void = { firstId, report in
+            report["uncertain"] = true
+            guard firstId == "T1" else { return }
+            editSource(&report) { $0[0]["status"] = "uncertain"; $0[0]["evidence"] = [String]() }
+        }
+        let judged = LongModel(cover: { $0 == "T401" ? ["N1"] : [] }, coverage: unclearPart)
+        await assertRejects("De inhoudscontrole is onzeker; beoordeel het concept") { try await audit(longSource, sam, LongRecorder(), judged) }
+        try await audit(longSource, sam, LongRecorder(), judged, sourceUnclear: true)
+        let invented = LongModel(cover: { $0 == "T401" ? ["N2"] : [] }, coverage: unclearPart,
+                                 uncited: { report in report["notes"] = verdict("N1", "unsupported") })
+        await assertRejects("De notule bevat een onbevestigde bewering: Joris betaalt de rekening.") {
+            try await audit(longSource, "<p>Joris betaalt de rekening.</p><p>Sam belt vrijdag de klant.</p>", LongRecorder(), invented, sourceUnclear: true)
+        }
+        let mostly = LongModel(cover: { $0 == "T401" ? ["N1"] : [] }, coverage: { _, report in
+            report["uncertain"] = true
+            editSource(&report) { source in
+                for index in source.indices where source[index]["id"] as? String != "T401" {
+                    source[index]["status"] = "uncertain"; source[index]["evidence"] = [String]()
+                }
+            }
+        })
+        let recorder = LongRecorder()
+        await assertRejects("De inhoudscontrole kon het grootste deel van de bron niet volgen; beoordeel het concept") {
+            try await audit(longSource, sam, recorder, mostly, sourceUnclear: true)
+        }
+        let steps = await recorder.requests("note")
+        XCTAssertEqual(steps.count, 0)
+    }
+
     func testEvidenceOnAMissingSourceIsIgnored() async {
         let model = LongModel(cover: { $0 == "T401" ? ["N1"] : [] }, coverage: { firstId, report in
             guard firstId == "T1" else { return }

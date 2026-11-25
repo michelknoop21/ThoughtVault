@@ -11,7 +11,7 @@ import { modelRefusal, usableModel } from "./suggestedModels";
 import { loadCorrectionsOrEmpty, usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, appendWarnings, AuditFinding, essentialConstraints, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
+import { auditSource, auditNotule, appendWarnings, AuditFinding, essentialConstraints, UNCHECKED_CONTENT_WARNING, UNCLEAR_SOURCE_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
 import { draftBlock } from "./notuleDetailLevel";
 import { UsageMeter, parseUsage, addToLedger } from "./usageMeter";
 import { logModelRequest, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, type ModelStep, type RequestTrace } from "./modelRequestLog";
@@ -497,7 +497,9 @@ export class LLMService {
       const source = await sourceCheck;
       if ("error" in source) throw source.error;
       warning = source.warning;
-      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null,
+      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints,
+        // Only a source the check called unclear relaxes the content check; a failed source check does not (DEC-083).
+        warning === UNCLEAR_SOURCE_WARNING,
         auditNoteConcurrency(config.provider, baseURL), onStep, detailLevel);
       checkModelCancellation(signal);
       const approved = appendWarnings(warning ? [warning] : [], candidate);

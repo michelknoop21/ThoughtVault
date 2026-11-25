@@ -157,18 +157,13 @@ extension NotuleAudit {
         return audit
     }
 
-    /// `sourceUnclear`: the source check already warned. A sentence no source cites then proves nothing, because
-    /// the sources the model could not follow cite nothing; it counts as not judged, like an uncertain one (DEC-083).
     private static func run(_ check: NoteCheck, request: AuditRequest, sourceUnclear: Bool = false) async throws -> [Verdict] {
-        var checked: [Verdict]
+        let checked: [Verdict]
         if check.evidence.isEmpty {
             let audit = try await ask(request, uncitedSystem,
                                       "Notulezinnen zonder bronverwijzing (geen generatie):\n{\"notes\":\(json(check.notes))}",
                                       sourceUnclear: sourceUnclear)
             checked = try verdicts(audit["notes"], expected: check.notes, references: [], statuses: ["non_factual", "unsupported"])
-            if sourceUnclear {
-                checked = checked.map { $0.status == "unsupported" ? Verdict(id: $0.id, status: "uncertain", evidence: $0.evidence) : $0 }
-            }
         } else {
             let audit = try await ask(request, noteSystem,
                                       "Notulezin controleren (geen generatie):\n{\"notes\":\(json(check.notes)),\"evidence\":\(json(check.evidence)),\"context\":\(json(check.context))}",

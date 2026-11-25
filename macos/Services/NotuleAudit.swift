@@ -176,8 +176,15 @@ enum NotuleAudit {
         }
         // The title names the purpose or outcome in a few words (profile rule); it is a label for the sentences
         // below, which are the ones checked. As a claim of its own the long path reported it as unsupported (DEC-083).
-        let noteText = HTMLPlainText.from(regex(#"<h1(?![A-Za-z0-9_])[^>]*>[\s\S]*?</h1>"#, .caseInsensitive)
-            .stringByReplacingMatches(in: markup.html, range: whole(markup.html), withTemplate: ""))
+        // Only the first, closed, plain-text h1 is that title; any other heading is checked like the rest.
+        var checkedHTML = markup.html
+        let all = whole(checkedHTML)
+        if let first = regex(#"<h1(?![A-Za-z0-9_])"#, .caseInsensitive).firstMatch(in: checkedHTML, range: all),
+           let title = regex(#"<h1(?![A-Za-z0-9_])[^>]*>[^<]*</h1\s*>"#, .caseInsensitive).firstMatch(in: checkedHTML, range: all),
+           title.range.location == first.range.location {
+            checkedHTML = (checkedHTML as NSString).replacingCharacters(in: title.range, with: "")
+        }
+        let noteText = HTMLPlainText.from(checkedHTML)
         guard !normalize(source).isEmpty, !normalize(noteText).isEmpty else {
             throw NotuleAuditError(message: "De bron of notule bevat geen controleerbare tekst")
         }
@@ -247,11 +254,12 @@ enum NotuleAudit {
 
     static let tooLargeMessage = "Deze inhoud is te groot of onvolledig voor betrouwbare controle; beoordeel het concept"
 
-    /// When the model could not follow more than half of the transcription, one concrete line about a single
-    /// sentence would suggest the rest was checked. The general line is the honest one then (DEC-083).
-    static func rejectMostlyUnclear(_ sourceChecks: [Verdict]) throws {
-        let transcript = sourceChecks.filter { $0.id.hasPrefix("T") }
-        if transcript.filter({ $0.status == "uncertain" }).count * 2 > transcript.count {
+    /// When the model could not follow more than half of the transcription, or could not judge more than half of
+    /// the notule, one concrete line about a single sentence would suggest the rest was checked. The general line is
+    /// the honest one then (DEC-083).
+    static func rejectMostlyUnclear(_ sourceChecks: [Verdict], noteChecks: [Verdict] = []) throws {
+        func mostly(_ items: [Verdict]) -> Bool { items.filter { $0.status == "uncertain" }.count * 2 > items.count }
+        if mostly(sourceChecks.filter { $0.id.hasPrefix("T") }) || mostly(noteChecks) {
             throw NotuleAuditError(message: "De inhoudscontrole kon het grootste deel van de bron niet volgen; beoordeel het concept")
         }
     }
@@ -263,20 +271,22 @@ enum NotuleAudit {
     /// is skipped and the rest is still judged (DEC-083). A user note is never skipped.
     private static func conclude(sourceChecks: [Verdict], noteChecks: [Verdict], sourceUnits: [Unit], noteUnits: [Unit],
                                  requiredSentences: [String], sourceUnclear: Bool = false) throws {
-        func skipped(_ check: Verdict) -> Bool { sourceUnclear && check.status == "uncertain" && check.id.hasPrefix("T") }
-        if sourceUnclear { try rejectMostlyUnclear(sourceChecks) }
-        func allowedMinor(_ check: Verdict, _ text: String) -> Bool {
-            check.status == "minor" && check.id.hasPrefix("T")
-                && !requiredSentences.contains { same(normalize($0), normalize(text)) }
-                && regex(amount, .caseInsensitive).firstMatch(in: text, range: whole(text)) == nil
+        if sourceUnclear { try rejectMostlyUnclear(sourceChecks, noteChecks: noteChecks) }
+        func textOf(_ check: Verdict) -> String { sourceUnits.first { same($0.id, check.id) }!.text }
+        // A required sentence or an amount is never a side issue, and never skipped as unclear either.
+        func essential(_ check: Verdict) -> Bool {
+            let text = textOf(check)
+            return requiredSentences.contains { same(normalize($0), normalize(text)) }
+                || regex(amount, .caseInsensitive).firstMatch(in: text, range: whole(text)) != nil
         }
+        func skipped(_ check: Verdict) -> Bool { sourceUnclear && check.status == "uncertain" && check.id.hasPrefix("T") && !essential(check) }
+        func allowedMinor(_ check: Verdict) -> Bool { check.status == "minor" && check.id.hasPrefix("T") && !essential(check) }
         // With an unclear source the notule sentences come first: a claim the source contradicts or does not make is
         // what the reader must hear about, and one the model could not judge follows from the source already warned for.
         if sourceUnclear { try rejectNoteProblem(noteChecks.filter { $0.status != "uncertain" }, noteUnits: noteUnits) }
         // A valid negative verdict remains a rejection; tell the reviewer which text needs attention.
         if let problem = sourceChecks.first(where: { check in
-            check.status != "covered" && check.status != "non_factual" && !skipped(check)
-                && !allowedMinor(check, sourceUnits.first { same($0.id, check.id) }!.text)
+            check.status != "covered" && check.status != "non_factual" && !skipped(check) && !allowedMinor(check)
         }) {
             let text = sourceUnits.first { same($0.id, problem.id) }!.text
             let missing = problem.status == "missing" || problem.status == "minor"

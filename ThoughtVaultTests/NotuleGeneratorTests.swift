@@ -204,6 +204,17 @@ final class NotuleGeneratorTests: XCTestCase {
         XCTAssertEqual(result, warnings(NotuleAudit.unclearSourceWarning, NotuleAudit.uncheckedContentWarning, in: html))
     }
 
+    // DEC-083: a source check that failed did not find the source unclear, so the content check stays strict.
+    func testFailedSourceCheckKeepsTheContentCheckStrict() async throws {
+        let html = "<p>Sam neemt vrijdag telefonisch contact op.</p>"
+        let service = StubLLM(draft: html, audit: { user in
+            if user.hasPrefix("Broncontrole") { return "geen json" }
+            return try StubLLM.approve { $0["uncertain"] = true }(user)
+        })
+        let result = try await generate(service, "Sam belt vrijdag.")
+        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedSourceWarning, NotuleAudit.uncheckedContentWarning, in: html))
+    }
+
     // An unsupported notule sentence is quoted; one generation, two audit calls, no retry.
     func testUnsupportedSentenceIsQuoted() async throws {
         let html = "<p>Sam neemt dinsdag telefonisch contact op. Iris mailt vrijdag de offerte.</p>"

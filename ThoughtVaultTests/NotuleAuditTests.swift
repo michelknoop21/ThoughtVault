@@ -137,6 +137,53 @@ final class NotuleAuditTests: XCTestCase {
         XCTAssertFalse(calls[0].user.contains("Controle en belafspraak"))
     }
 
+    // "keeps required sentences and amounts, and gives the general line when most of the notule is unjudged" (DEC-083)
+    func testEssentialSentencesAreNeverSkippedAndAMostlyUnjudgedNotuleGetsTheGeneralLine() async {
+        let html = "<p>Sam voert vrijdag de controle uit. Joris belt maandag.</p>"
+        func unclear(_ extra: @escaping @Sendable (inout AuditReport) -> Void = { _ in }) -> AuditRequest {
+            fixture(CallLog()) { report in
+                report.uncertain = true
+                report.source[1]["status"] = "uncertain"; report.source[1]["evidence"] = [String]()
+                for index in report.notes.indices {
+                    report.notes[index]["evidence"] = (report.notes[index]["evidence"] as? [String] ?? []).filter { $0 != "T2" }
+                }
+                extra(&report)
+            }
+        }
+        await assertRejects("De bron is onvoldoende duidelijk: Ja dat kost 500 euro zeg maar.") {
+            try await NotuleAudit.auditNotule(source: "Sam controleert vrijdag. Ja dat kost 500 euro zeg maar. Joris belt maandag.",
+                                              html: html, quickNote: "", request: unclear(), sourceUnclear: true)
+        }
+        let plain = "Sam controleert vrijdag. Ja dat ook niet zeg maar. Joris belt maandag."
+        await assertRejects("De bron is onvoldoende duidelijk: Ja dat ook niet zeg maar.") {
+            try await NotuleAudit.auditNotule(source: plain, html: html, quickNote: "", request: unclear(),
+                                              requiredSentences: ["Ja dat ook niet zeg maar."], sourceUnclear: true)
+        }
+        await assertRejects("De inhoudscontrole kon het grootste deel van de bron niet volgen; beoordeel het concept") {
+            try await NotuleAudit.auditNotule(source: plain + " Iris mailt dinsdag.",
+                                              html: "<p>Sam voert vrijdag de controle uit. Joris belt maandag. Iris mailt dinsdag.</p>",
+                                              quickNote: "", request: unclear { $0.notes[1]["status"] = "uncertain"; $0.notes[2]["status"] = "uncertain" },
+                                              sourceUnclear: true)
+        }
+    }
+
+    // "skips only the first plain title and checks any other heading"
+    func testOnlyTheFirstPlainTitleIsSkipped() async throws {
+        let log = CallLog()
+        try await NotuleAudit.auditNotule(source: "Sam controleert vrijdag. Joris belt maandag.",
+                                          html: "<h1>Controle</h1><p>Sam voert vrijdag de controle uit.</p><h1>Akkoord over 50.000 euro</h1><p>Joris belt maandag.</p>",
+                                          quickNote: "", request: fixture(log))
+        let calls = await log.calls
+        XCTAssertFalse(calls[0].user.contains("Controle\""))
+        XCTAssertTrue(calls[0].user.contains("Akkoord over 50.000 euro"))
+        let nested = CallLog()
+        try await NotuleAudit.auditNotule(source: "Sam controleert vrijdag.",
+                                          html: "<h1>Controle <strong>vrijdag</strong></h1><p>Sam voert vrijdag de controle uit.</p>",
+                                          quickNote: "", request: fixture(nested))
+        let nestedCalls = await nested.calls
+        XCTAssertTrue(nestedCalls[0].user.contains("Controle vrijdag"))
+    }
+
     // "judges the rest when the source check warned and a transcription sentence is unclear" (DEC-083)
     func testUnclearSentenceIsSkippedWhenTheSourceCheckWarned() async throws {
         let source = "Sam controleert vrijdag. Ja dat ook niet zeg maar. Joris belt maandag."

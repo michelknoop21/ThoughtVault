@@ -114,7 +114,9 @@ struct NotuleGenerator: Sendable {
             warning = try await sourceWarning
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
-                                              request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
+                                              request: request, requiredSentences: constraints,
+                                              // Only a source the check called unclear relaxes the content check; a failed source check does not (DEC-083).
+                                              sourceUnclear: warning == NotuleAudit.unclearSourceWarning,
                                               noteConcurrency: noteConcurrency, detailLevel: detailLevel, onProgress: onStep)
             log.info("Notule audit ran outcome=ok source_warning=\(warning != nil)")
             return Run(html: NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate), checkedHtml: candidate, skipReason: nil)

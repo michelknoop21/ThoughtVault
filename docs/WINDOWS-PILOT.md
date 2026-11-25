@@ -218,8 +218,26 @@ debugpoort van de webview), niet met de hand op de VM:
   `C:\Program Files\ThoughtVault Dev\ThoughtVault.exe` met `--mcp`, gecontroleerd met
   `Get-Clipboard` in de gebruikerssessie.
 
-Niet getest: een upgrade van een bestaande installatie (de CI slaat die stap voor
-het dev-kanaal over) en een gebruiker die de schakelaars zelf aanklikt.
+**Upgradeproef op dezelfde VM** (25 november, 1.0.296 naar productie 1.0.347, run
+45624630430, broncommit `831f1049`). 1.0.347 bevat de AI-koppeling. De MSI uit
+`releases.json` had dezelfde SHA-256 als die uit de CI (`e9121e28…ae51265`). Vooraf
+zijn beide appdatamappen gekopieerd naar `C:\Users\michelknoop\tv-backup-20261125`
+(302 bestanden).
+
+- `msiexec /qn` over de bestaande 1.0.296 gaf exitcode 0.
+- `local-transcripts.json` bleef byte voor byte gelijk, na de installatie en na
+  starten en sluiten van de app: dezelfde hash, 7 notities met dezelfde ID's en titels.
+- De app vroeg eerst om **Even voorstellen** (nieuw sinds 1.0.296), daarna kwam het
+  hoofdscherm zonder onboarding. De notulenlijst toonde alle 7 notities.
+- Beide schakelaars stonden na de upgrade uit. Met alleen **Koppeling aan** gaf
+  `scripts/test-mcp-stdio.py` (zonder `--write`) 9 leestools, 7 notities en 7 opnames.
+  Daarna is de koppeling weer uitgezet.
+- De lokale appdatamap werd 19 MB kleiner. Volgens de vergelijking met de back-up
+  verwijderde de webview alleen zijn eigen `WidevineCdm`-component; notities en
+  opnames bleven ongemoeid.
+
+Niet getest: een upgrade via de updater in de app (de MSI is direct geïnstalleerd) en
+een gebruiker die de schakelaars zelf aanklikt.
 
 ## Historische kandidaat 1.0.296
 

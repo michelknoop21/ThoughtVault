@@ -208,4 +208,23 @@ final class PersonalCorrectionsTests: XCTestCase {
         entry.learned = ["de Prospectflow", "prospectsflow"]
         XCTAssertEqual(entry.heardAs, ["Prospect Flow", "prospectsflow"])
     }
+
+    func testHostNamesGetTermsInLowercase() {
+        let yinga = PersonalCorrection(canonical: "Yinga", variants: ["Jinga"], scope: nil)
+        func fix(_ text: String) -> String { PersonalCorrections.text(text, entries: [yinga], profileId: nil) }
+        XCTAssertEqual(fix("Log in op secure.Jinga.nl of secure.Yinga.nl."), "Log in op secure.yinga.nl of secure.yinga.nl.")
+        XCTAssertEqual(fix("Mail info@Yinga.nl en Yinga.nl"), "Mail info@yinga.nl en yinga.nl")
+        // Words joined by a dot with a capital last part are text, not a host name.
+        XCTAssertEqual(fix("Yinga.AI en werkt.Jinga"), "Yinga.AI en werkt.Yinga")
+        // A URL path may be case-sensitive: only variants change there.
+        XCTAssertEqual(fix("https://x.nl/Yinga en https://x.nl/Jinga"), "https://x.nl/Yinga en https://x.nl/yinga")
+        XCTAssertEqual(fix("Jinga. Versie 1.0.341 en `secure.Yinga.nl`"), "Yinga. Versie 1.0.341 en `secure.Yinga.nl`")
+        // A term without variants still lowercases host names; a term with a space does not.
+        let flow = PersonalCorrection(canonical: "Prospectflow", variants: [], scope: nil)
+        XCTAssertEqual(PersonalCorrections.text("app.Prospectflow.nl en Prospectflow", entries: [flow], profileId: nil), "app.prospectflow.nl en Prospectflow")
+        let spaced = PersonalCorrection(canonical: "Prospect Flow", variants: [], scope: nil)
+        XCTAssertEqual(PersonalCorrections.text("app.Prospect.nl", entries: [spaced], profileId: nil), "app.Prospect.nl")
+        XCTAssertEqual(PersonalCorrections.html("<p>secure.Jinga.nl</p><a href=\"https://secure.Jinga.nl\">secure.Jinga.nl</a>", entries: [yinga], profileId: nil),
+                       "<p>secure.yinga.nl</p><a href=\"https://secure.Jinga.nl\">secure.Jinga.nl</a>")
+    }
 }

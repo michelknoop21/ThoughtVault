@@ -35,6 +35,18 @@ it("does not treat a spelling that holds the term, or a longer acronym, as mishe
   expect(isMisspelling("Sanne Backer","Sanne Bakker")).toBe(true);
   expect(heardAs({ id:"p",canonical:"Prospectflow",variants:["Prospect Flow"],scope:null,enabled:true,learned:["de Prospectflow","prospectsflow"] })).toEqual(["Prospect Flow","prospectsflow"]);
 });
+it("writes terms in host names in lowercase", () => {
+  const yinga: PersonalCorrection = { id:"y",canonical:"Yinga",variants:["Jinga"],scope:null,enabled:true };
+  const fix = (text: string) => correctText(text,[yinga]);
+  expect(fix("Log in op secure.Jinga.nl of secure.Yinga.nl.")).toBe("Log in op secure.yinga.nl of secure.yinga.nl.");
+  expect(fix("Mail info@Yinga.nl en Yinga.nl")).toBe("Mail info@yinga.nl en yinga.nl");
+  expect(fix("Yinga.AI en werkt.Jinga")).toBe("Yinga.AI en werkt.Yinga");
+  expect(fix("https://x.nl/Yinga en https://x.nl/Jinga")).toBe("https://x.nl/Yinga en https://x.nl/yinga");
+  expect(fix("Jinga. Versie 1.0.341 en `secure.Yinga.nl`")).toBe("Yinga. Versie 1.0.341 en `secure.Yinga.nl`");
+  expect(correctText("app.Prospectflow.nl en Prospectflow",[{...yinga,canonical:"Prospectflow",variants:[]}])).toBe("app.prospectflow.nl en Prospectflow");
+  expect(correctText("app.Prospect.nl",[{...yinga,canonical:"Prospect Flow",variants:[]}])).toBe("app.Prospect.nl");
+  expect(correctHTML('<p>secure.Jinga.nl</p><a href="https://secure.Jinga.nl">secure.Jinga.nl</a>',[yinga])).toBe('<p>secure.yinga.nl</p><a href="https://secure.Jinga.nl">secure.Jinga.nl</a>');
+});
 it("keeps markup, attributes, links, code, CSS and comments intact", () => {
   const input = '<style>.Django{}</style><!-- Django --><p title="Django > x">Django</p><a href="/Django">Django</a><pre><code>Django</code></pre><script>Django</script><p>Jengo</p>';
   expect(correctHTML(input,[rule])).toBe(input.replace('>Django</p>','>Yinga</p>').replace('>Jengo</p>','>Yinga</p>'));

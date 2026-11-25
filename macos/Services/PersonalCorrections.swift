@@ -253,17 +253,37 @@ enum PersonalCorrections {
         text.lowercased().replacingOccurrences(of: #"[‐‑‒–—−]"#, with: "-", options: .regularExpression)
     }
     static func text(_ text: String, entries: [PersonalCorrection], profileId: String?, html: Bool = false) -> String {
-        var replacements: [String: String] = [:]
+        // Variants become their term; terms without a space are also known so addresses can be lowercased.
+        var replacements: [String: String] = [:], terms: [String: String] = [:]
         for entry in active(entries, profileId: profileId) {
-            for variant in entry.variants { replacements[spellingKey(variant.trimmingCharacters(in: .whitespacesAndNewlines))] = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines) }
+            let canonical = entry.canonical.trimmingCharacters(in: .whitespacesAndNewlines)
+            for variant in entry.variants { replacements[spellingKey(variant.trimmingCharacters(in: .whitespacesAndNewlines))] = canonical }
+            if canonical.rangeOfCharacter(from: .whitespacesAndNewlines) == nil { terms[spellingKey(canonical)] = canonical }
         }
-        guard !replacements.isEmpty else { return text }
-        let alternatives = replacements.keys.sorted { $0.count > $1.count }.map { NSRegularExpression.escapedPattern(for: $0).replacingOccurrences(of: "-", with: "[-‐‑‒–—−]") }.joined(separator: "|")
+        guard !replacements.isEmpty || !terms.isEmpty else { return text }
+        func word(_ keys: [String]) -> String? {
+            guard !keys.isEmpty else { return nil }
+            let alternatives = keys.sorted { $0.count > $1.count }.map { NSRegularExpression.escapedPattern(for: $0).replacingOccurrences(of: "-", with: "[-‐‑‒–—−]") }.joined(separator: "|")
+            return #"(?<![\p{L}\p{N}_])(?:"# + alternatives + #")(?![\p{L}\p{N}_])"#
+        }
         let entity = #"&(?:#\d+|#x[\da-f]+|[a-z]+);"#
-        let word = #"(?<![\p{L}\p{N}_])(?:"# + alternatives + #")(?![\p{L}\p{N}_])"#
-        let pattern = entity + #"|(?:https?://|www\.)[^\s<>]+|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}|`[^`]*`|"# + word
+        let url = #"(?:https?://|www\.)[^\s<>]+"#
+        let email = #"[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}"#
+        let host = #"(?<![\p{L}\p{N}_@./-])(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+[\p{L}]{2,}(?![\p{L}\p{N}_@-])"#
+        let variants = word(Array(replacements.keys)), all = word(Array(Set(replacements.keys).union(terms.keys)))
+        let pattern = ([entity, url, email, host, "`[^`]*`"] + [variants].compactMap { $0 }).joined(separator: "|")
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-              let inner = try? NSRegularExpression(pattern: entity + "|" + word, options: .caseInsensitive) else { return text }
+              let innerVariants = try? NSRegularExpression(pattern: ([entity] + [variants].compactMap { $0 }).joined(separator: "|"), options: .caseInsensitive),
+              let innerAll = try? NSRegularExpression(pattern: ([entity] + [all].compactMap { $0 }).joined(separator: "|"), options: .caseInsensitive) else { return text }
+        func rewrite(_ token: String, _ inner: NSRegularExpression, _ value: (String) -> String?) -> String {
+            var out = token
+            for part in inner.matches(in: token, range: NSRange(token.startIndex..., in: token)).reversed() {
+                guard let range = Range(part.range, in: token), let target = Range(part.range, in: out), let new = value(String(token[range])) else { continue }
+                out.replaceSubrange(target, with: html ? escape(new) : new)
+            }
+            return out
+        }
+        func lower(_ term: String?) -> String? { term.flatMap { $0.rangeOfCharacter(from: .whitespacesAndNewlines) == nil ? $0.lowercased() : nil } }
         var result = text
         for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let range = Range(match.range, in: text), let outputRange = Range(match.range, in: result) else { continue }
@@ -273,15 +293,19 @@ enum PersonalCorrections {
                 result.replaceSubrange(outputRange, with: html ? escape(canonical) : canonical)
                 continue
             }
-            // An e-mail address or URL: variants inside it become the term in lowercase (DEC-075).
-            var address = matched
-            for part in inner.matches(in: matched, range: NSRange(matched.startIndex..., in: matched)).reversed() {
-                guard let partRange = Range(part.range, in: matched), let target = Range(part.range, in: address),
-                      let canonical = replacements[spellingKey(String(matched[partRange]))],
-                      canonical.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else { continue }
-                address.replaceSubrange(target, with: html ? escape(canonical.lowercased()) : canonical.lowercased())
+            let lowered = matched.lowercased()
+            let replacement: String
+            if lowered.hasPrefix("http://") || lowered.hasPrefix("https://") || lowered.hasPrefix("www.") {
+                // A URL: only variants change, in lowercase; a path may be case-sensitive (DEC-075).
+                replacement = rewrite(matched, innerVariants) { lower(replacements[spellingKey($0)]) }
+            } else if matched.contains("@") || matched.split(separator: ".").last.map({ $0 == $0.lowercased() }) == true {
+                // An e-mail address or host name such as secure.yinga.nl: every term in lowercase (DEC-077).
+                replacement = rewrite(matched, innerAll) { lower(replacements[spellingKey($0)] ?? terms[spellingKey($0)]) }
+            } else {
+                // Words joined by a dot ("Yinga.AI", "werkt.Jinga") are ordinary text.
+                replacement = rewrite(matched, innerVariants) { replacements[spellingKey($0)] }
             }
-            result.replaceSubrange(outputRange, with: address)
+            result.replaceSubrange(outputRange, with: replacement)
         }
         return result
     }

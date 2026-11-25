@@ -236,6 +236,21 @@ zijn beide appdatamappen gekopieerd naar `C:\Users\michelknoop\tv-backup-2026112
   verwijderde de webview alleen zijn eigen `WidevineCdm`-component; notities en
   opnames bleven ongemoeid.
 
+**Kopieerproef op dezelfde VM** (25 november, Dev-build 1.0.350,
+[run 45640648923](https://github.com/michelknoop21/ThoughtVault/actions/runs/45640648923),
+broncommit `afb17d0a`). De MSI uit de dev-feed en de MSI uit CI waren
+byte-identiek, met SHA-256
+`635814c9c99abf0d46f7ca4c48e59a8cd6569f33a9a0133b30a113275b579fab`.
+De updaterhandtekening kwam overeen met die uit CI. `msiexec /qn` gaf exitcode 0.
+Windows registreerde daarna ThoughtVault Dev 1.0.350 naast ThoughtVault 1.0.347.
+
+Via de debugpoort van de webview is in **Instellingen → AI-koppeling** de derde
+kopieerknop aangeklikt. De app toonde **Opdracht gekopieerd**. `Get-Clipboard -Raw`
+in de interactieve Windows-sessie kwam pas na de klik teken voor teken overeen
+met de verwachte registratieopdracht, inclusief het pad
+`C:\Program Files\ThoughtVault Dev\ThoughtVault.exe` tussen aanhalingstekens en
+de vlag `--mcp`. Een handmatige muisklik viel buiten deze proef.
+
 Niet getest: een upgrade via de updater in de app (de MSI is direct geïnstalleerd) en
 een gebruiker die de schakelaars zelf aanklikt.
 

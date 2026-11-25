@@ -25,6 +25,10 @@ enum AppEnvironment {
 @main
 enum AppEntry {
     @MainActor static func main() {
+        #if os(macOS)
+        // Started by an MCP client as its stdio server: relay to the running app, no UI.
+        if McpBridge.isRequested { McpBridge.run() }
+        #endif
         if AppEnvironment.isRunningTests { TestHostApp.main() } else { ThoughtVaultApp.main() }
     }
 }
@@ -38,7 +42,7 @@ struct ThoughtVaultApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var supportVM = SupportViewModel()
     @State private var authVM = AuthViewModel()
-    @State private var recordingVM = RecordingViewModel()
+    @State private var recordingVM: RecordingViewModel
     @State private var tasksVM = TasksViewModel()
     @State private var updateCheckService = UpdateCheckService()
     let calendarService = CalendarService.shared
@@ -46,8 +50,12 @@ struct ThoughtVaultApp: App {
     let debugLogger = DebugLogger.shared
 
     init() {
+        let recordingVM = RecordingViewModel()
+        _recordingVM = State(initialValue: recordingVM)
         #if os(macOS)
         AppLog.endSessionOnTermination()
+        // At launch, not on a window: the app can run from the menu bar without its main window.
+        McpServer.shared.attach(recordingVM: recordingVM)
         #endif
         // Before settings sync can write `notulenProvider`: existing installs keep their notule default.
         NotulenProvider.decideLegacyDefault(defaults: .standard, storeExists: LocalTranscriptStore.storeFileExists)

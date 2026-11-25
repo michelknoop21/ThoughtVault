@@ -4027,6 +4027,8 @@ button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-vis
 .toggle-switch input:checked+.toggle-slider{background:#6d3df5;border-color:#af76ff}
 .toggle-switch input:checked+.toggle-slider::after{transform:translateX(18px)}
 .toggle-switch input:focus-visible+.toggle-slider{outline:2px solid #b995ff;outline-offset:3px}
+.toggle-switch input:disabled{cursor:not-allowed}
+.toggle-switch input:disabled+.toggle-slider{opacity:.45}
 .settings-other{max-width:none}
 .action-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
 .profile-empty{padding:12px 14px;background:#182032;border:1px solid #384052;border-radius:10px}

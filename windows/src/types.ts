@@ -447,6 +447,9 @@ export interface AppSettings {
   obsidian_base_url: string;
   obsidian_vault_path: string;
   prospectflow_base_url: string;
+  /** Local MCP server for AI programs on this computer; writing needs its own switch. */
+  mcp_enabled: boolean;
+  mcp_allow_write: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -478,4 +481,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   obsidian_base_url: "https://127.0.0.1:27124",
   obsidian_vault_path: "Notulen",
   prospectflow_base_url: "",
+  mcp_enabled: false,
+  mcp_allow_write: false,
 };

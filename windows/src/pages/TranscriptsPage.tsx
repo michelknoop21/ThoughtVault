@@ -1,5 +1,5 @@
 import { mergeNotulen } from "../services/mergeNotulen";
-import { exportWithOwnNotes, getTranscriptQuickNote, getTranscriptIdentity } from "../services/quickNotes";
+import { getTranscriptIdentity } from "../services/quickNotes";
 import { useTaskHistory } from "../services/taskHistory";
 import { reprocessTask, canReprocess } from "../services/taskActions";
 import {transcriptDocumentOptions} from "../services/documentExport";
@@ -21,14 +21,8 @@ import { useLocalTranscriptsStore, isLocalId } from "../stores/localTranscriptsS
 import { useSettingsStore } from "../stores/settingsStore";
 import { useProfilesStore } from "../stores/profilesStore";
 import { useRecordingStore } from "../stores/recordingStore";
-import { LLMService } from "../services/llm";
-import { UsageMeter } from "../services/usageMeter";
-import { stepLabel } from "../services/modelRequestLog";
-import { NotuleReviewError } from "../services/notuleAudit";
 import { prepareNotuleHtml } from "../services/notulePresentation";
 import { saveTextExport } from "../services/textExport";
-import { hasUsableNotule, hasUsableTranscription } from "../services/notuleValidation";
-import { extractTitle } from "../services/titleExtractor";
 import { api } from "../services/api";
 import { createSSEClient } from "../services/sse";
 import { persistNotesSection } from "../services/uploadAndTrack";
@@ -38,8 +32,8 @@ import { useToast } from "../components/ui/InfoBar";
 import { clampMenuPosition } from "../utils/menuPosition";
 import { TranscriptsList } from "../components/transcripts/TranscriptsList";
 import { TranscriptDetail } from "../components/transcripts/TranscriptDetail";
-import { runInBackground } from "../services/contextSuggestions";
 import { regenerateDetailLevel } from "../services/notuleDetailLevel";
+import { addRegenerateTask, regenerateLocalNotule } from "../services/regenerateNotule";
 import { DetailLevelPicker } from "../components/DetailLevelPicker";
 import { enrichProfile } from "../services/profileTemplates";
 import type { NotuleDetailLevel, Transcript } from "../types";
@@ -275,68 +269,18 @@ export function TranscriptsPage() {
       return;
     }
     setRegenerateTarget(null);
-    const tasks = useRecordingStore.getState();
-    const taskId = `regen-${transcript.id}`;
-    tasks.removeBackgroundTask(taskId);
-    tasks.addBackgroundTask({ task_id: taskId, status: "generating", progress: 10,
-      mode: "microphone", profile_id: profileId, extracted_title: transcript.title,
-      created_at: new Date().toISOString(), message: `Notulen met ${profile.name}` });
     // Local records: re-run the on-device LLM over the stored transcription.
     if (isLocalId(transcript.id)) {
-      let transcription = transcript.raw_transcription ?? "";
-      if (!hasUsableTranscription(transcription)) {
-        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: "Geen bruikbare transcriptie beschikbaar" });
-        toast.show("Geen bruikbare transcriptie beschikbaar", "error");
-        return;
-      }
       setRegeneratingId(transcript.id);
-      const detailLevel = chosenLevel
-        ?? regenerateDetailLevel(transcript, enrichProfile(profile), useSettingsStore.getState().profile_detail_levels);
       try {
-        if (!transcript.merge_sources) transcription = await LLMService.correctTranscription(transcription, profile.id, transcript.id);
-        if (transcription !== transcript.raw_transcription) {
-          await useLocalTranscriptsStore.getState().update(transcript.id, { raw_transcription: transcription });
-          updateTranscript(transcript.id, { raw_transcription: transcription });
-        }
-        const meter = new UsageMeter();
-        const generatedHTML = await LLMService.generateNotulen(transcription, profile,
-          () => tasks.updateBackgroundTask(taskId, { progress: 60 }), [], "",
-          step => tasks.updateBackgroundTask(taskId, { message: stepLabel(step) }), meter, !!transcript.merge_sources, undefined, detailLevel);
-        if (!hasUsableNotule(generatedHTML)) throw new Error("Geen bruikbare notule gegenereerd");
-        const html = exportWithOwnNotes(generatedHTML, transcript.quick_note || getTranscriptQuickNote(transcript.id), true);
-        const title = getTranscriptIdentity(transcript.id)?.title ? transcript.title : (extractTitle(html) || transcript.title);
-        const finished = { notule_html: html, notule_usage: meter.usageFor(transcription, html), detail_level: detailLevel, has_notes: true, title, profile_name: profile.name, profile_id: profile.id,
-          notule_draft_html: "", notule_review_reason: "", updated_at: new Date().toISOString() };
-        await useLocalTranscriptsStore.getState().update(transcript.id, finished);
-        updateTranscript(transcript.id, finished);
-        runInBackground(transcript.id, transcription, [], profile.id, profile.name);
-        tasks.updateBackgroundTask(taskId, { status: "completed", progress: 100 });
-        const settings = useSettingsStore.getState();
-        if (settings.obsidian_enabled) {
-          const saved = useLocalTranscriptsStore.getState().items.find((item) => item.id === transcript.id);
-          if (saved) void exportToObsidian(saved, settings).catch((error) =>
-            obsidianToast(error, "Obsidian-sync mislukt"));
-        }
-        toast.show("Notule opnieuw gegenereerd", "success");
-      } catch (error) {
-        let message = error instanceof Error ? error.message : "Regenereren mislukt";
-        if (error instanceof NotuleReviewError) {
-          try {
-            const patch = { notule_draft_html: error.draftHtml, notule_review_reason: message, updated_at: new Date().toISOString() };
-            await useLocalTranscriptsStore.getState().update(transcript.id, patch);
-            updateTranscript(transcript.id, patch);
-            message += ". Het concept is apart bewaard voor beoordeling; de bestaande notule is behouden.";
-          } catch {
-            message += ". Het concept kon niet worden bewaard; de bestaande notule is behouden.";
-          }
-        }
-        tasks.updateBackgroundTask(taskId, { status: "failed", error_message: message });
-        toast.show("Regenereren mislukt", "error");
+        await regenerateLocalNotule(transcript, profile, chosenLevel, toast.show);
       } finally {
         setRegeneratingId(null);
       }
       return;
     }
+    const tasks = useRecordingStore.getState();
+    const taskId = addRegenerateTask(transcript, profile);
     setRegeneratingId(transcript.id);
     try {
       const { task_id } = await api.regenerateNotule(transcript.id, profileId);

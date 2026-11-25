@@ -37,6 +37,7 @@ import { createSSEClient } from "./services/sse";
 import { initCrashReporter } from "./services/crashReporter";
 import { installClickPath, installConsoleForwarding, logRoute } from "./services/appLog";
 import { initMeetingNotifications } from "./services/meetingNotifications";
+import { syncMcpServer } from "./services/mcp/server";
 import { useGlobalRecordingHandler } from "./hooks/useGlobalRecordingHandler";
 import { useSupportLifecycle } from "./hooks/useSupportLifecycle";
 import { useToast } from "./components/ui/InfoBar";
@@ -340,6 +341,12 @@ export default function App() {
     if (!("__TAURI_INTERNALS__" in window)) return;
     initMeetingNotifications().catch(() => {});
   }, []);
+
+  const mcpEnabled = useSettingsStore((s) => s.mcp_enabled);
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    return syncMcpServer(mcpEnabled);
+  }, [mcpEnabled]);
 
   // One-time migration of recordings from %APPDATA% (Roaming) to %LOCALAPPDATA% (Local).
   // Roaming was getting picked up by OneDrive Known Folder Move and roaming profiles,

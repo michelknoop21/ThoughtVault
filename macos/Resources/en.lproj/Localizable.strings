@@ -775,3 +775,17 @@
 "Automatisch labelen opnieuw proberen (%lld)" = "Retry automatic labeling (%lld)";
 "Label %lld notulen" = "Label %lld notes";
 "De huidige AI-aanvraag wordt afgerond. Het resultaat wordt niet opgeslagen." = "The current AI request is finishing. Its result will not be saved.";
+
+/* AI-koppeling (MCP) */
+"AI-koppeling (MCP)" = "AI connection (MCP)";
+"Laat een AI-programma op deze Mac, zoals Claude Desktop of Claude Code, je notities lezen. Werkt alleen zolang ThoughtVault open is." = "Let an AI program on this Mac, such as Claude Desktop or Claude Code, read your notes. Works only while ThoughtVault is open.";
+"Koppeling aan" = "Connection on";
+"Wijzigingen toestaan" = "Allow changes";
+"Notities, mappen, personen en woordenlijst aanpassen en notulen opnieuw laten maken." = "Change notes, folders, people and glossary, and generate minutes again.";
+"Kopieer voor Claude Desktop" = "Copy for Claude Desktop";
+"Kopieer opdracht voor Claude Code" = "Copy command for Claude Code";
+"Configuratie gekopieerd" = "Configuration copied";
+"Opdracht gekopieerd" = "Command copied";
+"Status: actief" = "Status: active";
+"Koppeling kon niet starten: %@" = "Connection could not start: %@";
+"Koppeling gestopt: %@" = "Connection stopped: %@";

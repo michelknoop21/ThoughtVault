@@ -58,6 +58,17 @@ export const CLOUD_STT_PRESETS: Record<CloudSttProvider, { label: string; baseUr
   openrouter: { label: "OpenRouter", baseUrl: "https://openrouter.ai/api", models: ["openai/gpt-4o-transcribe", "openai/whisper-large-v3"], credentialKey: "openrouter_api_key" },
   custom: { label: "Eigen adres", baseUrl: "", models: [], credentialKey: "custom_stt_api_key" },
 };
+/** Model choices: on OpenRouter the key's list once loaded (presets it contains first), otherwise the presets (DEC-080). */
+export function cloudSttChoices(provider: CloudSttProvider, listed: string[]): string[] {
+  const presets = CLOUD_STT_PRESETS[provider].models;
+  if (provider !== "openrouter" || !listed.length) return presets;
+  return [...presets.filter(m => listed.includes(m)), ...listed.filter(m => !presets.includes(m)).sort()];
+}
+/** Whether `model` can be kept before the key's list is known: OpenRouter ids are always `vendor/model`. */
+export function cloudSttKeeps(provider: CloudSttProvider, model: string): boolean {
+  const presets = CLOUD_STT_PRESETS[provider].models;
+  return provider === "openrouter" ? model.includes("/") : !presets.length || presets.includes(model);
+}
 
 // In-progress recording/processing task
 export interface TranscriptTask {

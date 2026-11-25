@@ -8,6 +8,22 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-080: OpenRouter-transcriptiemodellen per sleutel
+
+**Date:** 2026-11-25
+**Status:** Accepted
+
+**Context:** In de Thoughtvault-workspace op OpenRouter zijn meer transcriptiemodellen toegestaan, maar de cloud-transcriptie (DEC-074) toonde voor OpenRouter een vaste lijst van twee: `openai/gpt-4o-transcribe` en `openai/whisper-large-v3`. OpenRouter heeft 30 transcriptiemodellen (25 november 2026), allemaal op hetzelfde `/api/v1/audio/transcriptions`-endpoint dat de app al gebruikt.
+
+**Decision:**
+1. Bij OpenRouter met een sleutel vraagt de app `GET /api/v1/models/user?output_modalities=transcription`: alleen de transcriptiemodellen die de sleutel mag gebruiken. Zonder sleutel of antwoord blijft de vaste lijst staan. De notulekeuze (DEC-078) vraagt hetzelfde endpoint zonder die parameter en krijgt alleen tekstmodellen.
+2. De keuzelijst toont dan eerst de vaste modellen die op de lijst staan en daarna de rest op alfabet. Staat het gekozen model niet op de lijst van de sleutel, dan kiest de app het eerste model uit de lijst.
+3. Een gekozen OpenRouter-model (`vendor/model`) blijft staan zolang de lijst nog niet geladen is. Een model zonder `/`, bijvoorbeeld na overstappen van OpenAI, wordt het eerste vaste model.
+
+**Consequences:** Er geldt geen prijsgrens voor transcriptiemodellen, net als in DEC-074. Op Windows verschijnt de lijst van een nieuw ingevulde sleutel pas na opnieuw openen van de instelling; macOS laadt hem opnieuw na het opslaan van de sleutel.
+
+---
+
 ## DEC-079: Lokale MCP-server in de app, stdio via `ThoughtVault --mcp`
 
 **Date:** 2026-11-25

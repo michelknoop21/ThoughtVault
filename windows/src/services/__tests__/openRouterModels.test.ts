@@ -86,3 +86,15 @@ it("lists only the models the stored key may use", async () => {
   loadCredential.mockRejectedValue(new Error("no store"));
   expect(await openRouterKeyModels()).toEqual([]);
 });
+
+it("lists the transcription models the stored key may use", async () => {
+  loadCredential.mockResolvedValue("fixture-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ data: [
+    { id: "mistralai/voxtral-small-transcribe-3-0", architecture: { output_modalities: ["transcription"] } },
+    { id: "openai/gpt-6.1-terra", architecture: { output_modalities: ["text"] } },
+    { id: "deepgram/nova-3" },
+  ] }) });
+  expect(await openRouterKeyModels("transcription")).toEqual(["mistralai/voxtral-small-transcribe-3-0", "deepgram/nova-3"]);
+  expect(invoke).toHaveBeenCalledWith("proxy_request", { request: expect.objectContaining({
+    url: `${OPENROUTER_KEY_MODELS_URL}?output_modalities=transcription`, headers: { Authorization: "Bearer fixture-key" } }) });
+});

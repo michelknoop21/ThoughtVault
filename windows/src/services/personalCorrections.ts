@@ -103,24 +103,42 @@ const escapeHTML = (text: string) => text.replace(/&/g,"&amp;").replace(/</g,"&l
 const spellingKey = (text: string) => text.toLowerCase().replace(/[‐‑‒–—−]/g, "-");
 
 export function correctText(text: string, entries: PersonalCorrection[], profileId?: string, html = false): string {
-  const replacements = new Map(activeCorrections(entries, profileId).flatMap(e => e.variants.map(v => [spellingKey(v.trim()), e.canonical.trim()] as const)));
-  if (!replacements.size) return text;
-  const alternatives = [...replacements.keys()].sort((a,b) => b.length-a.length).map(v => escapeRegex(v).replace(/-/g, "[-‐‑‒–—−]")).join("|");
+  // Variants become their term; terms without a space are also known so addresses can be lowercased.
+  const replacements = new Map<string, string>(), terms = new Map<string, string>();
+  for (const entry of activeCorrections(entries, profileId)) {
+    const canonical = entry.canonical.trim();
+    entry.variants.forEach(v => replacements.set(spellingKey(v.trim()), canonical));
+    if (!/\s/.test(canonical)) terms.set(spellingKey(canonical), canonical);
+  }
+  if (!replacements.size && !terms.size) return text;
+  const word = (keys: string[]) => keys.length
+    ? `(?<![\\p{L}\\p{N}_])(?:${[...keys].sort((a,b) => b.length-a.length).map(v => escapeRegex(v).replace(/-/g, "[-‐‑‒–—−]")).join("|")})(?![\\p{L}\\p{N}_])` : null;
   // Protected tokens win before word alternatives, so replacements never cascade.
   const entity = "&(?:#\\d+|#x[\\da-f]+|[a-z]+);";
-  const word = `(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`;
-  const pattern = new RegExp(`${entity}|(?:https?:\\/\\/|www\\.)[^\\s<>]+|[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}|\\x60[^\\x60]*\\x60|${word}`,"giu");
-  const inner = new RegExp(`${entity}|${word}`,"giu");
-  const output = (canonical: string) => html ? escapeHTML(canonical) : canonical;
+  const url = "(?:https?:\\/\\/|www\\.)[^\\s<>]+";
+  const email = "[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}";
+  const host = "(?<![\\p{L}\\p{N}_@./-])(?:[\\p{L}\\p{N}][\\p{L}\\p{N}-]*\\.)+[\\p{L}]{2,}(?![\\p{L}\\p{N}_@-])";
+  const variants = word([...replacements.keys()]), all = word([...new Set([...replacements.keys(), ...terms.keys()])]);
+  const pattern = new RegExp([entity, url, email, host, "\\x60[^\\x60]*\\x60", variants].filter(Boolean).join("|"), "giu");
+  const innerVariants = new RegExp([entity, variants].filter(Boolean).join("|"), "giu");
+  const innerAll = new RegExp([entity, all].filter(Boolean).join("|"), "giu");
+  const output = (value: string) => html ? escapeHTML(value) : value;
+  const lower = (term?: string) => term === undefined || /\s/.test(term) ? undefined : term.toLowerCase();
+  const rewrite = (token: string, inner: RegExp, value: (part: string) => string | undefined) =>
+    token.replace(inner, part => { const next = value(part); return next === undefined ? part : output(next); });
   return text.replace(pattern, match => {
     if (/^[&`]/.test(match)) return match;
     const canonical = replacements.get(spellingKey(match));
     if (canonical !== undefined) return output(canonical);
-    // An e-mail address or URL: variants inside it become the term in lowercase (DEC-075).
-    return match.replace(inner, part => {
-      const term = replacements.get(spellingKey(part));
-      return term === undefined || /\s/.test(term) ? part : output(term.toLowerCase());
-    });
+    // A URL: only variants change, in lowercase; a path may be case-sensitive (DEC-075).
+    if (/^(?:https?:\/\/|www\.)/i.test(match)) return rewrite(match, innerVariants, part => lower(replacements.get(spellingKey(part))));
+    // An e-mail address or host name such as secure.yinga.nl: every term in lowercase (DEC-077).
+    const last = match.split(".").pop() ?? "";
+    if (match.includes("@") || last === last.toLowerCase()) {
+      return rewrite(match, innerAll, part => lower(replacements.get(spellingKey(part)) ?? terms.get(spellingKey(part))));
+    }
+    // Words joined by a dot ("Yinga.AI", "werkt.Jinga") are ordinary text.
+    return rewrite(match, innerVariants, part => replacements.get(spellingKey(part)));
   });
 }
 export function correctHTML(html: string, entries: PersonalCorrection[], profileId?: string): string {

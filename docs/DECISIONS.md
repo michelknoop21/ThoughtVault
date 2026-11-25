@@ -8,6 +8,22 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-077: Termen in e-mailadressen en hostnamen in kleine letters
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+**Context:** Na DEC-075 stond in een notule nog `secure.Yinga.nl`. Het transcript had die schrijfwijze al, dus er was geen variant om te vervangen: de juiste term zelf stond met hoofdletter in een hostnaam. Losse hostnamen zonder `https://` of `www.` werden bovendien niet als adres herkend.
+
+**Decision:**
+1. `PersonalCorrections.text()` en `correctText()` herkennen naast URL's en e-mailadressen ook losse hostnamen: woorden met een punt ertussen, waarvan het laatste deel uit minstens twee kleine letters bestaat (`secure.yinga.nl`). Met een hoofdletter in het laatste deel ("Yinga.AI", "werkt.Jinga") blijft het gewone tekst, en daar werkt de normale vervanging.
+2. In e-mailadressen en hostnamen komen zowel varianten als de juiste term zelf in kleine letters, ook bij een term zonder varianten. Een term met een spatie blijft buiten adressen.
+3. In URL's met `https://`, `http://` of `www.` verandert alleen een variant, zoals in DEC-075. Een pad kan hoofdlettergevoelig zijn, dus de juiste term blijft daar staan zoals hij is.
+
+**Consequences:** Een hostnaam in gewone tekst verandert mee: "Yinga.nl blijft de website" wordt "yinga.nl blijft de website", ook aan het begin van een zin. Tekst tussen backticks en de inhoud van `<a>`, `<code>` en `<pre>` blijft ongemoeid.
+
+---
+
 ## DEC-076: Automatisch leren slaat woordgroepen met de term en langere afkortingen over
 
 **Date:** 2026-11-24

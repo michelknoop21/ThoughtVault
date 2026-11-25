@@ -24,7 +24,7 @@ const TABS: [string, string][] = [
   ["Verwerking", "Snelle setup"],
   ["Notulen", "Standaard notulentemplate"],
   ["Agenda", "Microsoft 365"],
-  ["Obsidian", "Obsidian-koppeling"],
+  ["Apps & export", "Obsidian-koppeling"],
   ["Account", "Probleem melden of suggestie"],
   ["Geavanceerd", "Systeeminstellingen openen"],
 ];

@@ -1,7 +1,7 @@
 // SettingsView+Cards.swift
 // ThoughtVault
 //
-// macOS Instellingen tabs Algemeen, Notulen, Agenda, Obsidian, Account and
+// macOS Instellingen tabs Algemeen, Notulen, Agenda, Apps & export, Account and
 // Geavanceerd as cards with an icon and a heading, in the style of the
 // Verwerking page. Every row is the existing settings row (the iOS sections
 // show the same rows); only the presentation differs. Two columns when the

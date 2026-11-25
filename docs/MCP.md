@@ -6,7 +6,7 @@ Er gaat niets via internet. De koppeling werkt alleen zolang ThoughtVault open i
 
 ## Aanzetten
 
-1. Instellingen, tab **Obsidian**, kaart **AI-koppeling (MCP)** (Mac), of tab **AI-koppeling** (Windows).
+1. Instellingen, tab **Apps & export**, kaart **AI-koppeling (MCP)** (Mac), of tab **AI-koppeling** (Windows).
 2. Zet **Koppeling aan** aan. Alleen lezen is dan mogelijk.
 3. Zet **Wijzigingen toestaan** aan als het AI-programma ook mag schrijven: notities aanmaken en wijzigen, mappen, labels, personen, woordenlijst, en notulen opnieuw laten maken.
 4. Kopieer de configuratie met de knop en plak die in je AI-programma.

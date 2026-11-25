@@ -24,7 +24,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .notulen:     return "Notulen"
         case .huisstijlen: return "Huisstijlen"
         case .agenda:      return "Agenda"
-        case .obsidian:    return "Obsidian"
+        case .obsidian:    return "Apps & export"
         case .account:     return "Account"
         case .geavanceerd: return "Geavanceerd"
         }

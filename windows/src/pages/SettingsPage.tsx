@@ -18,7 +18,7 @@ const TABS = [
   { name: "Verwerking", icon: <WaveformIcon /> },
   { name: "Notulen", icon: <DocumentText24Regular /> },
   { name: "Agenda", icon: <Calendar24Regular /> },
-  { name: "Obsidian", icon: <VaultIcon /> },
+  { name: "Obsidian", label: "Apps & export", icon: <VaultIcon /> },
   { name: "Prospect Flow", icon: <DocumentText24Regular /> },
   { name: "AI-koppeling", icon: <Code24Regular /> },
   { name: "Account", icon: <Person24Regular /> },
@@ -31,7 +31,7 @@ export function SettingsPage() {
 
   return <div className="page-scroll northstar-settings">
     <h1>Instellingen</h1>
-    <nav className="settings-tabs" aria-label="Instellingen">{TABS.map(({ name, icon }) => <button key={name} aria-current={tab === name ? "page" : undefined} className={tab === name ? "active" : ""} onClick={() => setTab(name)}>{icon}{name}</button>)}</nav>
+    <nav className="settings-tabs" aria-label="Instellingen">{TABS.map(({ name, label, icon }) => <button key={name} aria-current={tab === name ? "page" : undefined} className={tab === name ? "active" : ""} onClick={() => setTab(name)}>{icon}{label ?? name}</button>)}</nav>
     {tab === "Huisstijlen" && <BrandingTab />}
     {tab === "Algemeen" && <GeneralTab />}
     {tab === "Verwerking" && <ProcessingTab />}

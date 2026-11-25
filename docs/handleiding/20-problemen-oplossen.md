@@ -179,7 +179,7 @@ Bij "Sleutelopslag niet beschikbaar" of "Opslaan in Windows Credential Manager m
 ### Exporteren naar Obsidian lukt niet
 
 - "Deze notule is gewijzigd in Obsidian. Haal die versie eerst op voordat je exporteert." De notitie in je vault is aangepast nadat de app hem schreef. De app overschrijft die wijziging niet.
-- Een melding die begint met "Vul eerst de Obsidian": de koppeling is niet volledig ingevuld. Ga naar **Instellingen** > **Obsidian**.
+- Een melding die begint met "Vul eerst de Obsidian": de koppeling is niet volledig ingevuld. Open **Instellingen** > **Apps & export** op Mac en Windows, of **Instellingen** > **Obsidian** op iPhone.
 - "Niet bereikbaar" na **Test verbinding**: Obsidian staat niet open, de plugin Local REST API staat uit, of het adres of de sleutel klopt niet.
 
 ### De agenda koppelt niet

@@ -79,6 +79,57 @@ final class AppLogTests: XCTestCase {
         XCTAssertEqual(AppLog.beginSession(in: dir), .clean)
     }
 
+    /// TV-000025: an installer, update or another build stopping the app is not a crash.
+    func testMarkerFromAnotherBuildIsNotACrash() throws {
+        let url = dir.appending(path: "session.open")
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.340 (340)"), .clean)
+        AppLog.setSessionStage("transcriberen", in: dir, build: "1.0.340 (340)")
+        XCTAssertEqual(String(decoding: try Data(contentsOf: url), as: UTF8.self), "build=1.0.340 (340)\ntranscriberen")
+        AppLog.setSessionStage(nil, in: dir, build: "1.0.340 (340)")   // idle when the installer stopped it
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .clean)
+        AppLog.setSessionStage("notule", in: dir, build: "1.0.341 (341)")
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .crashed(stage: "notule"))
+        try Data("".utf8).write(to: url)   // idle marker from a build before this format
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .clean)
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341) debug"), .clean)   // debugger stop
+    }
+
+    /// An installer does not run in the middle of a stage: a stop there stays a crash after a version change.
+    func testStopDuringStageIsReportedAcrossBuilds() throws {
+        let url = dir.appending(path: "session.open")
+        _ = AppLog.beginSession(in: dir, build: "1.0.340 (340)")
+        AppLog.setSessionStage("transcriberen", in: dir, build: "1.0.340 (340)")
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .crashed(stage: "transcriberen"))
+        try Data("opnemen".utf8).write(to: url)   // marker from a build before this format
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .crashed(stage: "opnemen"))
+        try Data("build=1.0.341 (341) debug\nopnemen".utf8).write(to: url)   // debugger stopped mid-recording
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .clean)
+        try Data("build=1.0.340 (340)\ncrash".utf8).write(to: url)
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .clean)
+        try Data("build=1.0.340 (340)\nprivate meeting body".utf8).write(to: url)
+        XCTAssertEqual(AppLog.beginSession(in: dir, build: "1.0.341 (341)"), .clean)
+    }
+
+    /// Progress callbacks set the same stage many times a second: only a change replaces the file.
+    func testUnchangedStageIsNotRewritten() throws {
+        let url = dir.appending(path: "session.open")
+        _ = AppLog.beginSession(in: dir, build: "1.0.341 (341)")
+        AppLog.setSessionStage("transcriberen", in: dir, build: "1.0.341 (341)")
+        let fileNumber = { try FileManager.default.attributesOfItem(atPath: url.path)[.systemFileNumber] as? Int }
+        let first = try fileNumber()
+        AppLog.setSessionStage("transcriberen", in: dir, build: "1.0.341 (341)")
+        XCTAssertEqual(try fileNumber(), first)
+        AppLog.setSessionStage("notule", in: dir, build: "1.0.341 (341)")
+        XCTAssertNotEqual(try fileNumber(), first)
+    }
+
+    func testOnlyTheProductionReleaseBuildReportsCrashes() {
+        XCTAssertTrue(AppLog.reportsCrashes(bundleID: "com.buildmind.ThoughtVault", debug: false))
+        XCTAssertFalse(AppLog.reportsCrashes(bundleID: "com.buildmind.ThoughtVault", debug: true))
+        XCTAssertFalse(AppLog.reportsCrashes(bundleID: "com.buildmind.ThoughtVault.dev", debug: false))
+        XCTAssertFalse(AppLog.reportsCrashes(bundleID: nil, debug: false))
+    }
+
     #if os(macOS)
     @MainActor func testTerminationNotificationRemovesMarkerSynchronously() {
         let center = NotificationCenter()

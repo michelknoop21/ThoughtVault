@@ -3,6 +3,9 @@ import XCTest
 @testable import ThoughtVault
 
 final class SupportViewModelTests: XCTestCase {
+    /// The crash marker names the build that wrote it (TV-000025).
+    private static func marker(_ stage: String) -> String { "build=\(AppLog.sessionBuild)\n\(stage)" }
+
     @MainActor
     private func fixture() -> (SupportViewModel, SupportRelay, UserDefaults, URLSession, URL, String) {
         let suite = "SupportViewModelTests-\(UUID().uuidString)"
@@ -36,7 +39,7 @@ final class SupportViewModelTests: XCTestCase {
         XCTAssertTrue(vm.hasBegunSession)
         AppLog.setSessionStage("opnemen", in: directory)
         XCTAssertNil(vm.beginSessionIfNeeded(in: directory))
-        XCTAssertEqual(try String(contentsOf: directory.appending(path: "session.open"), encoding: .utf8), "opnemen")
+        XCTAssertEqual(try String(contentsOf: directory.appending(path: "session.open"), encoding: .utf8), Self.marker("opnemen"))
     }
 
     @MainActor func testCleanStartupDoesNotReportCrashOnRootRestart() {
@@ -81,7 +84,7 @@ final class SupportViewModelTests: XCTestCase {
         vm.reconcileSession(isBackground: false, in: directory)
         AppLog.setSessionStage("opnemen", in: directory)
         XCTAssertEqual(previous, .crashed(stage: "notule"))
-        XCTAssertEqual(try String(contentsOf: directory.appending(path: "session.open"), encoding: .utf8), "opnemen")
+        XCTAssertEqual(try String(contentsOf: directory.appending(path: "session.open"), encoding: .utf8), Self.marker("opnemen"))
         XCTAssertNil(vm.beginSessionIfNeeded(in: directory))
     }
 
@@ -145,13 +148,13 @@ final class SupportViewModelTests: XCTestCase {
         vm.addTask(task)
         vm.updateTask(task.id, status: .transcribing)
         let marker = AppLog.directory.appending(path: "session.open")
-        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), "transcriberen")
+        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), Self.marker("transcriberen"))
         vm.updateTask(task.id, status: .completed)
-        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), "")
+        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), Self.marker(""))
         vm.recordingState = .preparing
-        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), "opnemen")
+        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), Self.marker("opnemen"))
         vm.recordingState = .idle
-        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), "")
+        XCTAssertEqual(try String(contentsOf: marker, encoding: .utf8), Self.marker(""))
     }
 
     @MainActor func testAutomaticPayloadNeverStoresDynamicFailureContent() async throws {

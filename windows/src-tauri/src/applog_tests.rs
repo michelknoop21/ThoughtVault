@@ -137,33 +137,103 @@ fn tail_handles_line_boundaries_zero_limits_and_unicode() {
     assert_eq!(tail(d.path(), 2).unwrap(), "");
 }
 
+// Without a readable build line nobody can say which build wrote the marker: log it, do not report it.
 #[test]
-fn invalid_marker_still_reports_a_previous_crash() {
+fn marker_without_a_readable_build_line_is_not_reported() {
     let d = tempfile::tempdir().unwrap();
     fs::write(d.path().join(MARKER), [255]).unwrap();
-    assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: true, stage: None });
+    assert_eq!(session_begin_at(d.path(), BUILD), PreviousSession { crashed: false, stage: None });
+    fs::remove_file(d.path().join(MARKER)).unwrap();
+    fs::create_dir(d.path().join(MARKER)).unwrap(); // exists but cannot be read
+    assert_eq!(session_begin_at(d.path(), BUILD), PreviousSession { crashed: false, stage: None });
+    let log = fs::read_to_string(d.path().join(CURRENT)).unwrap();
+    assert!(log.contains("Previous session unknown build ended without a clean exit"));
+}
+
+#[test]
+fn invalid_bytes_after_the_build_line_keep_the_owner() {
+    let d = tempfile::tempdir().unwrap();
+    let mut bytes = format!("build={BUILD}\nnotule").into_bytes();
+    bytes.push(0xff);
+    fs::write(d.path().join(MARKER), bytes).unwrap();
+    assert!(session_begin_at(d.path(), BUILD).crashed);
+    let mut bytes = b"build=1.0.340\n".to_vec();
+    bytes.push(0xff);
+    fs::write(d.path().join(MARKER), bytes).unwrap();
+    assert!(!session_begin_at(d.path(), BUILD).crashed);
+}
+
+// TV-000025/TV-000027: an installer, update or another build stopping the app is not a crash.
+#[test]
+fn marker_from_another_build_is_logged_but_not_reported() {
+    let d = tempfile::tempdir().unwrap();
+    assert!(!session_begin_at(d.path(), "1.0.340").crashed);
+    fs::write(d.path().join(MARKER), "build=1.0.340\n").unwrap();
+    assert_eq!(session_begin_at(d.path(), "1.0.341"), PreviousSession { crashed: false, stage: None });
+    fs::write(d.path().join(MARKER), "").unwrap(); // idle marker from a build before this change
+    assert_eq!(session_begin_at(d.path(), "1.0.341"), PreviousSession { crashed: false, stage: None });
+    fs::write(d.path().join(MARKER), "build=1.0.341-debug\n").unwrap(); // `tauri dev` stopped
+    assert!(!session_begin_at(d.path(), "1.0.341").crashed);
+    fs::write(d.path().join(MARKER), "build=1.0.341-debug\ntranscriberen").unwrap(); // stopped mid-stage
+    assert!(!session_begin_at(d.path(), "1.0.341").crashed);
+    let log = fs::read_to_string(d.path().join(CURRENT)).unwrap();
+    assert!(log.contains("Previous session 1.0.340 ended without a clean exit; replaced by 1.0.341, not reported as a crash"));
+    assert!(log.contains("Previous session unknown build ended without a clean exit; replaced by 1.0.341"));
+    assert_eq!(fs::read_to_string(d.path().join(MARKER)).unwrap(), "build=1.0.341\n");
+    assert!(!d.path().join(format!("{MARKER}.tmp")).exists());
+}
+
+// An installer does not run in the middle of a stage: a stop there stays a crash.
+#[test]
+fn stop_during_a_stage_is_reported_across_builds() {
+    let d = tempfile::tempdir().unwrap();
+    fs::write(d.path().join(MARKER), "build=1.0.340\ntranscriberen").unwrap();
+    assert_eq!(session_begin_at(d.path(), "1.0.341"), PreviousSession { crashed: true, stage: Some("transcriberen".into()) });
+    fs::write(d.path().join(MARKER), "notule").unwrap(); // marker from a build before this change
+    assert_eq!(session_begin_at(d.path(), "1.0.341"), PreviousSession { crashed: true, stage: Some("notule".into()) });
+    fs::write(d.path().join(MARKER), "build=1.0.340\nprivate meeting body").unwrap();
+    assert!(!session_begin_at(d.path(), "1.0.341").crashed);
+}
+
+#[test]
+fn only_the_production_identifier_reports_crashes() {
+    assert!(reports_crashes(PRODUCTION_ID, false));
+    assert!(!reports_crashes("nl.prezent.transcript-studio-dev", false));
+    assert!(!reports_crashes("nl.prezent.transcript-studio-qa-20261110", false));
+    assert!(!reports_crashes(PRODUCTION_ID, true));
+}
+
+#[test]
+fn non_production_build_keeps_crash_in_log_only() {
+    let d = tempfile::tempdir().unwrap();
+    let crashed = PreviousSession { crashed: true, stage: Some("notule".into()) };
+    assert_eq!(gate(d.path(), crashed.clone(), false), PreviousSession { crashed: false, stage: None });
+    assert!(fs::read_to_string(d.path().join(CURRENT)).unwrap().contains("Not a production build"));
+    assert_eq!(gate(d.path(), crashed.clone(), true), crashed);
+    let clean = PreviousSession { crashed: false, stage: None };
+    assert_eq!(gate(d.path(), clean.clone(), true), clean);
 }
 
 #[test]
 fn session_marker_reports_crash_with_running_stage() {
     let d = tempfile::tempdir().unwrap();
-    assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: false, stage: None });
+    assert_eq!(session_begin_at(d.path(), BUILD), PreviousSession { crashed: false, stage: None });
     session_stage_at(d.path(), Some("transcriberen")).unwrap();
     assert_eq!(
-        session_begin_at(d.path()),
+        session_begin_at(d.path(), BUILD),
         PreviousSession { crashed: true, stage: Some("transcriberen".into()) }
     );
     session_end_at(d.path());
-    assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: false, stage: None });
+    assert_eq!(session_begin_at(d.path(), BUILD), PreviousSession { crashed: false, stage: None });
     session_stage_at(d.path(), None).unwrap();
-    assert_eq!(session_begin_at(d.path()), PreviousSession { crashed: true, stage: None });
+    assert_eq!(session_begin_at(d.path(), BUILD), PreviousSession { crashed: true, stage: None });
 }
 
 #[test]
 fn session_begin_once_reports_clean_on_later_calls() {
     let d = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(d.path()).unwrap();
-    std::fs::write(d.path().join("session.open"), "notule").unwrap();
+    std::fs::write(d.path().join("session.open"), format!("build={BUILD}\nnotule")).unwrap();
     let started = std::sync::atomic::AtomicBool::new(false);
     assert_eq!(
         session_begin_once(d.path(), &started),
@@ -198,18 +268,26 @@ fn global_commands_handle_startup_session_lifecycle_and_io_failures() {
     assert!(!session_begin().crashed);
 
     let d = tempfile::tempdir().unwrap();
-    fs::write(d.path().join(MARKER), "transcriberen").unwrap();
+    fs::write(d.path().join(MARKER), format!("build={BUILD}\ntranscriberen")).unwrap();
     fs::write(d.path().join(ROTATED), "expired").unwrap();
     fs::File::options().write(true).open(d.path().join(ROTATED)).unwrap()
         .set_modified(SystemTime::now() - KEEP_ROTATED - Duration::from_secs(60)).unwrap();
     init(d.path().to_path_buf());
     assert!(!d.path().join(ROTATED).exists());
-    assert_eq!(session_begin(), PreviousSession { crashed: true, stage: Some("transcriberen".into()) });
+    // `cargo test` (debug) keeps the crash in the log; CI's `cargo test --release` with the production id reports it.
+    let reports = reports_crashes(env!("TV_APP_IDENTIFIER"), cfg!(debug_assertions));
+    let expected = if reports {
+        PreviousSession { crashed: true, stage: Some("transcriberen".into()) }
+    } else {
+        PreviousSession { crashed: false, stage: None }
+    };
+    assert_eq!(session_begin(), expected);
+    assert_eq!(fs::read_to_string(d.path().join(CURRENT)).unwrap().contains("Not a production build"), !reports);
     session_stage(Some("notule".into()));
     assert!(!session_begin().crashed);
-    assert_eq!(fs::read_to_string(d.path().join(MARKER)).unwrap(), "notule");
+    assert_eq!(fs::read_to_string(d.path().join(MARKER)).unwrap(), format!("build={BUILD}\nnotule"));
     session_stage(None);
-    assert_eq!(fs::read_to_string(d.path().join(MARKER)).unwrap(), "");
+    assert_eq!(fs::read_to_string(d.path().join(MARKER)).unwrap(), format!("build={BUILD}\n"));
     session_end();
     assert!(!d.path().join(MARKER).exists());
 

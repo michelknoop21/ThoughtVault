@@ -109,7 +109,8 @@ struct ThoughtVaultApp: App {
                         supportVM.reconcileSession(isBackground: scenePhase == .background)
                         #endif
                         recordingVM.syncSessionStage()
-                        if case .crashed(let stage) = outcome {
+                        // Debug and Dev-channel builds keep a crash in their own log (TV-000025).
+                        if case .crashed(let stage) = outcome, AppLog.reportsCrashes {
                             await supportVM.reportCrash(runningStage: stage.flatMap(SupportStage.init(rawValue:)))
                         }
                         await SupportRelay.shared.flush()

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { capNotice, isModelAllowed, modelChoices, modelProvider, priceOf, pricePerToken, suggestedModels, usableModel } from "../suggestedModels";
+import { OPENROUTER_API_URL, capNotice, isModelAllowed, modelChoices, modelProvider, priceOf, pricePerToken, rememberReportedPrices, suggestedModels, usableModel } from "../suggestedModels";
 
 /** Ids from the routed provider's public model list (November 2026), kept here so the test needs no network. */
 const ROUTED_LIST_FIXTURE = new Set([
   "mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5",
-  "anthropic/claude-opus-5.5", "anthropic/claude-fable-5.2", "openai/gpt-5.6-terra",
+  "anthropic/claude-opus-5.5", "anthropic/claude-fable-5.2", "openai/gpt-5.6-terra", "openai/gpt-6.1-terra",
   "openai/gpt-5.6-luna", "openai/gpt-5.6-sol",
 ]);
 
@@ -85,4 +85,20 @@ it("uses a higher fresh endpoint price and ignores expired reports", async () =>
   expect(modelRefusal("gpt-5.6-terra", "https://other.example")).toBeUndefined();
   rememberReportedPrices("https://prices.example", rows, Date.now() - 8 * 86400_000);
   expect(modelRefusal("gpt-5.6-terra", "https://prices.example")).toBeUndefined();
+});
+
+it("shows the models an OpenRouter key may use and keeps them at request time", () => {
+  const allowed = ["anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "mistralai/mistral-large-4-0", "mistralai/mistral-medium-3-5",
+    "mistralai/mistral-small-2603", "openai/gpt-6-luna", "openai/gpt-6-sol", "openai/gpt-6.1-sol", "openai/gpt-6.1-terra"];
+  const choices = modelChoices("openrouter", "", allowed);
+  expect([...choices].sort()).toEqual([...allowed].sort());
+  expect(choices.slice(0, 3)).toEqual(["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-6.1-terra"]);
+  // A suggestion the key may not use is left out once the list is loaded.
+  expect(modelChoices("openrouter", "", ["mistralai/mistral-small-2603"])).toEqual(["mistralai/mistral-small-2603"]);
+  for (const model of allowed) expect(usableModel(model, "openrouter")).toBe(model);
+  // A model only priced by the list is allowed through the remembered price.
+  rememberReportedPrices(OPENROUTER_API_URL, [{ id: "vendor/new-model", pricing: { prompt: "0.000001", completion: "0.000002" } }]);
+  expect(usableModel("vendor/new-model", "openrouter")).toBe("vendor/new-model");
+  rememberReportedPrices(OPENROUTER_API_URL, [{ id: "vendor/new-model", pricing: { prompt: "0.00001", completion: "0.00005" } }]);
+  expect(usableModel("vendor/new-model", "openrouter")).toBe("mistralai/mistral-large-4-0");
 });

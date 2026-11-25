@@ -1,4 +1,5 @@
 import type { Transcript } from "../types";
+import { htmlToPlainText } from "../utils/htmlToMarkdown";
 
 export interface LibraryEntry {
   id: string;
@@ -22,6 +23,12 @@ export function matchesFolder(note: Transcript, selection: string, entries: Libr
   if (selection === "unfiled") return !folder;
   const smart = entries.find(e => e.kind === "smart" && e.id === selection);
   return smart ? entries.some(e => e.kind === "label" && smart.labelIDs.includes(e.id) && note.tags.includes(e.name)) : folder?.id === selection;
+}
+/** Search box filter of the notes list: title, transcript, minutes text and tags, case-insensitive. */
+export function matchesSearch(note: Transcript, searchQuery: string): boolean {
+  const query = searchQuery.trim().toLocaleLowerCase("nl-NL");
+  return !query || [note.title, note.raw_transcription ?? "", htmlToPlainText(note.notule_html || note.preview || "").replace(/\s+/g, " "), ...note.tags]
+    .some(value => value.toLocaleLowerCase("nl-NL").includes(query));
 }
 export function manualTags(note: Transcript, tags: string[], labels: LibraryEntry[]): NoteOrganization {
   const old = metadata(note);

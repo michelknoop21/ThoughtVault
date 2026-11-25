@@ -8,6 +8,25 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-079: Lokale MCP-server in de app, stdio via `ThoughtVault --mcp`
+
+**Date:** 2026-11-25
+**Status:** Accepted
+
+**Context:** Notulen en transcripties staan alleen lokaal; geen enkel ander programma kon erbij. Michel wil dat AI-programma's alles uit de app kunnen ophalen en ook kunnen wijzigen. Gekozen is: alleen lokaal, lezen en schrijven, en alleen zolang de app open is. Een eerdere poging op `fix/windows-audit-local-mcp` (7 oktober, losse geschiedenis, nooit gemerged) gebruikte HTTP op vaste poorten 11218/11219. Claude Desktop start lokale servers alleen via stdio, dus die bereikte hem niet.
+
+**Decision:**
+1. De draaiende app luistert op `127.0.0.1` op een vrije poort en schrijft poort en een per start nieuwe sleutel naar `mcp.json` in de eigen datamap (rechten 0600). Elke verbinding begint met de sleutel, daarna één JSON-RPC-bericht per regel.
+2. MCP-clients starten de app-binary met `--mcp`. Dat proces opent geen UI, leest `mcp.json` en geeft stdin en stdout door. Op macOS draait het in dezelfde sandbox-container als de app, dus zonder app-group. Er komt geen tweede binary of target bij.
+3. De app blijft de enige die de opslag aanraakt. Tools gebruiken dezelfde store- en viewmodelfuncties als de schermen.
+4. Eén contract voor beide platforms: `data/mcp/tools.json` (16 tools, scope `read` of `write`) en `data/mcp/protocol-fixtures.json`, die de tests van macOS en Windows allebei draaien. Het JSON-RPC-deel is met de hand geschreven, zonder SDK.
+5. Standaard uit. Schrijftools staan alleen in `tools/list` als "Wijzigingen toestaan" aan staat. Schrijven naar een notitie vraagt de revisie uit `get_note`, zodat een wijziging in de app niet stil wordt overschreven. Verwijderen, opnemen en instellingen of sleutels vallen buiten de koppeling.
+6. De server start bij het starten van de app, niet bij het hoofdvenster: de app kan zonder venster vanuit de menubalk draaien.
+
+**Consequences:** ChatGPT (web en app) kan geen lokale stdio-server starten en valt buiten deze koppeling. Wordt dat later nodig, dan komt er een HTTP-transport met tunnel bovenop dezelfde tools. Een herstart van de app geeft een nieuwe sleutel en poort: de client moet de server dan opnieuw starten. macOS krijgt `com.apple.security.network.server` in beide macOS-entitlements. Handleiding: `docs/MCP.md`.
+
+---
+
 ## DEC-077: Termen in e-mailadressen en hostnamen in kleine letters
 
 **Date:** 2026-11-24

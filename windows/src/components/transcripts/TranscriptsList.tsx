@@ -9,6 +9,7 @@ import {
 } from "../ui/StudioIcons";
 import type { Transcript } from "../../types";
 import { htmlToPlainText } from "../../utils/htmlToMarkdown";
+import { matchesSearch } from "../../services/libraryOrganization";
 
 type TimeFilter = "alles" | "vandaag" | "week" | "maand";
 
@@ -131,13 +132,11 @@ export function TranscriptsList({
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
-  const query = searchQuery.trim().toLocaleLowerCase("nl-NL");
   const filtered = transcripts.filter((t) => {
-    const matchesSearch = !query || [t.title, t.raw_transcription ?? "", htmlToPlainText(t.notule_html || t.preview || "").replace(/\s+/g, " "), ...t.tags]
-      .some(value => value.toLocaleLowerCase("nl-NL").includes(query));
+    const matchesQuery = matchesSearch(t, searchQuery);
     const matchesTags = selectedTags.length === 0 || selectedTags.some((tag) => t.tags.includes(tag));
     const matchesTime = filterByTime(t, timeFilter);
-    return matchesSearch && matchesTags && matchesTime;
+    return matchesQuery && matchesTags && matchesTime;
   });
 
   const allTags = Array.from(new Set(transcripts.flatMap((t) => t.tags)));

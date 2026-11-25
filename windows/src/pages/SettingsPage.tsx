@@ -1,13 +1,14 @@
 import {BrandingTab} from "../components/settings/BrandingTab";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Settings24Regular, WaveformIcon, AdvancedIcon, DocumentText24Regular, Calendar24Regular, VaultIcon, Person24Regular } from "../components/ui/StudioIcons";
+import { Settings24Regular, WaveformIcon, AdvancedIcon, DocumentText24Regular, Calendar24Regular, VaultIcon, Person24Regular, Code24Regular } from "../components/ui/StudioIcons";
 import { GeneralTab } from "../components/settings/GeneralTab";
 import { ProcessingTab } from "../components/settings/ProcessingTab";
 import { NotulenTab } from "../components/settings/NotulenTab";
 import { CalendarTab } from "../components/settings/CalendarTab";
 import { ObsidianTab } from "../components/settings/ObsidianTab";
 import { ProspectFlowTab } from "../components/settings/ProspectFlowTab";
+import { McpTab } from "../components/settings/McpTab";
 import { AccountTab } from "../components/settings/AccountTab";
 import { AdvancedTab } from "../components/settings/AdvancedTab";
 
@@ -19,6 +20,7 @@ const TABS = [
   { name: "Agenda", icon: <Calendar24Regular /> },
   { name: "Obsidian", icon: <VaultIcon /> },
   { name: "Prospect Flow", icon: <DocumentText24Regular /> },
+  { name: "AI-koppeling", icon: <Code24Regular /> },
   { name: "Account", icon: <Person24Regular /> },
   { name: "Geavanceerd", icon: <AdvancedIcon /> },
 ];
@@ -37,6 +39,7 @@ export function SettingsPage() {
     {tab === "Agenda" && <CalendarTab />}
     {tab === "Obsidian" && <ObsidianTab />}
     {tab === "Prospect Flow" && <ProspectFlowTab />}
+    {tab === "AI-koppeling" && <McpTab />}
     {tab === "Account" && <AccountTab />}
     {tab === "Geavanceerd" && <AdvancedTab />}
   </div>;

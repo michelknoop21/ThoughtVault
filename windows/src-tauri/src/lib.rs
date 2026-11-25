@@ -5,6 +5,7 @@ mod commands;
 mod transcribe;
 mod personal_corrections;
 mod main_navigation;
+mod mcp;
 
 use commands::audio::SharedRecordingState;
 use std::sync::{Arc, Mutex};
@@ -12,6 +13,9 @@ use tauri::{Emitter, Listener, Manager};
 
 #[tauri::command]
 fn app_architecture() -> &'static str { std::env::consts::ARCH }
+
+/// Stdio bridge for `ThoughtVault.exe --mcp`; returns the process exit code.
+pub fn run_mcp_bridge() -> i32 { mcp::run_bridge() }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -29,6 +33,7 @@ pub fn run() {
             }
         })
         .manage(transcribe::ModelDownloadControl::default())
+        .manage(mcp::McpState::default())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
@@ -153,12 +158,16 @@ pub fn run() {
             personal_corrections::read_context_file,
             personal_corrections::write_context_file,
             personal_corrections::set_aside_context_file,
+            mcp::mcp_set_enabled,
+            mcp::mcp_respond,
+            mcp::mcp_executable_path,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app, event| {
             if let tauri::RunEvent::Exit = event {
                 applog::session_end();
+                mcp::remove_endpoint();
             }
         });
 }

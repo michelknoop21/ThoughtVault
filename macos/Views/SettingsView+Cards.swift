@@ -103,6 +103,12 @@ extension SettingsView {
     func obsidianCards(_ layout: SettingsLayout) -> some View {
         vaultFolderImporter(cardsPage(layout) {
             SettingsCard(icon: "tray.and.arrow.down", title: "Obsidian-koppeling", subtitle: LocalizedStringKey(obsidianFooterText)) { obsidianRows }
+            #if os(macOS)
+            SettingsCard(icon: "cpu", title: "AI-koppeling (MCP)",
+                         subtitle: "Laat een AI-programma op deze Mac, zoals Claude Desktop of Claude Code, je notities lezen. Werkt alleen zolang ThoughtVault open is.") {
+                McpSettingsSection()
+            }
+            #endif
         } right: {
             SettingsCard(icon: "network", title: "Local REST API") { obsidianRestRows }
             SettingsCard(icon: "doc.text", title: "Prospect Flow",

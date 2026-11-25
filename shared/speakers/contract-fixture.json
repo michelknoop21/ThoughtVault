@@ -62,6 +62,13 @@
       "turns": [],
       "segments": [{"start": 0.0, "end": 4.0, "text": "Eerste stuk. Tweede stuk.", "speakerId": null}],
       "text": "Eerste stuk. Tweede stuk."
+    },
+    {
+      "name": "an equal minor overlap goes to the lowest speaker name",
+      "pieces": [{"start": 0.0, "end": 1.0, "text": "ja"}, {"start": 1.0, "end": 2.0, "text": "nee"}],
+      "turns": [{"start": 0.875, "end": 1.0, "speaker": "b"}, {"start": 0.0, "end": 0.125, "speaker": "a"}, {"start": 1.0, "end": 2.0, "speaker": "a"}],
+      "segments": [{"start": 0.0, "end": 2.0, "text": "ja nee", "speakerId": "S1"}],
+      "text": "Spreker 1: ja nee"
     }
   ]
 }

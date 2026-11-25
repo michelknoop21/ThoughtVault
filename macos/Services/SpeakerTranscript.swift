@@ -15,9 +15,12 @@ struct TimedPiece: Codable, Equatable, Sendable {
 
 extension TimedPiece {
     /// Joins the pieces of consecutive chunks onto one timeline: chunk `i` starts at `i * chunkDuration`.
-    static func offset(_ chunks: [[TimedPiece]], chunkDuration: TimeInterval) -> [TimedPiece] {
-        chunks.enumerated().flatMap { index, pieces in
-            pieces.map { TimedPiece(start: $0.start + Double(index) * chunkDuration, end: $0.end + Double(index) * chunkDuration, text: $0.text) }
+    /// A chunk with text but no timings gives no pieces at all: the speaker text is built from the pieces only,
+    /// so labelling the rest would silently drop that chunk's speech from the transcript.
+    static func offset(_ chunks: [TimedTranscript], chunkDuration: TimeInterval) -> [TimedPiece] {
+        if chunks.contains(where: { $0.pieces.isEmpty && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { return [] }
+        return chunks.enumerated().flatMap { index, chunk in
+            chunk.pieces.map { TimedPiece(start: $0.start + Double(index) * chunkDuration, end: $0.end + Double(index) * chunkDuration, text: $0.text) }
         }
     }
 }

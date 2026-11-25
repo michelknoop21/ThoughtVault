@@ -19,7 +19,7 @@ final class SpeakerTranscriptTests: XCTestCase {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("shared/speakers/contract-fixture.json")
         let fixture = try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: url))
-        XCTAssertEqual(fixture.cases.count, 5)
+        XCTAssertEqual(fixture.cases.count, 6)
         for item in fixture.cases {
             let segments = SpeakerTranscript.segments(pieces: item.pieces, turns: item.turns)
             XCTAssertEqual(segments.map(\.text), item.segments.map(\.text), item.name)
@@ -61,8 +61,10 @@ final class SpeakerTranscriptTests: XCTestCase {
     func testChunkPiecesAreShiftedOntoOneTimeline() {
         let a = TimedPiece(start: 1, end: 2, text: "een")
         let b = TimedPiece(start: 0.5, end: 1, text: "twee")
-        XCTAssertEqual(TimedPiece.offset([[a], [], [b]], chunkDuration: 55),
+        XCTAssertEqual(TimedPiece.offset([TimedTranscript(text: "een", pieces: [a]), TimedTranscript(text: ""), TimedTranscript(text: "twee", pieces: [b])], chunkDuration: 55),
                        [a, TimedPiece(start: 110.5, end: 111, text: "twee")])
+        // A chunk with speech but no timings: no pieces at all, so its text is never dropped from the transcript.
+        XCTAssertEqual(TimedPiece.offset([TimedTranscript(text: "een", pieces: [a]), TimedTranscript(text: "drie zonder tijden"), TimedTranscript(text: "twee", pieces: [b])], chunkDuration: 55), [])
     }
 
     func testAppleSpeechSegmentsBecomePieces() {

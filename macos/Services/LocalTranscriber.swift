@@ -494,7 +494,7 @@ struct AppleSpeechTranscriber: LocalTranscriber {
         onProgress(1.0)
         let trimmed = parts.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LocalTranscriberError.emptyResult }
-        return TimedTranscript(text: trimmed, pieces: TimedPiece.offset(parts.map(\.pieces), chunkDuration: Self.maxSingleRequestDuration))
+        return TimedTranscript(text: trimmed, pieces: TimedPiece.offset(parts, chunkDuration: Self.maxSingleRequestDuration))
     }
 }
 
@@ -643,7 +643,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             var results: [TranscriptionResult] = []
             // WhisperKit already places its own VAD windows on the file's timeline; only our
             // 10-minute chunks still need their start added.
-            var chunkPieces: [[TimedPiece]] = []
+            var chunkParts: [TimedTranscript] = []
             let duration = AudioChunker.duration(of: wavURL)
             stages.begin("transcribe", " chunked=\((duration ?? 0) > chunkThreshold)")
             if let duration, duration > chunkThreshold {
@@ -661,7 +661,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                         }
                     )
                     results.append(contentsOf: chunkResults)
-                    chunkPieces.append(Self.pieces(chunkResults))
+                    chunkParts.append(TimedTranscript(text: chunkResults.map(\.text).joined(separator: " "), pieces: Self.pieces(chunkResults)))
                 }
             } else {
                 results = try await pipe.transcribe(
@@ -672,7 +672,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                         return nil
                     }
                 )
-                chunkPieces = [Self.pieces(results)]
+                chunkParts = [TimedTranscript(text: results.map(\.text).joined(separator: " "), pieces: Self.pieces(results))]
             }
             onProgress(0.95)
 
@@ -682,7 +682,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             onProgress(1.0)
             stages.end()
             logger.info("WhisperKit transcription complete — \(text.count) characters")
-            return TimedTranscript(text: text, pieces: TimedPiece.offset(chunkPieces, chunkDuration: chunkLength))
+            return TimedTranscript(text: text, pieces: TimedPiece.offset(chunkParts, chunkDuration: chunkLength))
         } catch let error as LocalTranscriberError {
             stages.failed(error)
             throw error

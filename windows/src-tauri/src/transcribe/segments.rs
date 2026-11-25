@@ -78,7 +78,7 @@ fn speaker_for(piece: &TimedPiece, turns: &[SpeakerTurn]) -> Option<String> {
     }
     // Sorted by name as well, so a tie never depends on map order.
     let mut ranked: Vec<(&str, f64)> = overlap.into_iter().collect();
-    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then(b.0.cmp(a.0)));
+    ranked.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(b.0)));
     let Some(best) = ranked.first() else {
         let mut nearest: Option<(f64, &str)> = None;
         for turn in turns {
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn shared_contract_fixture() {
         let fixture: Fixture = serde_json::from_str(include_str!("../../../../shared/speakers/contract-fixture.json")).unwrap();
-        assert_eq!(fixture.cases.len(), 5);
+        assert_eq!(fixture.cases.len(), 6);
         for case in fixture.cases {
             let got = segments(&case.pieces, &case.turns);
             assert_eq!(got.len(), case.segments.len(), "{}", case.name);

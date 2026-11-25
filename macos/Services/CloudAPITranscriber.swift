@@ -160,7 +160,7 @@ struct CloudAPITranscriber: LocalTranscriber {
 
         let text = parts.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw LocalTranscriberError.emptyResult }
-        return TimedTranscript(text: text, pieces: TimedPiece.offset(parts.map(\.pieces), chunkDuration: Self.chunkDuration))
+        return TimedTranscript(text: text, pieces: TimedPiece.offset(parts, chunkDuration: Self.chunkDuration))
     }
 
     /// Uploads one WAV chunk and returns its `text`, with segment times when the model gives them.

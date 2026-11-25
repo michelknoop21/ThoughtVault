@@ -1,4 +1,6 @@
-versie: 1.0.347
+versie: 1.0.354
+Geen crashmelding na een stop van buitenaf (eerst testen): sluit ThoughtVault geforceerd af (macOS: Activiteitenweergave > Stop geforceerd; Windows: Taakbeheer) terwijl er niets loopt, installeer of start daarna een andere versie en open de app. Er hoort geen melding "onverwacht gestopt" in Mijn meldingen te komen. Herhaal het tijdens een lopende transcriptie: dan hoort de melding wel te komen, ook als je intussen een andere versie hebt geinstalleerd.
+
 Transcriptiemodellen van OpenRouter (eerst testen): kies in Instellingen > Verwerking voor de cloud-transcriptie OpenRouter, met een opgeslagen sleutel. De keuzelijst met modellen hoort alle transcriptiemodellen te tonen die jullie sleutel mag gebruiken (nu negen, waaronder Whisper, Voxtral, Gemini en Nemotron), met gpt-4o-transcribe en whisper-large-v3 bovenaan. Kies een ander model, neem een kort fragment op en controleer dat de transcriptie werkt.
 
 Notule bij een haperende verbinding (Windows, eerst testen): kies een AI-aanbieder op internet, zoals OpenRouter, start een notule en zet het netwerk tijdens het verwerken een paar seconden uit en weer aan. De notule hoort gewoon klaar te komen. Laat het netwerk daarna eens langer uit tijdens een notule: dan hoort de melding "Kan de AI-aanbieder niet bereiken. Controleer je internetverbinding en probeer het opnieuw." te verschijnen, en het supportrapport hoort notule_provider_unreachable te noemen in plaats van background_task_failed.

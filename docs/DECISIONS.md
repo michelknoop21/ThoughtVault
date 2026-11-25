@@ -45,7 +45,7 @@ Zonder waarschuwing van de broncontrole zijn punt 1, 2, 3, 6 en 8 ongewijzigd. D
 ## DEC-082: Notule in korte regels, bronzinnen ingeperkt en niet meer geciteerd
 
 **Date:** 2026-11-25
-**Status:** Implemented on `feat/notule-wispr-vorm`; macOS-testset nog niet gedraaid
+**Status:** Implemented on `feat/notule-wispr-vorm`
 
 **Context:** Een collega nam op 24 november drie gesprekken op met ThoughtVault en met Wispr Flow. De ThoughtVault-notules bevatten letterlijke, verhaspelde zinnen uit de spraakherkenning, schreven "de spreker" en waren twee keer zo lang. De oorzaak zat in de schrijfopdracht: `constraintSentences` maakte van elke zin met niet, geen of zonder een "verplicht te behouden bronzin". Van de 68 bronzinnen die letterlijk in de drie notules stonden, kwamen er 56 uit dat blok. Het profiel Standaard stond op Volledig en kreeg dus de volle lijst.
 

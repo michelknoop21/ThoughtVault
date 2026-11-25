@@ -1,4 +1,6 @@
-versie: 1.0.342
+versie: 1.0.343
+OpenRouter-modellen (eerst testen): open Instellingen > Verwerking met OpenRouter en een opgeslagen sleutel. De keuzelijst hoort zonder extra klik alle modellen te tonen die jullie OpenRouter-sleutel mag gebruiken (nu negen), en geen model dat de sleutel niet mag gebruiken. Kies een GPT-6- of Mistral Small-model, maak een notule en controleer in de taakdetails dat precies dat model is gebruikt.
+
 Adressen in notulen (eerst testen): zet in de woordenlijst Yinga met de verkeerde spelling Jinga en maak een notule van een gesprek waarin je secure.yinga.nl en analytics@yinga.nl noemt. Hostnamen en e-mailadressen horen in kleine letters te staan, ook als de spraakherkenning Yinga met een hoofdletter of als Jinga schreef. Gewone tekst zoals "Yinga.AI" hoort ongewijzigd te blijven.
 
 Woordenlijst (eerst testen): zet in de woordenlijst Yinga met de verkeerde spelling Jinga en maak een notule van een gesprek waarin je "AI" zegt en het e-mailadres analytics@jinga.nl noemt. AI hoort overal AI te blijven en het adres hoort analytics@yinga.nl te worden. Kijk daarna in de woordenlijst bij de geleerde spellingen: daar horen geen woordgroepen bij te komen waar de term zelf al in staat, zoals "de Prospectflow", en bij AI geen "API".

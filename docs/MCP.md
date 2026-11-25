@@ -1,6 +1,6 @@
 # AI-koppeling (MCP)
 
-Met de AI-koppeling kan een AI-programma op dezelfde computer je notities in ThoughtVault lezen en, als je dat toestaat, aanpassen. Het programma praat via het Model Context Protocol (MCP). Getest met Claude Code; Claude Desktop en Codex CLI starten een lokale server op dezelfde manier.
+Met de AI-koppeling kan een AI-programma op dezelfde computer je notities in ThoughtVault lezen en, als je dat toestaat, aanpassen. Het programma praat via het Model Context Protocol (MCP). Getest met Claude Code en Codex; Claude Desktop start de server op dezelfde manier.
 
 Er gaat niets via internet. De koppeling werkt alleen zolang ThoughtVault open is, ook als alleen het menubalkicoon (Mac) of systeemvakicoon (Windows) actief is. De ChatGPT-app kan niet met een server op je eigen computer praten en valt daarom buiten deze koppeling (DEC-079).
 
@@ -31,6 +31,16 @@ claude mcp add thoughtvault -- "/Applications/ThoughtVault.app/Contents/MacOS/Th
 ```
 
 Op Windows is `command` het pad naar `ThoughtVault.exe`; de knop vult het juiste pad in.
+
+### Codex
+
+Codex (de terminalversie en de Codex-app) gebruikt dezelfde server. Kopieer met **Kopieer opdracht voor Codex** (Mac) of **Opdracht voor Codex kopiëren** (Windows) de opdracht en voer die uit in een terminal:
+
+```sh
+codex mcp add thoughtvault -- "/Applications/ThoughtVault.app/Contents/MacOS/ThoughtVault" --mcp
+```
+
+De opdracht zet de server in `~/.codex/config.toml` en herschrijft daarbij de rest van dat bestand in een eigen volgorde; maak eerst een kopie als je het bestand met de hand bijhoudt. `codex mcp list` toont daarna `thoughtvault`. Op 25 november gaf `codex exec` via `list_notes` en `get_note` de laatste notule van een Mac met 1.0.347 terug.
 
 ## Wat het AI-programma kan
 

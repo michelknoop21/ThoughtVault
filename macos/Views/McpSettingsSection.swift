@@ -49,7 +49,8 @@ struct McpSettingsSection: View {
 
     @ViewBuilder private var copyButtons: some View {
         Button("Kopieer voor Claude Desktop") { copy(desktopConfig, as: "desktop") }
-        Button("Kopieer opdracht voor Claude Code") { copy(codeCommand, as: "code") }
+        Button("Kopieer opdracht voor Claude Code") { copy(command("claude"), as: "code") }
+        Button("Kopieer opdracht voor Codex") { copy(command("codex"), as: "code") }
     }
 
     private var executable: String { Bundle.main.executablePath ?? "/Applications/ThoughtVault.app/Contents/MacOS/ThoughtVault" }
@@ -60,7 +61,8 @@ struct McpSettingsSection: View {
         return String(decoding: data, as: UTF8.self)
     }
 
-    private var codeCommand: String { "claude mcp add thoughtvault -- \"\(executable)\" --mcp" }
+    /// `claude mcp add` and `codex mcp add` take the same arguments.
+    private func command(_ cli: String) -> String { "\(cli) mcp add thoughtvault -- \"\(executable)\" --mcp" }
 
     private func copy(_ text: String, as kind: String) {
         NSPasteboard.general.clearContents()

@@ -53,6 +53,10 @@ export function McpTab() {
             onClick={() => void copy((exe) => `claude mcp add thoughtvault -- "${exe}" --mcp`, "Opdracht gekopieerd")}>
             <Copy24Regular style={{ fontSize: 14 }} /> Opdracht voor Claude Code kopiëren
           </button>
+          <button className="btn btn-secondary btn-sm" disabled={off}
+            onClick={() => void copy((exe) => `codex mcp add thoughtvault -- "${exe}" --mcp`, "Opdracht gekopieerd")}>
+            <Copy24Regular style={{ fontSize: 14 }} /> Opdracht voor Codex kopiëren
+          </button>
         </div>
       </div>
     </div>

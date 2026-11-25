@@ -784,6 +784,7 @@
 "Notities, mappen, personen en woordenlijst aanpassen en notulen opnieuw laten maken." = "Change notes, folders, people and glossary, and generate minutes again.";
 "Kopieer voor Claude Desktop" = "Copy for Claude Desktop";
 "Kopieer opdracht voor Claude Code" = "Copy command for Claude Code";
+"Kopieer opdracht voor Codex" = "Copy command for Codex";
 "Configuratie gekopieerd" = "Configuration copied";
 "Opdracht gekopieerd" = "Command copied";
 "Status: actief" = "Status: active";

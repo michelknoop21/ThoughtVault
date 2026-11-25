@@ -43,6 +43,14 @@ struct TranscriptSegment: Codable, Equatable, Sendable {
     var speakerId: String?
 }
 
+/// A name for one speaker id. `confirmed` is false for a proposal the user has not yet accepted;
+/// `evidence` says what the proposal rests on, in Dutch, for the user.
+struct SpeakerName: Codable, Equatable, Sendable {
+    var name: String
+    var confirmed: Bool
+    var evidence: String
+}
+
 enum SpeakerTranscript {
     /// A piece counts as two speakers at once when the second speaker covers this share of it.
     private static let ambiguousShare = 0.25

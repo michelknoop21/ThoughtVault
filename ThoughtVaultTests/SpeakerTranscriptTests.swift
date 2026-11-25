@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 @testable import ThoughtVault
 
 final class SpeakerTranscriptTests: XCTestCase {
@@ -83,4 +84,86 @@ final class SpeakerTranscriptTests: XCTestCase {
                                 TimedPiece(start: 6, end: 7.5, text: "Dat pak ik op.")])
     }
     #endif
+
+    // MARK: Phase 2: storage and the microphone channel
+
+    func testSpeakerFieldsRoundTripAndStayNilWhenEmpty() {
+        let record = TranscriptRecord(id: "t", taskId: "t", title: "t", filename: "f.wav", rawTranscription: "x",
+                                      notuleHtml: "", profileId: "p", source: "local")
+        XCTAssertNil(record.segmentsJSON)
+        let segments = [TranscriptSegment(start: 0, end: 1.5, text: "Ja.", speakerId: "S1"),
+                        TranscriptSegment(start: 1.5, end: 2, text: "Nee.", speakerId: nil)]
+        record.segments = segments
+        record.speakerNames = ["S1": SpeakerName(name: "Jan de Vries", confirmed: false, evidence: "De enige stem op je microfoon")]
+        XCTAssertEqual(record.segments, segments)
+        XCTAssertEqual(record.speakerNames["S1"]?.name, "Jan de Vries")
+        XCTAssertEqual(record.speakerNames["S1"]?.confirmed, false)
+        record.segments = []
+        record.speakerNames = [:]
+        XCTAssertNil(record.segmentsJSON)
+        XCTAssertNil(record.speakerNamesJSON)
+    }
+
+    /// Writes a 16 kHz file from per-second (left, right) levels; one channel when `right` is nil.
+    private func stereo(_ seconds: [(Float, Float?)]) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("channels-\(UUID().uuidString).wav")
+        let channels: AVAudioChannelCount = seconds.first?.1 == nil ? 1 : 2
+        let format = try XCTUnwrap(AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: channels))
+        let file = try AVAudioFile(forWriting: url, settings: format.settings)
+        for (left, right) in seconds {
+            let buffer = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_000))
+            buffer.frameLength = 16_000
+            for i in 0..<16_000 {
+                // A tone, so the level is the same in every block.
+                let wave = Float(sin(Double(i) * 0.05))
+                buffer.floatChannelData![0][i] = left * wave
+                if channels == 2 { buffer.floatChannelData![1][i] = (right ?? 0) * wave }
+            }
+            try file.write(from: buffer)
+        }
+        return url
+    }
+
+    func testOneVoiceClearlyOnTheMicrophoneIsLocal() throws {
+        // S1 speaks into the microphone, with a little leak to the system side; S2 is the call.
+        let url = try stereo([(0.3, 0.02), (0.02, 0.3), (0.3, 0.02)])
+        defer { try? FileManager.default.removeItem(at: url) }
+        let segments = [TranscriptSegment(start: 0, end: 1, text: "a", speakerId: "S1"),
+                        TranscriptSegment(start: 1, end: 2, text: "b", speakerId: "S2"),
+                        TranscriptSegment(start: 2, end: 3, text: "c", speakerId: "S1")]
+        XCTAssertEqual(try SpeakerDiarizer.localSpeaker(stereo: url, segments: segments), "S1")
+    }
+
+    func testTwoVoicesOnTheMicrophoneGiveNoLocalSpeaker() throws {
+        // A meeting room: both voices reach the microphone, the microphone is no evidence of who is "me".
+        let url = try stereo([(0.3, 0.0), (0.25, 0.0), (0.01, 0.3)])
+        defer { try? FileManager.default.removeItem(at: url) }
+        let segments = [TranscriptSegment(start: 0, end: 1, text: "a", speakerId: "S1"),
+                        TranscriptSegment(start: 1, end: 2, text: "b", speakerId: "S2"),
+                        TranscriptSegment(start: 2, end: 3, text: "c", speakerId: "S3")]
+        XCTAssertNil(try SpeakerDiarizer.localSpeaker(stereo: url, segments: segments))
+    }
+
+    func testLoudspeakerLeakDoesNotMakeTheCallLocal() throws {
+        // S2 is heard on the microphone through the loudspeakers, but far louder on the system side.
+        let url = try stereo([(0.3, 0.0), (0.1, 0.3)])
+        defer { try? FileManager.default.removeItem(at: url) }
+        let segments = [TranscriptSegment(start: 0, end: 1, text: "a", speakerId: "S1"),
+                        TranscriptSegment(start: 1, end: 2, text: "b", speakerId: "S2")]
+        XCTAssertEqual(try SpeakerDiarizer.localSpeaker(stereo: url, segments: segments), "S1")
+    }
+
+    func testMonoRecordingHasNoChannelEvidence() throws {
+        let url = try stereo([(0.3, nil), (0.3, nil)])
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertNil(try SpeakerDiarizer.localSpeaker(stereo: url, segments: [TranscriptSegment(start: 0, end: 2, text: "a", speakerId: "S1")]))
+    }
+
+    func testNoModelMeansNoLabelsAndNoDownload() async {
+        guard !SpeakerDiarizer.isInstalled else { return }
+        let timed = TimedTranscript(text: "Ja.", pieces: [TimedPiece(start: 0, end: 1, text: "Ja.")])
+        let labels = await SpeakerDiarizer.label(timed, audio: URL(fileURLWithPath: "/nonexistent.wav"), selfName: "Jan")
+        XCTAssertNil(labels)
+        XCTAssertFalse(SpeakerDiarizer.isInstalled)
+    }
 }

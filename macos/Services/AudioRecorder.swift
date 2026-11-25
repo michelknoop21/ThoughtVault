@@ -506,7 +506,7 @@ final class AudioRecorder: NSObject, @unchecked Sendable {
             let mixed = try AVAudioFile(forReading: combinedURL)
             guard mixed.length == expectedFrames,
                   mixed.processingFormat.sampleRate == 16_000,
-                  mixed.processingFormat.channelCount == 1,
+                  (1...2).contains(mixed.processingFormat.channelCount),
                   let buffer = AVAudioPCMBuffer(pcmFormat: mixed.processingFormat, frameCapacity: 16_000 * 10)
             else { return false }
             var readFrames: AVAudioFramePosition = 0

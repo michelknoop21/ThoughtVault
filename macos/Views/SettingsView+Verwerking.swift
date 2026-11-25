@@ -267,6 +267,11 @@ extension SettingsView {
             Text("Apple Spraakherkenning werkt direct, zonder download.")
                 .font(.system(size: 13)).foregroundStyle(HomeColor.text3)
         }
+
+        HStack(alignment: .top, spacing: 16) {
+            Text("Sprekers").font(.system(size: 14)).foregroundStyle(HomeColor.text2).frame(width: 96, alignment: .leading).padding(.top, 6)
+            SpeakerModelRow().frame(maxWidth: 560, alignment: .leading)
+        }
     }
 
     // MARK: Notulen

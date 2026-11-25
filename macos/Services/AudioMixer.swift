@@ -1,9 +1,10 @@
 import AVFoundation
 
-/// Mixes the microphone and system recordings into one 16 kHz mono file.
-/// Each source is first brought to the same speech level, then the two are summed:
-/// sample = mic * micGain + system * systemGain, clamped to full scale.
-/// The capture levels differ per microphone and per call app, and halving the sum cost another 6 dB.
+/// Mixes the microphone and system recordings into one 16 kHz stereo file: left is the microphone,
+/// right is the system audio. Keeping them apart preserves the evidence of who spoke on which side,
+/// which speaker detection uses; every engine reads the file through a mono downmix.
+/// Each source is first brought to the same speech level and clamped to full scale.
+/// The capture levels differ per microphone and per call app.
 enum AudioMixer {
     private static let sampleRate = 16_000.0
     private static let chunkFrames: AVAudioFrameCount = 16_000 * 10
@@ -53,10 +54,12 @@ enum AudioMixer {
 
         guard total > 0,
               let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: 1, interleaved: false),
+              let stereo = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: 2, interleaved: false),
               let micBuf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
               let sysBuf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
-              let outBuf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunkFrames),
-              let mic = micBuf.floatChannelData?[0], let sys = sysBuf.floatChannelData?[0], let out = outBuf.floatChannelData?[0]
+              let outBuf = AVAudioPCMBuffer(pcmFormat: stereo, frameCapacity: chunkFrames),
+              let mic = micBuf.floatChannelData?[0], let sys = sysBuf.floatChannelData?[0],
+              let left = outBuf.floatChannelData?[0], let right = outBuf.floatChannelData?[1]
         else { throw CocoaError(.fileReadCorruptFile) }
 
         let micGain = gain(forLevel: try speechLevel(of: micFile, buffer: micBuf, data: mic))
@@ -67,7 +70,7 @@ enum AudioMixer {
         let diskSettings: [String: Any] = [
             AVFormatIDKey: Int(kAudioFormatLinearPCM),
             AVSampleRateKey: sampleRate,
-            AVNumberOfChannelsKey: 1,
+            AVNumberOfChannelsKey: 2,
             AVLinearPCMBitDepthKey: 16,
             AVLinearPCMIsFloatKey: false,
             AVLinearPCMIsBigEndianKey: false,
@@ -96,7 +99,8 @@ enum AudioMixer {
                     let m: Float = i < micCount ? mic[i] : 0
                     let j = i - silent
                     let s: Float = j >= 0 && j < sysCount ? sys[j] : 0
-                    out[i] = max(-1, min(1, m * micGain + s * sysGain))
+                    left[i] = max(-1, min(1, m * micGain))
+                    right[i] = max(-1, min(1, s * sysGain))
                 }
                 outBuf.frameLength = AVAudioFrameCount(n)
                 try outFile.write(from: outBuf)

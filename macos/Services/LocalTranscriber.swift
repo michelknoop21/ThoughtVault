@@ -186,6 +186,8 @@ enum AudioPreConverter {
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
             throw LocalTranscriberError.transcriptionFailed("Audio-conversie niet mogelijk voor dit formaat.")
         }
+        // Without this the converter keeps only the first channel: the microphone of a stereo call.
+        converter.downmix = true
 
         let inputChunkSize = AVAudioFrameCount(max(4096, Int(sourceFormat.sampleRate)))
         let estimatedOutputChunkSize = AVAudioFrameCount(
@@ -275,7 +277,7 @@ enum AudioPreConverter {
     }
 
     /// Linear gain that lifts the file's mean RMS to `targetRMSdB`; 1 when it is
-    /// already loud enough. Never attenuates. Reads the first channel only.
+    /// already loud enough. Never attenuates. Averages over every channel.
     static func normalizationGain(for url: URL) throws -> Float {
         let file = try AVAudioFile(forReading: url)
         let chunk: AVAudioFrameCount = 1 << 16
@@ -285,11 +287,13 @@ enum AudioPreConverter {
         while file.framePosition < file.length {
             let toRead = AVAudioFrameCount(min(AVAudioFramePosition(chunk), file.length - file.framePosition))
             try file.read(into: buffer, frameCount: toRead)
-            guard let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 else { break }
-            var s: Float = 0
-            vDSP_svesq(samples, 1, &s, vDSP_Length(buffer.frameLength))
-            sumSquares += Double(s)
-            count += Double(buffer.frameLength)
+            guard let channels = buffer.floatChannelData, buffer.frameLength > 0 else { break }
+            for channel in 0..<Int(buffer.format.channelCount) {
+                var s: Float = 0
+                vDSP_svesq(channels[channel], 1, &s, vDSP_Length(buffer.frameLength))
+                sumSquares += Double(s)
+                count += Double(buffer.frameLength)
+            }
         }
         return gain(forMeanSquare: count > 0 ? sumSquares / count : 0)
     }

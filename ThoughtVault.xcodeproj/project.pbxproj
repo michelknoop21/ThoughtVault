@@ -56,8 +56,12 @@
 		ABPK0002 /* ParakeetModelStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0002 /* ParakeetModelStore.swift */; };
 		ABDG0001 /* DiagnosticLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = FADG0001 /* DiagnosticLog.swift */; };
 		AAPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		AASPR001 /* SpeakerModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASPR001 /* SpeakerModelRow.swift */; };
+		AASPD001 /* SpeakerDiarizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASPD001 /* SpeakerDiarizer.swift */; };
 		AASP0001 /* SpeakerTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASP0001 /* SpeakerTranscript.swift */; };
 		ABPK0003 /* ParakeetTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAPK0003 /* ParakeetTranscriber.swift */; };
+		ABSPR001 /* SpeakerModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASPR001 /* SpeakerModelRow.swift */; };
+		ABSPD001 /* SpeakerDiarizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASPD001 /* SpeakerDiarizer.swift */; };
 		ABSP0001 /* SpeakerTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = FASP0001 /* SpeakerTranscript.swift */; };
 		ACPK0001 /* ParakeetCatalogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0001 /* ParakeetCatalogTests.swift */; };
 		ACPK0002 /* NotulenDefaultMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBPK0002 /* NotulenDefaultMigrationTests.swift */; };
@@ -495,6 +499,8 @@
 		FBCP0001 /* ContinuedProcessingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuedProcessingTests.swift; sourceTree = "<group>"; };
 		FADG0001 /* DiagnosticLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticLog.swift; sourceTree = "<group>"; };
 		FAPK0003 /* ParakeetTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetTranscriber.swift; sourceTree = "<group>"; };
+		FASPR001 /* SpeakerModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerModelRow.swift; sourceTree = "<group>"; };
+		FASPD001 /* SpeakerDiarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerDiarizer.swift; sourceTree = "<group>"; };
 		FASP0001 /* SpeakerTranscript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeakerTranscript.swift; sourceTree = "<group>"; };
 		FBPK0001 /* ParakeetCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetCatalogTests.swift; sourceTree = "<group>"; };
 		FBPK0002 /* NotulenDefaultMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotulenDefaultMigrationTests.swift; sourceTree = "<group>"; };
@@ -875,6 +881,7 @@
 				FACP0001 /* ContinuedProcessing.swift */,
 				FADG0001 /* DiagnosticLog.swift */,
 				FAPK0003 /* ParakeetTranscriber.swift */,
+				FASPD001 /* SpeakerDiarizer.swift */,
 				FASP0001 /* SpeakerTranscript.swift */,
 				FA0000K2 /* AppleFoundationModelService.swift */,
 				FA0000K1 /* AnthropicLLMService.swift */,
@@ -984,6 +991,7 @@
 				FAPK1200 /* SettingsView+VerwerkingIOS.swift */,
 				FAPK1100 /* SettingsView+VerwerkingLogic.swift */,
 				FAPK1000 /* ParakeetModelRows.swift */,
+				FASPR001 /* SpeakerModelRow.swift */,
 				FA0000K7 /* SettingsView+Verwerking.swift */,
 				F1D71F9B7A4C14F2548A9932 /* SettingsView+Cards.swift */,
 				FA0000K6 /* SettingsView+Studio.swift */,
@@ -1306,6 +1314,8 @@
 				AAPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
 				AAPK1000 /* ParakeetModelRows.swift in Sources */,
 				AAPK0003 /* ParakeetTranscriber.swift in Sources */,
+				AASPR001 /* SpeakerModelRow.swift in Sources */,
+				AASPD001 /* SpeakerDiarizer.swift in Sources */,
 				AASP0001 /* SpeakerTranscript.swift in Sources */,
 				AA000001 /* ThoughtVaultApp.swift in Sources */,
 				AA0F0601 /* MenuBarViews.swift in Sources */,
@@ -1580,6 +1590,8 @@
 				ABPK1100 /* SettingsView+VerwerkingLogic.swift in Sources */,
 				ABPK1000 /* ParakeetModelRows.swift in Sources */,
 				ABPK0003 /* ParakeetTranscriber.swift in Sources */,
+				ABSPR001 /* SpeakerModelRow.swift in Sources */,
+				ABSPD001 /* SpeakerDiarizer.swift in Sources */,
 				ABSP0001 /* SpeakerTranscript.swift in Sources */,
 				AB00FA00DS01 /* DebugScreenshotSeed.swift in Sources */,
 				AB01FA00CSB1 /* ContextSuggestionBar.swift in Sources */,

@@ -908,8 +908,10 @@ final class RecordingViewModel {
     /// Worker that does the actual transcription + notule generation. Runs off the
     /// MainActor on a detached Task. All @MainActor state updates go through Task hops.
     private func processLocallyWorker(url: URL, localId: String, profile: Profile, participants: [Participant], optimizeAudio: Bool) async {
-        // 1. Local transcription
+        // 1. Local transcription, then speaker detection on the whole recording
         let transcription: String
+        var speakers: SpeakerDiarizer.Labels?
+        let selfName = await MainActor.run { LocalTranscriptStore.shared.fetchSelfProfile()?.name }
         let audioSeconds = await Self.audioDuration(url)
         let transcriptionStart = Date()
         let size = ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int64) ?? -1
@@ -922,15 +924,15 @@ final class RecordingViewModel {
             }
             defer { if inputURL != url { try? FileManager.default.removeItem(at: inputURL) } }
             let transcriber = LocalTranscriberFactory.make()
-            transcription = try await LocalTranscriptionQueue.shared.run(id: localId, onWait: { [weak self] in
+            let result: (TimedTranscript, SpeakerDiarizer.Labels?) = try await LocalTranscriptionQueue.shared.run(id: localId, onWait: { [weak self] in
                 Task { @MainActor in
                     self?.updateTask(localId, status: .transcribing, statusDetail: "Wacht op vorige transcriptie")
                     ContinuedProcessing.shared?.update(runId: localId, phase: .waiting)
                 }
             }) { [weak self] in
                 await self?.updateTask(localId, status: .transcribing)  // clears the waiting note
-                return try await AudioPreConverter.$usesOptimizedAudio.withValue(inputURL != url) {
-                try await transcriber.transcribe(url: inputURL, profileId: profile.id) { [weak self] fraction in
+                let timed = try await AudioPreConverter.$usesOptimizedAudio.withValue(inputURL != url) {
+                try await transcriber.transcribeTimed(url: inputURL, profileId: profile.id) { [weak self] fraction in
                     Task { @MainActor in
                         guard let self else { return }
                         guard !Task.isCancelled else { return }
@@ -941,7 +943,13 @@ final class RecordingViewModel {
                     }
                 }
                 }
+                // Same queue slot as the transcription, so two heavy models never load at once.
+                guard SpeakerDiarizer.isInstalled, !timed.pieces.isEmpty else { return (timed, nil) }
+                await self?.updateTask(localId, status: .transcribing, statusDetail: "Sprekers herkennen")
+                return (timed, await SpeakerDiarizer.label(timed, audio: inputURL, selfName: selfName))
             }
+            speakers = result.1
+            transcription = speakers.map { SpeakerTranscript.text($0.segments) } ?? result.0.text
             log.info("[RecordingVM] Local transcription done task=\(LogRedact.mask(localId)) s=\(Int(Date().timeIntervalSince(transcriptionStart).rounded())) chars=\(transcription.count)")
             guard Self.hasUsableTranscription(transcription) else {
                 throw LLMError.generationFailed("Geen bruikbare spraak herkend. Controleer de opname en probeer opnieuw.")
@@ -985,6 +993,10 @@ final class RecordingViewModel {
         )
         record.participants = participants
         record.durationSeconds = audioSeconds
+        if let speakers {
+            record.segments = speakers.segments
+            record.speakerNames = speakers.names
+        }
         record.detailLevel = NotuleDetailLevel.effective(for: profile).rawValue
         do {
             try LocalTranscriptStore.shared.save(record)

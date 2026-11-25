@@ -2,7 +2,7 @@
 
 Vergelijkt notules van kandidaatmodellen via OpenRouter. Het script draait de echte Windows-pijplijn (`windows/src/services/llm.ts`: concept, broncontrole, inhoudscontrole, "Even nalopen") met het standaardprofiel, onder het al geinstalleerde vitest. Kosten komen per verzoek uit `usage.cost` van OpenRouter.
 
-Het detailniveau (`--detail kort|normaal|volledig`) bestaat in de pijplijn nog niet. De optie wordt geaccepteerd, genegeerd en als "n.v.t." vastgelegd.
+Zonder `--detail` geldt het detailniveau van het profiel; `--detail kort|normaal|volledig` gaat daarvoor, zoals de keuze van de gebruiker in de app. Per run telt het script ook hoeveel bronzinnen van zes woorden of meer letterlijk in de notule staan en hoe vaak er "de spreker" staat.
 
 ## Invoer en uitvoer (privé, buiten de repo)
 
@@ -27,7 +27,7 @@ Stuur eerst `/grant OPENROUTER_API`. Zonder `--env-var` leest het script `VAULT_
 | `--conversations` | `schadebezoek,thuisserver` | Naamvoorvoegsel van de bestanden in de datamap |
 | `--reps` | 1 | Herhalingen per model en gesprek |
 | `--budget` | 6 | USD. Geen nieuwe run als het gemeten totaal dit haalt, dus overschrijding hooguit één run |
-| `--detail` | geen | `kort`, `normaal` of `volledig` (nog n.v.t.) |
+| `--detail` | niveau van het profiel | `kort`, `normaal` of `volledig` |
 | `--data-dir`, `--results-dir`, `--candidates` | zie boven | Andere locaties |
 | `--dry-run` | uit | Nep-OpenRouter en fictieve fixture, geen netwerk, geen sleutel |
 | `--dry-cost` | 0.01 | Nepkosten per verzoek in een dry-run |

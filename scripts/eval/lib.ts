@@ -26,6 +26,14 @@ export function scoreFacts(text: string, facts: Fact[]) {
   return { found: facts.length - missing.length, total: facts.length, missing };
 }
 
+/** Source sentences of 6 words or more that the notule repeats word for word, and how often it says "de spreker". */
+export function copiedSentences(text: string, transcript: string) {
+  const flat = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const hay = flat(text);
+  const copied = new Set((transcript.match(/[^.!?\n]+/g) ?? []).map(flat).filter(s => s.split(" ").length >= 6 && hay.includes(s))).size;
+  return { copied, speaker: (hay.match(/\bde spreker\b/g) ?? []).length };
+}
+
 /** Items in the "Even nalopen" section, the warnings the app's audit appends. */
 export function nalopenCount(html: string): number {
   const at = html.indexOf("<h2>Even nalopen</h2>");
@@ -35,21 +43,21 @@ export function nalopenCount(html: string): number {
 export interface RunResult { commit?: string;
   model: string; conversation: string; rep: number; detail: string;
   found: number; total: number; missing: string[];
-  chars: number; words: number; nalopen: number;
+  chars: number; words: number; nalopen: number; copied: number; speaker: number; auditErrors: string[];
   durationMs: number; costUsd: number; costKnown: boolean; budgetLimited?: boolean; error: string | null;
 }
 
 const mean = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
 
 export function summaryTable(runs: RunResult[], totalCost: number): string {
-  const rows = ["| Model | Gesprek | Runs | Feiten (gem.) | Min-max | Kosten USD (gem.) | Duur s (gem.) | Even nalopen (gem.) | Fouten |", "|---|---|---|---|---|---|---|---|---|"];
+  const rows = ["| Model | Gesprek | Runs | Feiten (gem.) | Min-max | Kosten USD (gem.) | Duur s (gem.) | Even nalopen (gem.) | Letterlijke zinnen (gem.) | De spreker (gem.) | Tekens (gem.) | Fouten |", "|---|---|---|---|---|---|---|---|---|---|---|---|"];
   const keys = [...new Set(runs.map(r => `${r.model}\t${r.conversation}`))];
   for (const key of keys) {
     const [model, conversation] = key.split("\t");
     const group = runs.filter(r => r.model === model && r.conversation === conversation);
     const ok = group.filter(r => !r.error);
     const f = ok.map(r => r.found);
-    rows.push(`| ${model} | ${conversation} | ${group.length} | ${ok.length ? `${mean(f).toFixed(1)}/${ok[0].total}` : "-"} | ${f.length ? `${Math.min(...f)}-${Math.max(...f)}` : "-"} | ${mean(group.map(r => r.costUsd)).toFixed(4)} | ${(mean(group.map(r => r.durationMs)) / 1000).toFixed(1)} | ${ok.length ? mean(ok.map(r => r.nalopen)).toFixed(1) : "-"} | ${group.filter(r => r.error).length} |`);
+    rows.push(`| ${model} | ${conversation} | ${group.length} | ${ok.length ? `${mean(f).toFixed(1)}/${ok[0].total}` : "-"} | ${f.length ? `${Math.min(...f)}-${Math.max(...f)}` : "-"} | ${mean(group.map(r => r.costUsd)).toFixed(4)} | ${(mean(group.map(r => r.durationMs)) / 1000).toFixed(1)} | ${ok.length ? mean(ok.map(r => r.nalopen)).toFixed(1) : "-"} | ${ok.length ? mean(ok.map(r => r.copied)).toFixed(1) : "-"} | ${ok.length ? mean(ok.map(r => r.speaker)).toFixed(1) : "-"} | ${ok.length ? mean(ok.map(r => r.chars)).toFixed(0) : "-"} | ${group.filter(r => r.error).length} |`);
   }
   return `${rows.join("\n")}\n\nTotale kosten: USD ${totalCost.toFixed(4)}\n`;
 }

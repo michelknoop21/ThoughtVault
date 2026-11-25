@@ -108,11 +108,32 @@ def publish(directory, staging, version, channel):
         atomic_write(manifest_path, (json.dumps(data, indent=2) + "\n").encode())
 
 
+def set_testflight(directory, version):
+    """Point macos_testflight at a version just uploaded to TestFlight; the join link stays."""
+    if not re.fullmatch(r"\d+\.\d+\.\d+", version): raise ValueError("Invalid version")
+    with (directory / ".publish.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        manifest_path = directory / "releases.json"
+        data = json.loads(manifest_path.read_text())
+        entry = data.get("macos_testflight")
+        if not entry: raise ValueError("No macos_testflight entry")
+        if tuple(map(int, entry["version"].split("."))) > tuple(map(int, version.split("."))):
+            raise ValueError("Refusing to announce an older TestFlight build")
+        entry["version"] = version
+        atomic_write(manifest_path, (json.dumps(data, indent=2) + "\n").encode())
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--directory", type=Path, required=True)
-    parser.add_argument("--staging", type=Path, required=True)
+    parser.add_argument("--staging", type=Path)
     parser.add_argument("--version", required=True)
-    parser.add_argument("--channel", choices=["production", "dev"], required=True)
+    parser.add_argument("--channel", choices=["production", "dev"])
+    parser.add_argument("--testflight", action="store_true", help="only update macos_testflight")
     args = parser.parse_args()
-    publish(args.directory, args.staging, args.version, args.channel)
+    if args.testflight:
+        set_testflight(args.directory, args.version)
+    elif args.staging and args.channel:
+        publish(args.directory, args.staging, args.version, args.channel)
+    else:
+        parser.error("--staging and --channel are required to publish")

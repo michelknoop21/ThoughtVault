@@ -119,6 +119,14 @@ if [ "$UPLOAD" = true ]; then
     # The upload stays valid when this fails; rerun the script by hand.
     python3 "$ROOT_DIR/scripts/testflight_wat_te_testen.py" "$VERSION" "$WHAT" \
         || echo "WARNING: 'Wat te testen' niet ingesteld; draai scripts/testflight_wat_te_testen.py $VERSION $WHAT"
+    # The download page links the macOS TestFlight build; the release publisher updates it under its lock.
+    if [ "$WHAT" != "ios" ]; then
+        ssh -o BatchMode=yes michelk@3.69.205.209 \
+            "python3 - --directory /home/michelk/tstudio-releases --version $VERSION --testflight" \
+            < "$ROOT_DIR/scripts/publish-release.py" \
+            && echo "releases.json: macos_testflight -> $VERSION" \
+            || echo "WARNING: macos_testflight niet bijgewerkt; draai: ssh michelk@3.69.205.209 \"python3 - --directory /home/michelk/tstudio-releases --version $VERSION --testflight\" < scripts/publish-release.py"
+    fi
 else
     echo "Local archives and exports complete for $VERSION; nothing uploaded."
 fi

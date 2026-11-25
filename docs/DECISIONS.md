@@ -8,6 +8,39 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-080: Notule in korte regels, bronzinnen ingeperkt en niet meer geciteerd
+
+**Date:** 2026-11-25
+**Status:** Implemented on `feat/notule-wispr-vorm`; macOS-testset nog niet gedraaid
+
+**Context:** Een collega nam op 24 november drie gesprekken op met ThoughtVault en met Wispr Flow. De ThoughtVault-notules bevatten letterlijke, verhaspelde zinnen uit de spraakherkenning, schreven "de spreker" en waren twee keer zo lang. De oorzaak zat in de schrijfopdracht: `constraintSentences` maakte van elke zin met niet, geen of zonder een "verplicht te behouden bronzin". Van de 68 bronzinnen die letterlijk in de drie notules stonden, kwamen er 56 uit dat blok. Het profiel Standaard stond op Volledig en kreeg dus de volle lijst.
+
+**Decision:**
+- De schrijfopdracht en de controle krijgen op elk detailniveau alleen nog `essentialConstraints`: zinnen met een getal, een besluit- of toestemmingswoord of een sterk trefwoord. Een kale ontkenning is geen verplichting meer.
+- De kop van het blok vraagt de betekenis in eigen woorden, verbiedt citeren en staat toe een onverstaanbare uitspraak over te slaan. In de systeemprompt is "behoud dat letterlijk als onbeslist" vervangen door "benoem dat als onbeslist".
+- `commonRules`: schrijf in eigen woorden en hele zinnen, schrijf niets over de transcriptie of de notule zelf, schrijf nooit "de spreker", herstel een verhaspeld woord als de context het duidelijk maakt en noteer een naam met twee lezingen als "Cloud (waarschijnlijk Claude)". De sprekerregels van `feat/sprekersdetectie` zijn ongewijzigd.
+- Profiel Standaard: detailniveau Normaal; onder de titel één of twee zinnen met de uitkomst, per onderwerp regels van één feit, "Volgende stappen" met de uitvoerder tussen haakjes vooraan, en "Genomen besluiten" alleen bij een uitgesproken besluit. De actietabel en de sectie "Openstaande punten" zijn vervallen; een open vraag staat bij haar onderwerp.
+
+**Measurements:** `scripts/eval` met `anthropic/claude-sonnet-5.5` via OpenRouter, één run per gesprek, controlelijsten afgeleid uit de Wispr-notules. De gesprekken en uitkomsten staan buiten de repo.
+
+| Gesprek | Feiten oud | Feiten nieuw | Letterlijke zinnen oud | nieuw | "de spreker" oud | nieuw | Tekens oud | nieuw |
+|---|---|---|---|---|---|---|---|---|
+| Stand-up A | 18/20 | 18/20 | 1 | 0 | 12 | 1 | 5.669 | 4.192 |
+| Stand-up B | 29/30 | 29/30 | 5 | 0 | 14 | 0 | 8.566 | 5.169 |
+| Klantdemo | 20/20 | 19/20 | 8 | 0 | 0 | 0 | 6.795 | 4.252 |
+| Schadebezoek (DEC-060) | 12/18 | 12/18 | niet geteld | 0 | niet geteld | 0 | niet geteld | 6.444 |
+
+Een letterlijke zin telt hier vanaf zes woorden. Van de 18 feiten van het schadebezoek komen er 5 als zoekterm nergens in de transcriptie voor, dus 13 is daar het haalbare maximum. Een tussenversie met "Beknopt: één regel per feit" haalde op het schadebezoek 10/18; de regel dat elk genoemd jaartal, bedrag, datum en onderdeel terugkomt bracht dat terug naar 12. Met de Wispr-transcriptie als invoer (sprekerlabels) kwam elke actie op naam van een spreker te staan.
+
+**Consequences:**
+- Een verbod zonder getal of besluitwoord ("Er gaan geen klantgegevens naar leveranciers") staat niet meer in de lijst. De algemene regel over ontkenningen en verboden blijft in de opdracht, en op Volledig meldt de controle een ontbrekende bronzin nog steeds.
+- Wie voor Standaard zelf Volledig koos, houdt dat niveau; alleen de standaard van het profiel verandert.
+- De andere profielen delen `commonRules` en het blok, maar zijn niet per profiel gemeten.
+- In alle 22 runs waarin de reden is vastgelegd, eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren" kreeg. De controle zet één vlag voor de hele bron zodra een bronzin onverstaanbaar is, en gooit dan alle oordelen weg. Bij tekst uit spraakherkenning is dat altijd het geval. DEC-081 pakt dat aan.
+- De cijfers zijn één run per gesprek; een verschil van één feit valt binnen de spreiding.
+
+---
+
 ## DEC-074: Optionele cloud-transcriptie met eigen API-sleutel
 
 **Date:** 2026-11-20

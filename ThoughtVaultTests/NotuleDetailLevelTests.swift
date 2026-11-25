@@ -178,7 +178,7 @@ final class NotuleDetailLevelTests: XCTestCase {
 
     func testBundledProfilesCarryTheirDefault() {
         let levels = Dictionary(uniqueKeysWithValues: Profile.defaults.map { ($0.id, $0.detailLevel) })
-        XCTAssertEqual(levels["standaard"], "volledig")
+        XCTAssertEqual(levels["standaard"], "normaal")
         XCTAssertEqual(levels["projectoverleg"], "volledig")
         XCTAssertEqual(levels["klantgesprek"], "normaal")
         XCTAssertEqual(levels["brainstorm"], "normaal")
@@ -194,7 +194,7 @@ final class NotuleDetailLevelTests: XCTestCase {
 final class NotuleDetailLevelStoreTests: XCTestCase {
     func testFinalizeStoresTheLevelAndRegenerateStartsFromIt() throws {
         let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
-                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none))
         let store = LocalTranscriptStore(container: container)
         try store.save(TranscriptRecord(id: "t1", taskId: "t1", title: "Overleg", rawTranscription: "Sam belt vrijdag.", profileId: "standaard"))
         let record = try XCTUnwrap(store.record(forTaskId: "t1"))
@@ -216,7 +216,7 @@ final class NotuleDetailLevelStoreTests: XCTestCase {
 
     func testRegenerateSheetPreselection() throws {
         let container = try ModelContainer(for: TranscriptRecord.self, PersonProfile.self,
-                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+                                           configurations: ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none))
         let store = LocalTranscriptStore(container: container)
         try store.save(TranscriptRecord(id: "t1", taskId: "t1", title: "Overleg", rawTranscription: "Sam belt vrijdag.", profileId: "standaard"))
         try store.finalizeNotule(taskId: "t1", html: "<p>Sam belt vrijdag.</p>", title: "Overleg", detailLevel: .kort)

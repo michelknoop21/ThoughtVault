@@ -16,7 +16,7 @@ struct NotuleGenerator: Sendable {
     /// `onStep` reports the running step for the task label (`ModelStep.displayLabel`).
     /// `onUsage` gets length, requests, tokens, cost and duration of a successful run. Every run, also a
     /// failed one, is added to the monthly `UsageLedger`.
-    /// `detailLevel` shortens the notule below volledig; volledig sends exactly the prompts of before.
+    /// `detailLevel` shortens the notule below volledig; volledig adds no length block.
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
                   createdAt: Date, corrections: [PersonalCorrection], context: String = "",
                   detailLevel: NotuleDetailLevel = .volledig,
@@ -61,8 +61,9 @@ struct NotuleGenerator: Sendable {
                              detailLevel: NotuleDetailLevel,
                              onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> Run {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
-        // Below volledig only the essential constraints stay mandatory, for the draft and for the audit.
-        let constraints = detailLevel == .volledig ? NotuleAudit.constraintSentences(source) : NotuleAudit.essentialConstraints(source)
+        // Only the essential constraints are mandatory, for the draft and for the audit: a plain negation in
+        // spoken text is usually small talk, and listing it made the model quote it word for word (DEC-080).
+        let constraints = NotuleAudit.essentialConstraints(source)
 
         // NotuleAudit turns every request error into an audit message; remember cancellation separately.
         let cancelled = OSAllocatedUnfairLock(initialState: false)

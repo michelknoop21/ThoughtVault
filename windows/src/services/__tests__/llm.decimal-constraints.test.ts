@@ -61,13 +61,13 @@ it.each(["Niet 15.000 euro.", "Niet 1.500.000 euro.", "Niet 15.000,50 euro.", "N
     const prompts = invoke.mock.calls.map(call => JSON.parse(call[1].request.body).messages[1].content as string);
     expect(prompts).toHaveLength(1);
     expect(prompts.every(prompt => prompt.includes(raw))).toBe(true);
-    const required = prompts[0].split("Verplicht te behouden bronzinnen")[1];
+    const required = prompts[0].split("Uitspraken uit de transcriptie")[1];
     expect(required).toContain(`1. ${constraint}`);
     expect(required).not.toContain("1. Niet 15.\n");
   },
 );
 
-it("still flags a prohibition after a normal sentence boundary", async () => {
+it("still reports a missing prohibition that is not listed for the draft", async () => {
   const raw = "Niet 15.000 euro. Geen klantgegevens naar externe diensten.";
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages[1].content;
@@ -77,5 +77,7 @@ it("still flags a prohibition after a normal sentence boundary", async () => {
   });
   expect(await LLMService.generateNotulen(raw, profile)).toContain("<h2>Even nalopen</h2>");
   const prompt = JSON.parse(invoke.mock.calls[0][1].request.body).messages[1].content as string;
-  expect(prompt).toContain("1. Niet 15.000 euro.\n2. Geen klantgegevens naar externe diensten.");
+  // DEC-080: the plain prohibition is no longer listed for the draft; the audit above still reports it as missing.
+  expect(prompt).toContain("\n1. Niet 15.000 euro.");
+  expect(prompt).not.toContain("2. Geen klantgegevens naar externe diensten.");
 });

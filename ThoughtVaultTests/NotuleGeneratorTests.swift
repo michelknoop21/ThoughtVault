@@ -233,12 +233,13 @@ final class NotuleGeneratorTests: XCTestCase {
         _ = try await generate(service, raw, quickNote: "Bel Sam", participants: [Participant(name: "Fatima")])
         let call = try XCTUnwrap(service.generations.first)
         XCTAssertEqual(call.systemPrompt, notuleSystemPrompt("Je bent notulist."))
-        XCTAssertEqual(call.constraints, ["Er gaan geen klantgegevens naar leveranciers.", "We besluiten dit niet vandaag."])
+        // DEC-080: the plain negation about customer data is no longer listed; the decision sentence is.
+        XCTAssertEqual(call.constraints, ["We besluiten dit niet vandaag."])
         XCTAssertTrue(call.notulePrompt.contains("Bel Sam"))
         XCTAssertTrue(call.notulePrompt.contains("- Fatima"))
         let content = buildNotuleUserContent(notulePrompt: call.notulePrompt, transcription: call.transcription,
                                              outputTemplate: nil, constraints: call.constraints)
-        XCTAssertTrue(content.hasSuffix("\n2. We besluiten dit niet vandaag."))
+        XCTAssertTrue(content.hasSuffix("\n1. We besluiten dit niet vandaag."))
     }
 
     func testEmptyDraftIsRejectedBeforeTheAudit() async {
@@ -746,10 +747,10 @@ final class NotuleGeneratorDetailLevelTests: XCTestCase {
         SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    func testDefaultIsVolledigWithTheDraftOfBefore() async throws {
+    func testDefaultIsVolledigWithTheRecordedDraft() async throws {
         let (call, usage) = try await run(nil)
         XCTAssertEqual(call.detailBlock, "")
-        XCTAssertEqual(call.constraints, NotuleAudit.constraintSentences(transcription))
+        XCTAssertEqual(call.constraints, ["De vorige afspraak vervalt."])
         XCTAssertEqual(sha256(notuleSystemPrompt("Je bent notulist.")), Self.fixtureSystemSha256)
         XCTAssertEqual(sha256(userMessage(call)), Self.fixtureUserSha256)
         XCTAssertEqual(usage?.detailLevel, "volledig")
@@ -774,6 +775,6 @@ final class NotuleGeneratorDetailLevelTests: XCTestCase {
     }
 
     // SHA-256 of `system` and `user` in tests/fixtures/notule-detail/draft-volledig.json.
-    static let fixtureSystemSha256 = "37bd9bf3f46b319cb8dc0c83d5e7a411cfb1da3c597b47e665b64084ecbc80b8"
-    static let fixtureUserSha256 = "be9c1c4a735a98388848eaeda37b3312ce178a34af34b2ede3bba68c7c143539"
+    static let fixtureSystemSha256 = "20cf96ddfd3427535f0b3097f3019fd23f7b81cb2c71d5fe53c32cc607a8193f"
+    static let fixtureUserSha256 = "b66b11aeaabcbbc3dacd329d6ca808f93399984c94003816bb0419bde5aea175"
 }

@@ -8,6 +8,24 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TimedPiece { pub start: f64, pub end: f64, pub text: String }
 
+/// What a transcription engine returns. `pieces` is empty when the engine gives no timings.
+/// Deserializes straight from the faster-whisper worker and from a `verbose_json` cloud reply,
+/// which both name the pieces `segments`; their extra fields are ignored.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TimedTranscript {
+    pub text: String,
+    #[serde(default, alias = "segments")]
+    pub pieces: Vec<TimedPiece>,
+}
+
+/// Joins the pieces of consecutive chunks onto one timeline: chunk `i` starts at `i * chunk_seconds`.
+pub fn offset(chunks: Vec<Vec<TimedPiece>>, chunk_seconds: f64) -> Vec<TimedPiece> {
+    chunks.into_iter().enumerate().flat_map(|(index, pieces)| {
+        let shift = index as f64 * chunk_seconds;
+        pieces.into_iter().map(move |p| TimedPiece { start: p.start + shift, end: p.end + shift, text: p.text })
+    }).collect()
+}
+
 /// One turn from the speaker detector, in seconds from the start of the recording.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SpeakerTurn { pub start: f64, pub end: f64, pub speaker: String }
@@ -99,6 +117,21 @@ mod tests {
     struct Case { name: String, pieces: Vec<TimedPiece>, turns: Vec<SpeakerTurn>, segments: Vec<TranscriptSegment>, text: String }
     #[derive(Deserialize)]
     struct Fixture { cases: Vec<Case> }
+
+    #[test]
+    fn chunk_pieces_are_shifted_onto_one_timeline() {
+        let piece = |start: f64, end: f64, text: &str| TimedPiece { start, end, text: text.into() };
+        assert_eq!(offset(vec![vec![piece(1.0, 2.0, "een")], vec![], vec![piece(0.5, 1.0, "twee")]], 60.0),
+                   vec![piece(1.0, 2.0, "een"), piece(120.5, 121.0, "twee")]);
+    }
+
+    #[test]
+    fn worker_and_verbose_replies_deserialize_and_plain_replies_have_no_pieces() {
+        let verbose: TimedTranscript = serde_json::from_str(r#"{"text":"Ja. Doe ik.","language":"dutch","segments":[{"id":0,"start":0.0,"end":1.2,"text":" Ja.","tokens":[1]}]}"#).unwrap();
+        assert_eq!(verbose.pieces, vec![TimedPiece { start: 0.0, end: 1.2, text: " Ja.".into() }]);
+        let plain: TimedTranscript = serde_json::from_str(r#"{"text":"Hallo"}"#).unwrap();
+        assert_eq!(plain, TimedTranscript { text: "Hallo".into(), pieces: vec![] });
+    }
 
     /// The same file the Swift tests read, so both implementations stay equal.
     #[test]

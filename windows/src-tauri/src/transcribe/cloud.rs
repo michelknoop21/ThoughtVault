@@ -49,6 +49,11 @@ fn split_wav(path: &str) -> Result<Vec<Vec<u8>>, String> {
     Ok(chunks)
 }
 
+/// `verbose_json` carries segment times, but OpenAI's gpt-4o transcription models refuse it with a 400.
+/// Whisper models accept it at OpenAI, Groq and OpenRouter. Same rule as macOS `CloudAPITranscriber`.
+// ponytail: model-name check; a per-model list once a custom endpoint needs otherwise.
+fn wants_segments(model: &str) -> bool { model.to_lowercase().contains("whisper") }
+
 fn error_message(status: u16, body: &[u8]) -> String {
     if status == 401 { return "API-sleutel ongeldig".into(); }
     let detail = serde_json::from_slice::<serde_json::Value>(body).ok()
@@ -90,7 +95,7 @@ pub async fn transcribe_cloud(
         let form = reqwest::multipart::Form::new()
             .text("model", model.clone())
             .text("language", "nl")
-            .text("response_format", "json")
+            .text("response_format", if wants_segments(&model) { "verbose_json" } else { "json" })
             .part("file", file);
 
         let response = client.post(&url).bearer_auth(&api_key).multipart(form).send().await
@@ -98,13 +103,16 @@ pub async fn transcribe_cloud(
         let status = response.status().as_u16();
         let body = response.bytes().await.map_err(|e| e.to_string())?;
         if !(200..300).contains(&status) { return Err(error_message(status, &body)); }
-        let text = serde_json::from_slice::<serde_json::Value>(&body).ok()
-            .and_then(|v| v["text"].as_str().map(str::to_string))
-            .ok_or("Onverwacht antwoord van de cloud-transcriptie")?;
-        parts.push(text);
+        let part = serde_json::from_slice::<crate::transcribe::segments::TimedTranscript>(&body)
+            .map_err(|_| "Onverwacht antwoord van de cloud-transcriptie")?;
+        parts.push(part);
         let _ = app.emit("transcribe-progress", serde_json::json!({"request_id": request_id, "progress": (index + 1) * 100 / total}));
     }
-    Ok(parts.join(" ").trim().to_string())
+    let text = parts.iter().map(|p| p.text.as_str()).collect::<Vec<_>>().join(" ").trim().to_string();
+    let pieces = crate::transcribe::segments::offset(parts.into_iter().map(|p| p.pieces).collect(), (CHUNK_SAMPLES / 16_000) as f64);
+    // The pieces carry the times for speaker labels; until those are stored only the count is logged.
+    elog!("[transcribe_cloud] pieces={}", pieces.len());
+    Ok(text)
 }
 
 #[cfg(test)]
@@ -125,6 +133,13 @@ mod tests {
         assert!(chunks.iter().all(|c| c.len() < 25 * 1024 * 1024));
         let last = hound::WavReader::new(Cursor::new(&chunks[2])).unwrap();
         assert_eq!(last.len() as usize, 5 * 60 * 16000);
+    }
+
+    #[test]
+    fn only_whisper_models_ask_for_segments() {
+        assert!(wants_segments("whisper-large-v3"));
+        assert!(wants_segments("openai/whisper-large-v3"));
+        assert!(!wants_segments("gpt-4o-transcribe"));
     }
 
     #[test]

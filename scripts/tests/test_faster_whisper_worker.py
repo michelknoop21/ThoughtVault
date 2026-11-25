@@ -17,17 +17,20 @@ class WorkerTests(unittest.TestCase):
     def test_offline_cpu_inference_finishes_before_persisting_result(self):
         model = Mock()
         model.transcribe.return_value = (iter([
-            SimpleNamespace(text=" Alex plant maandag.", end=5),
-            SimpleNamespace(text=" De test is afgerond.", end=10),
+            SimpleNamespace(text=" Alex plant maandag.", start=0.5, end=5),
+            SimpleNamespace(text=" De test is afgerond.", start=5.5, end=10),
         ]), SimpleNamespace(duration=10))
         constructor = Mock(return_value=model)
         with tempfile.TemporaryDirectory() as tmp, patch.dict("sys.modules", {"faster_whisper": SimpleNamespace(WhisperModel=constructor)}):
-            output = Path(tmp) / "result.txt"
+            output = Path(tmp) / "result.json"
             stdout = io.StringIO()
             with contextlib.redirect_stdout(stdout):
                 worker.transcribe("model-dir", "audio.wav", output)
             constructor.assert_called_once_with("model-dir", device="cpu", compute_type="int8", cpu_threads=4, local_files_only=True)
-            self.assertEqual(output.read_text(), "Alex plant maandag. De test is afgerond.")
+            result = json.loads(output.read_text())
+            self.assertEqual(result["text"], "Alex plant maandag. De test is afgerond.")
+            self.assertEqual(result["segments"], [{"start": 0.5, "end": 5, "text": "Alex plant maandag."},
+                                                  {"start": 5.5, "end": 10, "text": "De test is afgerond."}])
             progress = [json.loads(line)["progress"] for line in stdout.getvalue().splitlines()]
             self.assertEqual(progress[-1], 100)
             self.assertNotIn("Alex", stdout.getvalue())
@@ -37,7 +40,7 @@ class WorkerTests(unittest.TestCase):
 
     def test_inference_error_does_not_publish_partial_output(self):
         def segments():
-            yield SimpleNamespace(text="Partial", end=1)
+            yield SimpleNamespace(text="Partial", start=0, end=1)
             raise RuntimeError("inference failed")
         model = Mock()
         model.transcribe.return_value = (segments(), SimpleNamespace(duration=10))

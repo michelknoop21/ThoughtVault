@@ -92,7 +92,7 @@ pub(super) async fn download(app: &AppHandle, dest: &Path, cancelled: &mut watch
     result
 }
 
-pub(super) fn run(app: AppHandle, model: &Path, audio: &str, request_id: &str) -> Result<String, String> {
+pub(super) fn run(app: AppHandle, model: &Path, audio: &str, request_id: &str) -> Result<super::segments::TimedTranscript, String> {
     use std::io::{BufRead, BufReader};
     use std::process::{Command, Stdio};
     verify(model)?;
@@ -100,7 +100,7 @@ pub(super) fn run(app: AppHandle, model: &Path, audio: &str, request_id: &str) -
         .join("resources/faster-whisper-1.2.1/faster-whisper/faster-whisper.exe");
     if !runtime.is_file() { return Err("De Faster Whisper-runtime ontbreekt. Installeer de volledige Windows-update.".into()); }
     let work = tempfile::tempdir().map_err(|e| e.to_string())?;
-    let output: PathBuf = work.path().join("result.txt");
+    let output: PathBuf = work.path().join("result.json");
     let mut command = Command::new(runtime);
     command.arg("--model").arg(model).arg("--audio").arg(audio).arg("--output").arg(&output)
         .env("HF_HUB_OFFLINE", "1")
@@ -122,7 +122,8 @@ pub(super) fn run(app: AppHandle, model: &Path, audio: &str, request_id: &str) -
     }
     let status = child.wait().map_err(|e| e.to_string())?;
     if !status.success() { return Err(format!("Faster Whisper-transcriptie mislukt ({status}). Controleer model en beschikbaar geheugen.")); }
-    std::fs::read_to_string(output).map_err(|e| format!("Faster Whisper-resultaat lezen mislukt: {e}"))
+    let result = std::fs::read_to_string(output).map_err(|e| format!("Faster Whisper-resultaat lezen mislukt: {e}"))?;
+    serde_json::from_str(&result).map_err(|e| format!("Faster Whisper-resultaat onleesbaar: {e}"))
 }
 
 #[cfg(test)]

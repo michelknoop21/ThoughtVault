@@ -241,7 +241,7 @@ pub async fn transcribe_local(
         } else { None };
         check_cancelled()?;
         let input_path = optimized.as_ref().map(|f| f.path().to_string_lossy().into_owned()).unwrap_or_else(|| file_path.clone());
-        let result = if model_id == faster::MODEL_ID {
+        let timed = if model_id == faster::MODEL_ID {
             faster::run(app, &model, &input_path, &request_id)
         } else if let Some(info) = nvidia::model(&model_id) {
             nvidia::verify_model(&model, &info).and_then(|_| nvidia::run(app, &model, &input_path, &request_id))
@@ -249,6 +249,8 @@ pub async fn transcribe_local(
             run_whisper(app, &model, &input_path, &request_id, optimized.is_some())
         };
         check_cancelled()?;
+        // The pieces carry the times for speaker labels; until those are stored only the count is logged.
+        let result = timed.map(|timed| { elog!("[transcribe_local] pieces={}", timed.pieces.len()); timed.text });
         // Runtime stderr can include recognized speech; keep only a correlation token.
         if let Err(error) = &result { elog!("[transcribe_local] error={}", crate::applog::mask_token(error)); }
         result
@@ -293,7 +295,7 @@ fn speech_ranges(detector: &mut whisper_rs::WhisperVadContext, samples: &[f32]) 
 
 fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, request_id: &str,
     already_optimized: bool,
-) -> Result<String, String> {
+) -> Result<segments::TimedTranscript, String> {
     use whisper_rs::{
         convert_integer_to_float_audio, FullParams, SamplingStrategy, WhisperContext,
         WhisperContextParameters,
@@ -346,6 +348,7 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, request_id: &str
 
     let mut samples_iter = reader.samples::<i16>();
     let mut text = String::new();
+    let mut pieces = Vec::new();
     let mut int_buf: Vec<i16> = Vec::with_capacity(CHUNK_SAMPLES);
     let mut float_buf: Vec<f32> = vec![0.0; CHUNK_SAMPLES];
 
@@ -396,14 +399,25 @@ fn run_whisper(app: AppHandle, model: &PathBuf, wav_path: &str, request_id: &str
 
             for segment in state.as_iter() {
                 let bytes = segment.to_bytes().map_err(|e| format!("Segment lezen mislukt bij {}s: {e}", start / 16_000))?;
-                text.push_str(&decode_whisper_text(bytes, start / 16_000));
+                let decoded = decode_whisper_text(bytes, start / 16_000);
+                if let Some(piece) = whisper_piece(start, segment.start_timestamp(), segment.end_timestamp(), &decoded) { pieces.push(piece); }
+                text.push_str(&decoded);
             }
             text.push(' ');
         }
     }
 
     let _ = app.emit("transcribe-progress", serde_json::json!({ "request_id": request_id, "progress": 100 }));
-    Ok(text.trim().to_string())
+    Ok(segments::TimedTranscript { text: text.trim().to_string(), pieces })
+}
+
+/// A whisper.cpp segment on the recording's timeline: `range_start` is the first sample of the decoded
+/// speech range, `t0`/`t1` are whisper's centiseconds within that range.
+fn whisper_piece(range_start: usize, t0: i64, t1: i64, text: &str) -> Option<segments::TimedPiece> {
+    let text = text.trim();
+    if text.is_empty() { return None; }
+    let base = range_start as f64 / 16_000.0;
+    Some(segments::TimedPiece { start: base + t0 as f64 / 100.0, end: base + t1 as f64 / 100.0, text: text.into() })
 }
 
 fn decode_whisper_text(bytes: &[u8], offset_seconds: usize) -> std::borrow::Cow<'_, str> {
@@ -428,6 +442,14 @@ fn normalization_gain(mean_square: f64) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn whisper_segments_land_on_the_recording_timeline() {
+        // A speech range starting 10 minutes and 1 s in; whisper says 1.50 s to 3.25 s inside it.
+        let piece = super::whisper_piece(601 * 16_000, 150, 325, " Dat pak ik op. ").unwrap();
+        assert_eq!(piece, super::segments::TimedPiece { start: 602.5, end: 604.25, text: "Dat pak ik op.".into() });
+        assert!(super::whisper_piece(0, 0, 10, "  ").is_none());
+    }
+
     #[test]
     fn model_files_include_base_and_reject_paths() {
         for model in ["base", "small", "medium", "large-v3"] {

@@ -227,4 +227,14 @@ final class PersonalCorrectionsTests: XCTestCase {
         XCTAssertEqual(PersonalCorrections.html("<p>secure.Jinga.nl</p><a href=\"https://secure.Jinga.nl\">secure.Jinga.nl</a>", entries: [yinga], profileId: nil),
                        "<p>secure.yinga.nl</p><a href=\"https://secure.Jinga.nl\">secure.Jinga.nl</a>")
     }
+
+    func testHostNameFollowedByAHyphenGetsTermsInLowercase() {
+        let yinga = PersonalCorrection(canonical: "Yinga", variants: ["Jinga"], scope: nil)
+        func fix(_ text: String) -> String { PersonalCorrections.text(text, entries: [yinga], profileId: nil) }
+        XCTAssertEqual(fix("De secure.Yinga.nl-fix en de secure.Jinga.nl-test"), "De secure.yinga.nl-fix en de secure.yinga.nl-test")
+        // A capital last part stays ordinary text, also before a hyphen.
+        XCTAssertEqual(fix("Yinga.AI-tools en werkt.Jinga-achtig"), "Yinga.AI-tools en werkt.Yinga-achtig")
+        XCTAssertEqual(PersonalCorrections.html("<li>De secure.Yinga.nl-fix is nog niet gedeployed.</li>", entries: [yinga], profileId: nil),
+                       "<li>De secure.yinga.nl-fix is nog niet gedeployed.</li>")
+    }
 }

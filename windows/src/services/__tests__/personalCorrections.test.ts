@@ -47,6 +47,12 @@ it("writes terms in host names in lowercase", () => {
   expect(correctText("app.Prospect.nl",[{...yinga,canonical:"Prospect Flow",variants:[]}])).toBe("app.Prospect.nl");
   expect(correctHTML('<p>secure.Jinga.nl</p><a href="https://secure.Jinga.nl">secure.Jinga.nl</a>',[yinga])).toBe('<p>secure.yinga.nl</p><a href="https://secure.Jinga.nl">secure.Jinga.nl</a>');
 });
+it("writes terms in a host name followed by a hyphen in lowercase", () => {
+  const yinga: PersonalCorrection = { id:"y",canonical:"Yinga",variants:["Jinga"],scope:null,enabled:true };
+  expect(correctText("De secure.Yinga.nl-fix en de secure.Jinga.nl-test",[yinga])).toBe("De secure.yinga.nl-fix en de secure.yinga.nl-test");
+  expect(correctText("Yinga.AI-tools en werkt.Jinga-achtig",[yinga])).toBe("Yinga.AI-tools en werkt.Yinga-achtig");
+  expect(correctHTML("<li>De secure.Yinga.nl-fix is nog niet gedeployed.</li>",[yinga])).toBe("<li>De secure.yinga.nl-fix is nog niet gedeployed.</li>");
+});
 it("keeps markup, attributes, links, code, CSS and comments intact", () => {
   const input = '<style>.Django{}</style><!-- Django --><p title="Django > x">Django</p><a href="/Django">Django</a><pre><code>Django</code></pre><script>Django</script><p>Jengo</p>';
   expect(correctHTML(input,[rule])).toBe(input.replace('>Django</p>','>Yinga</p>').replace('>Jengo</p>','>Yinga</p>'));

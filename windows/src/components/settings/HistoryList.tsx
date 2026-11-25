@@ -7,6 +7,7 @@ export function sourceText(source: string): string {
   if (source.startsWith("gesprek:")) return "Uit gesprek";
   if (source.startsWith("voorstel:")) return "Voorstel";
   if (source.startsWith("automatisch:")) return "Automatisch";
+  if (source === "ai-koppeling") return "AI-koppeling";
   return source === "herstel" ? "Hersteld" : "Handmatig";
 }
 

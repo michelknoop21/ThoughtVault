@@ -75,6 +75,89 @@ Een letterlijke zin telt hier vanaf zes woorden. Van de 18 feiten van het schade
 
 ---
 
+## DEC-079: Lokale MCP-server in de app, stdio via `ThoughtVault --mcp`
+
+**Date:** 2026-11-25
+**Status:** Accepted
+**Context:** Notulen en transcripties staan alleen lokaal; geen enkel ander programma kon erbij. Michel wil dat AI-programma's alles uit de app kunnen ophalen en ook kunnen wijzigen. Gekozen is: alleen lokaal, lezen en schrijven, en alleen zolang de app open is. Een eerdere poging op `fix/windows-audit-local-mcp` (7 oktober, losse geschiedenis, nooit gemerged) gebruikte HTTP op vaste poorten 11218/11219. Claude Desktop start lokale servers alleen via stdio, dus die bereikte hem niet.
+
+**Decision:**
+1. De draaiende app luistert op `127.0.0.1` op een vrije poort en schrijft poort en een per start nieuwe sleutel naar `mcp.json` in de eigen datamap (rechten 0600). Elke verbinding begint met de sleutel, daarna één JSON-RPC-bericht per regel.
+2. MCP-clients starten de app-binary met `--mcp`. Dat proces opent geen UI, leest `mcp.json` en geeft stdin en stdout door. Op macOS draait het in dezelfde sandbox-container als de app, dus zonder app-group. Er komt geen tweede binary of target bij.
+3. De app blijft de enige die de opslag aanraakt. Tools gebruiken dezelfde store- en viewmodelfuncties als de schermen.
+4. Eén contract voor beide platforms: `data/mcp/tools.json` (16 tools, scope `read` of `write`) en `data/mcp/protocol-fixtures.json`, die de tests van macOS en Windows allebei draaien. Het JSON-RPC-deel is met de hand geschreven, zonder SDK.
+5. Standaard uit. Schrijftools staan alleen in `tools/list` als "Wijzigingen toestaan" aan staat. Schrijven naar een notitie vraagt de revisie uit `get_note`, zodat een wijziging in de app niet stil wordt overschreven. Verwijderen, opnemen en instellingen of sleutels vallen buiten de koppeling.
+6. De server start bij het starten van de app, niet bij het hoofdvenster: de app kan zonder venster vanuit de menubalk draaien.
+
+**Consequences:** ChatGPT (web en app) kan geen lokale stdio-server starten en valt buiten deze koppeling. Wordt dat later nodig, dan komt er een HTTP-transport met tunnel bovenop dezelfde tools. Een herstart van de app geeft een nieuwe sleutel en poort: de client moet de server dan opnieuw starten. macOS krijgt `com.apple.security.network.server` in beide macOS-entitlements. Handleiding: `docs/MCP.md`.
+
+---
+
+## DEC-078: OpenRouter-modellen per sleutel
+
+**Date:** 2026-11-25
+**Status:** Accepted
+**Context:** De Thoughtvault-workspace op OpenRouter staat 9 modellen toe ("Model & provider access", alleen de selectie). De app toonde er 3: op Windows haalde de modelkeuze geen lijst op, op macOS alleen na "Beschikbare modellen laden" en dan de openbare catalogus. Een van de drie voorstellen, `openai/gpt-5.6-terra`, staat niet op de toegestane lijst. Windows verving bij een verzoek bovendien elk model zonder bekende prijs door mistral-large, ook als de gebruiker dat model zelf had gekozen.
+
+**Decision:**
+1. De app vraagt de modellen op met de sleutel via `GET /api/v1/models/user`. Dat endpoint geeft alleen wat de sleutel mag gebruiken, met prijzen; een gewone sleutel volstaat (gecontroleerd op 25 november 2026: status 200, de 9 toegestane modellen).
+2. macOS laadt die lijst bij het openen van de OpenRouter-instelling als er een sleutel is; Windows laadt hem in de modelkeuze.
+3. Bij OpenRouter valt een voorstel weg dat niet op de lijst van de sleutel staat. Bij OpenAI en Anthropic blijven de voorstellen staan. Het derde voorstel is nu `openai/gpt-6.1-terra`.
+4. De prijzen van gpt-6-luna, gpt-6-sol, gpt-6.1-terra, gpt-6.1-sol, mistral-medium-3-5 en mistral-small-2603 staan in de vaste prijslijst (prijzen van 25 november 2026). Windows telt daarnaast de door OpenRouter gemelde prijs mee, zodat een gekozen model bij het verzoek niet wordt vervangen.
+
+**Consequences:** Een sleutel zonder beperking krijgt alle modellen onder de prijsgrens te zien. Op Windows verschijnt de lijst van een nieuw ingevulde sleutel pas na opnieuw openen van de instelling.
+
+---
+
+## DEC-077: Termen in e-mailadressen en hostnamen in kleine letters
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+**Context:** Na DEC-075 stond in een notule nog `secure.Yinga.nl`. Het transcript had die schrijfwijze al, dus er was geen variant om te vervangen: de juiste term zelf stond met hoofdletter in een hostnaam. Losse hostnamen zonder `https://` of `www.` werden bovendien niet als adres herkend.
+
+**Decision:**
+1. `PersonalCorrections.text()` en `correctText()` herkennen naast URL's en e-mailadressen ook losse hostnamen: woorden met een punt ertussen, waarvan het laatste deel uit minstens twee kleine letters bestaat (`secure.yinga.nl`). Met een hoofdletter in het laatste deel ("Yinga.AI", "werkt.Jinga") blijft het gewone tekst, en daar werkt de normale vervanging.
+2. In e-mailadressen en hostnamen komen zowel varianten als de juiste term zelf in kleine letters, ook bij een term zonder varianten. Een term met een spatie blijft buiten adressen.
+3. In URL's met `https://`, `http://` of `www.` verandert alleen een variant, zoals in DEC-075. Een pad kan hoofdlettergevoelig zijn, dus de juiste term blijft daar staan zoals hij is.
+
+**Consequences:** Een hostnaam in gewone tekst verandert mee: "Yinga.nl blijft de website" wordt "yinga.nl blijft de website", ook aan het begin van een zin. Tekst tussen backticks en de inhoud van `<a>`, `<code>` en `<pre>` blijft ongemoeid.
+
+---
+
+## DEC-076: Automatisch leren slaat woordgroepen met de term en langere afkortingen over
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+**Context:** De automatische herkenning uit DEC-062 had bij "Prospectflow" negen woordgroepen geleerd waar de juiste term al in zat ("de Prospectflow", "Prospectflow ook", "op Prospectflow"), bij "AI" de afkorting "API" en bij "AI Antwoorden" de woordgroep "de antwoorden". De kandidaatselectie sloot alleen de exacte term uit. Een woordgroep met de term scoort hoog op gelijkenis en het model zegt er vaak ja op, omdat de term er letterlijk in staat. Bij vervangen viel het buurwoord weg ("de Prospectflow" werd "Prospectflow"), en een bevestigde "API" werd "AI".
+
+**Decision:**
+1. `PersonalCorrections.isMisspelling(_:of:)` en `isMisspelling()` in TypeScript bepalen of een gehoorde vorm een verkeerde spelling kan zijn. Dat kan niet als de vorm de juiste term als los woord of woordgroep bevat. Bij een afkorting van 2 tot 4 hoofdletters moet de gehoorde vorm evenveel letters hebben: "AE", "A–E" en "ei" blijven kandidaat voor "AI", "API" niet. Bij een term van meerdere woorden met evenveel gehoorde woorden, waarvan er minstens één gelijk is, moet elk afwijkend woord lijken op het woord dat het vervangt (gelijkenis vanaf 0,5, de ondergrens uit DEC-062): "de antwoorden" telt niet voor "AI Antwoorden", "ei antwoorden" en "Sanne Backer" voor "Sanne Bakker" wel.
+2. `GlossaryAutoMatch.candidates()` en `findCandidates()` slaan zulke vormen over, ook als ze al geleerd zijn. Daardoor leert de app ze niet opnieuw en vervangt hij ze niet meer.
+3. `heardAs` laat geleerde spellingen weg die niet aan regel 1 voldoen, zodat ze niet meer als "ook gehoord als" in het contextblok staan. Vaste varianten blijven ongemoeid: die heeft de gebruiker zelf gekozen.
+
+**Consequences:** Bestaande geleerde spellingen blijven in `personal-corrections.json` en in de editor staan, maar doen niets meer. Opruimen kan met "Verwijderen" in de editor. Een spraakfout die een letter toevoegt aan een afkorting wordt niet meer automatisch gevonden; die kan de gebruiker als vaste variant invoeren. Het fixture-geval "learned word group holding the term and longer acronym are skipped" in `tests/fixtures/glossary-automatch.json` houdt beide platforms gelijk.
+
+---
+
+## DEC-075: Woordenlijst: nieuwste regel wint bij tegenspraak, varianten gelden ook in adressen
+
+**Date:** 2026-11-24
+**Status:** Accepted
+
+**Context:** Een notule van 24 november schreef overal "A‑E" waar "AI" bedoeld was en liet `analytics@jinga.nl` staan, terwijl "Jinga" een vaste variant van "Yinga" is. De woordenlijst bevatte twee regels die elkaar tegenspraken: `A‑E` met variant `AI` en, later opgeslagen, `AI` met variant `A‑E`. De vervanging loopt één keer over de tekst, dus elke "AI" van het model werd "A‑E". `validate()` kent alleen dubbele varianten en liet dit paar toe. E-mailadressen en URL's sloeg `PersonalCorrections.text()` altijd over, ook bij een variant die het hele adres was.
+
+**Decision:**
+1. **Nieuwste regel wint.** `PersonalCorrections.active()` en `activeCorrections()` lopen de regels van nieuw naar oud door (upsert zet de laatst opgeslagen regel achteraan). Een variant van een oudere regel die bij een nieuwere regel de correcte term is, telt niet mee. Een oudere regel die precies het omgekeerde zegt van een nieuwere valt helemaal weg, ook uit het contextblok en uit de automatische herkenning. Een keten (`Yinga` met variant `Jengo`, daarna `Other` met variant `Yinga`) is geen tegenspraak: beide regels blijven werken en er wordt niet doorvervangen.
+2. **Het bestand blijft ongewijzigd.** De oude regel staat nog in de editor. `validate()` weigert het paar niet, omdat een bestaande lijst met zo'n paar dan niet meer zou laden en de hele woordenlijst zou uitvallen.
+3. **Varianten in adressen.** Is een e-mailadres of URL zelf een variant, dan komt de correcte term ervoor in de plaats. Anders worden vaste varianten binnen het adres op woordgrens vervangen door de correcte term in kleine letters: `analytics@jinga.nl` wordt `analytics@yinga.nl`. Een term met een spatie wordt in een adres niet toegepast.
+4. **Wat beschermd blijft.** HTML-entiteiten, tekst tussen backticks en de inhoud van `<a>`, `<code>`, `<pre>`, `<script>` en `<style>`. `GlossaryAutoMatch` blijft adressen overslaan: geleerde en gegokte spellingen komen niet in een adres.
+
+**Consequences:** Een vaste variant verandert nu ook een echt adres waar hij in voorkomt: met "Nigel" als variant van "Naighel" wordt `nigel@bedrijf.nl` `naighel@bedrijf.nl`. Wie dat niet wil, beperkt de regel tot een opnameprofiel of haalt de variant weg. Een oude regel opnieuw opslaan maakt hem de nieuwste, en dan wint hij. Hoe de omgekeerde regel in de lijst kwam is niet achterhaald: `context-history.json` bevat er geen aanmaakregel van.
+
+---
+
 ## DEC-074: Optionele cloud-transcriptie met eigen API-sleutel
 
 **Date:** 2026-11-20

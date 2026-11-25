@@ -1,6 +1,6 @@
 [package]
 name = "thoughtvault"
-version = "1.0.340"
+version = "1.0.346"
 description = "ThoughtVault - Meeting recorder and transcription app"
 authors = ["Prezent Internet B.V."]
 edition = "2021"
@@ -17,6 +17,7 @@ path = "src/main.rs"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+serde_json  = "1"
 
 [dependencies]
 tauri          = { version = "2", features = ["tray-icon"] }
@@ -54,6 +55,7 @@ chrono   = { version = "0.4", features = ["serde"] }
 dirs     = "6"
 tempfile = "3"
 sha2     = "0.10"
+getrandom = "0.3"
 
 
 # Windows 11 native visual effects (Mica, Acrylic)

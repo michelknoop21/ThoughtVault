@@ -260,13 +260,20 @@ async function hostedRequest(
   const body = openAI
     ? { model, messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], max_completion_tokens: MAX_OUTPUT_TOKENS }
     : { model, max_tokens: 16000, system: systemPrompt, messages: [{ role: "user", content: userPrompt }] };
-  const response = await modelRequest({
-    url,
-    headers: openAI
-      ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
-      : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
-    body: JSON.stringify(body),
-  }, trace);
+  let response: { status: number; body: string };
+  try {
+    response = await modelRequest({
+      url,
+      headers: openAI
+        ? { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` }
+        : { "Content-Type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey },
+      body: JSON.stringify(body),
+    }, trace);
+  } catch (error) {
+    // Same as the OpenAI-compatible path: a lost connection gets a readable message the support report recognizes (TV-000024).
+    if ((error as { name?: string })?.name === "AbortError" || error instanceof Error && error.message === TIME_LIMIT_MESSAGE) throw error;
+    throw new Error(unreachableMessage(url, model));
+  }
   if (response.status === 401) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} API-sleutel geweigerd.`);
   if (response.status === 429) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} ${RATE_LIMIT_MESSAGE}`);
   if (response.status >= 400) throw new Error(`${openAI ? "OpenAI" : "Anthropic"} gaf HTTP ${response.status}.`);

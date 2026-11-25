@@ -38,8 +38,14 @@ Dit bewijst de build-/installatieroute, niet de juiste visuele opmaak.
    De buildref moet de actuele ThoughtVault-code en assets bevatten. Bouw niet
    automatisch de oudere GitHub-defaultbranch. Normale tests en installatiecontrole
    zijn vereist; een visuele review is geen standaard releasevoorwaarde.
-5. Controleer de CI-artifacts, de download, SHA-256, `releases/releases.json`
-   en `releases/windows/stable.json` op `https://thoughtvault.yinga.ai`.
+5. Controleer de CI-artifacts, de download en de SHA-256. `releases.json` staat
+   alleen onder het downloadpad uit `docs/AUTOMATISCHE-UPDATES.md`
+   (`https://thoughtvault.yinga.ai/d-…/releases.json`); onder `/releases/` geeft
+   het een 404. Controleer daar bij `windows` en `windows_x64` de versie en
+   `sha256`, en vergelijk die hash met de MSI uit de CI-artifacts. De updaterfeed
+   staat op `https://thoughtvault.yinga.ai/releases/windows/stable.json`. Het
+   globale `latest_version` in `releases.json` verandert bij een Windows-release
+   bewust niet: oudere Macs lezen dat veld.
 
 De GitHub-build gebruikt de bestaande secrets `TAURI_SIGNING_PRIVATE_KEY` en
 `SSH_PRIVATE_KEY`. Print hun inhoud niet. Publicatie schrijft alleen in

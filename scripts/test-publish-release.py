@@ -45,6 +45,18 @@ class PublicationTest(unittest.TestCase):
             self.assertEqual(manifest["macos_testflight"],link)
             self.assertEqual(manifest["windows_x64"]["filename"],artifact.name)
 
+    def test_testflight_upload_moves_only_the_testflight_version(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)
+            windows={"version":"1.0.344","filename":"ThoughtVault_1.0.344_x64.msi"}
+            (root/"releases.json").write_text(json.dumps({"latest_version":"1.0.242","windows":windows,"macos_testflight":{"version":"1.0.338","url":"https://testflight.apple.com/join/abc"}}))
+            publisher.set_testflight(root,"1.0.345")
+            manifest=json.loads((root/"releases.json").read_text())
+            self.assertEqual(manifest["macos_testflight"],{"version":"1.0.345","url":"https://testflight.apple.com/join/abc"})
+            self.assertEqual(manifest["windows"],windows);self.assertEqual(manifest["latest_version"],"1.0.242")
+            with self.assertRaises(ValueError): publisher.set_testflight(root,"1.0.344")
+            with self.assertRaises(ValueError): publisher.set_testflight(root,"1.0.345; rm")
+
     def test_unnotarized_mac_cannot_be_published(self):
         with tempfile.TemporaryDirectory() as temp:
             root,stage=Path(temp)/"release",Path(temp)/"stage";stage.mkdir()

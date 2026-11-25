@@ -5111,12 +5111,13 @@ dependencies = [
 
 [[package]]
 name = "thoughtvault"
-version = "1.0.340"
+version = "1.0.346"
 dependencies = [
  "chrono",
  "cpal",
  "dirs",
  "futures-util",
+ "getrandom 0.3.4",
  "hound",
  "keyring",
  "reqwest 0.12.28",

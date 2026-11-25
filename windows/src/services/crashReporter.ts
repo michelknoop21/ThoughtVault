@@ -25,6 +25,14 @@ export function processingDiagnostic(message: string): { shown: string; code: st
   if (/^Kan de notule-generator niet bereiken op [^\r\n]+ \(model "[^\r\n]+"\)\. Draait Ollama\/LM Studio en klopt de URL in Instellingen\?$/.test(message)) {
     return { shown: "Kan de notule-generator niet bereiken. Controleer of Ollama/LM Studio draait en controleer de URL bij Instellingen.", code: "notule_connection_failed" };
   }
+  // Remote provider without an HTTP answer (llm.ts unreachableMessage for https) and an error event inside a stream.
+  // Bounded, quote-free groups keep the match linear: the stream error code comes from the provider.
+  if (/^Kan [^\s]+ niet bereiken \(model "[^"\r\n]+"\)\. Controleer je internetverbinding en probeer het opnieuw\.$/.test(message)) {
+    return { shown: "Kan de AI-aanbieder niet bereiken. Controleer je internetverbinding en probeer het opnieuw.", code: "notule_provider_unreachable" };
+  }
+  if (/^[^\s]+ brak het antwoord af \(fout [^()\r\n]{1,64}\) voor model "[^"\r\n]+"\.$/.test(message)) {
+    return { shown: "De AI-aanbieder brak het antwoord af. Probeer het opnieuw of kies een ander model.", code: "notule_stream_error" };
+  }
   const http = message.match(/^(?:Ollama Cloud|OpenAI|Anthropic|Notule-generator op [^\r\n]+) gaf HTTP ([45][0-9]{2})(?: voor model "[^\r\n]+")?\.$/);
   if (http) {
     // Group HTTP failures by cause; volatile numeric details do not define repetition keys.

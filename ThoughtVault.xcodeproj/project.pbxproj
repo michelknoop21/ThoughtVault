@@ -7,6 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7FBAD0D639238325FEB05F7E /* McpRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53BA319DC38909D2F49BBD26 /* McpRouter.swift */; };
+		2E30BEB4A05F7DDE0A20A75E /* McpRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53BA319DC38909D2F49BBD26 /* McpRouter.swift */; };
+		357316F4357917ECE463C50C /* McpTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E0DA06229289749CEF325F /* McpTools.swift */; };
+		9952D16749DD9EE45E5446FB /* McpTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E0DA06229289749CEF325F /* McpTools.swift */; };
+		571514D6343BDA6315A9F7F1 /* McpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898E33C8244B208BED7A98CF /* McpServer.swift */; };
+		AC26B72FD921B510C492AB7E /* McpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898E33C8244B208BED7A98CF /* McpServer.swift */; };
+		5FEC1103F03BD061D6C0DBB9 /* McpBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 681CA4A245C67B7D8AAAEFBE /* McpBridge.swift */; };
+		ED2E8A01587826AFBDF0599B /* McpBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 681CA4A245C67B7D8AAAEFBE /* McpBridge.swift */; };
+		1CC9DC271CE74DF4C3163069 /* McpSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4A7861FD680050B3BD0DE1 /* McpSettingsSection.swift */; };
+		AD3FEB32107385ADA0D50060 /* McpSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4A7861FD680050B3BD0DE1 /* McpSettingsSection.swift */; };
+		A7DED677069D4FC36536E973 /* tools.json in Resources */ = {isa = PBXBuildFile; fileRef = C0D0C0E6EC2AA080CAE14D47 /* tools.json */; };
+		28A286634A39AEDC51D1D99B /* tools.json in Resources */ = {isa = PBXBuildFile; fileRef = C0D0C0E6EC2AA080CAE14D47 /* tools.json */; };
+		38E5D34E0F9249315A0AF5C8 /* McpRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2910108316DC9DC2AF7942F3 /* McpRouterTests.swift */; };
+		CE0EC5748CF9A0F5C5CD17DE /* protocol-fixtures.json in Resources */ = {isa = PBXBuildFile; fileRef = A68AA78420A0790797870AA2 /* protocol-fixtures.json */; };
 		AE704DABDC1A4F14A1E36347 /* UpdateCheckServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D70A85129A0F43F08BFFEF6E; };
 		4E9445C0F1734011B723A132 /* LibraryOrganizationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F867808426B64BD697FCFB8E /* LibraryOrganizationTests.swift */; };
 		0E87941E2E4D43A19DEE66B0 /* LibraryNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 443774CB90E04E49BBD5BC37 /* LibraryNavigation.swift */; };
@@ -480,6 +494,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		53BA319DC38909D2F49BBD26 /* McpRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = McpRouter.swift; path = macos/Services/MCP/McpRouter.swift; sourceTree = SOURCE_ROOT; };
+		D9E0DA06229289749CEF325F /* McpTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = McpTools.swift; path = macos/Services/MCP/McpTools.swift; sourceTree = SOURCE_ROOT; };
+		898E33C8244B208BED7A98CF /* McpServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = McpServer.swift; path = macos/Services/MCP/McpServer.swift; sourceTree = SOURCE_ROOT; };
+		681CA4A245C67B7D8AAAEFBE /* McpBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = McpBridge.swift; path = macos/Services/MCP/McpBridge.swift; sourceTree = SOURCE_ROOT; };
+		EB4A7861FD680050B3BD0DE1 /* McpSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = McpSettingsSection.swift; path = macos/Views/McpSettingsSection.swift; sourceTree = SOURCE_ROOT; };
+		C0D0C0E6EC2AA080CAE14D47 /* tools.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = tools.json; path = data/mcp/tools.json; sourceTree = SOURCE_ROOT; };
+		2910108316DC9DC2AF7942F3 /* McpRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = McpRouterTests.swift; path = ThoughtVaultTests/McpRouterTests.swift; sourceTree = SOURCE_ROOT; };
+		A68AA78420A0790797870AA2 /* protocol-fixtures.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = protocol-fixtures.json; path = data/mcp/protocol-fixtures.json; sourceTree = SOURCE_ROOT; };
 		D70A85129A0F43F08BFFEF6E /* UpdateCheckServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckServiceTests.swift; sourceTree = "<group>"; };
 		F867808426B64BD697FCFB8E /* LibraryOrganizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryOrganizationTests.swift; sourceTree = "<group>"; };
 		443774CB90E04E49BBD5BC37 /* LibraryNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryNavigation.swift; sourceTree = "<group>"; };
@@ -914,6 +936,14 @@
 				FA000054 /* MeetingNotificationService.swift */,
 				FA000050 /* MicrosoftGraphService.swift */,
 				FA000015 /* NetworkMonitor.swift */,
+				53BA319DC38909D2F49BBD26 /* McpRouter.swift */,
+				D9E0DA06229289749CEF325F /* McpTools.swift */,
+				898E33C8244B208BED7A98CF /* McpServer.swift */,
+				681CA4A245C67B7D8AAAEFBE /* McpBridge.swift */,
+				EB4A7861FD680050B3BD0DE1 /* McpSettingsSection.swift */,
+				C0D0C0E6EC2AA080CAE14D47 /* tools.json */,
+				2910108316DC9DC2AF7942F3 /* McpRouterTests.swift */,
+				A68AA78420A0790797870AA2 /* protocol-fixtures.json */,
 				FA0F0A01 /* AppLog.swift */,
 				FA0F0C01 /* SupportRelay.swift */,
 				FA0F0B01 /* SupportModels.swift */,
@@ -1267,6 +1297,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A7DED677069D4FC36536E973 /* tools.json in Resources */,
 				AA000041 /* Localizable.strings in Resources */,
 				AA000042 /* Localizable.strings in Resources */,
 				AA000043 /* PrivacyInfo.xcprivacy in Resources */,
@@ -1281,6 +1312,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				28A286634A39AEDC51D1D99B /* tools.json in Resources */,
 				1C0B282982F32DD265B211FB /* Localizable.strings in Resources */,
 				CFB647584DEC845B17AFE6EC /* Localizable.strings in Resources */,
 				A2153F886454AABBC7D1AA12 /* PrivacyInfo.xcprivacy in Resources */,
@@ -1298,6 +1330,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7FBAD0D639238325FEB05F7E /* McpRouter.swift in Sources */,
+				357316F4357917ECE463C50C /* McpTools.swift in Sources */,
+				571514D6343BDA6315A9F7F1 /* McpServer.swift in Sources */,
+				5FEC1103F03BD061D6C0DBB9 /* McpBridge.swift in Sources */,
+				1CC9DC271CE74DF4C3163069 /* McpSettingsSection.swift in Sources */,
 				E5338A938CE845CDACAB772F /* TaskHistorySection.swift in Sources */,
 				84E2633568704A369455B70E /* TaskHistoryDetailView.swift in Sources */,
 				1903C1007D0849DDB0EC31B7 /* TaskReprocessSheet.swift in Sources */,
@@ -1491,6 +1528,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				38E5D34E0F9249315A0AF5C8 /* McpRouterTests.swift in Sources */,
 				5318E63393F44311886DC09F /* SuggestedModelsTests.swift in Sources */,
 				3B9347916B10415EA631462E /* TaskHistoryStoreTests.swift in Sources */,
 				ACPK0001 /* ParakeetCatalogTests.swift in Sources */,
@@ -1558,6 +1596,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CE0EC5748CF9A0F5C5CD17DE /* protocol-fixtures.json in Resources */,
 				ABDOCFX1 /* fixtures.json in Resources */,
 				AB0F0E01 /* envelope-fixture.json in Resources */,
 				AB000006 /* GraphCalendarViewResponse.json in Resources */,
@@ -1574,6 +1613,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2E30BEB4A05F7DDE0A20A75E /* McpRouter.swift in Sources */,
+				9952D16749DD9EE45E5446FB /* McpTools.swift in Sources */,
+				AC26B72FD921B510C492AB7E /* McpServer.swift in Sources */,
+				ED2E8A01587826AFBDF0599B /* McpBridge.swift in Sources */,
+				AD3FEB32107385ADA0D50060 /* McpSettingsSection.swift in Sources */,
 				02A2FD6AFCCF4BD0BDF0BB7B /* TaskHistorySection.swift in Sources */,
 				741B2862754C4B6389C228DE /* TaskHistoryDetailView.swift in Sources */,
 				7CDFA23848BC4D398BB9DCFA /* TaskReprocessSheet.swift in Sources */,
@@ -1915,7 +1959,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 340;
+				CURRENT_PROJECT_VERSION = 346;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1933,7 +1977,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.340;
+				MARKETING_VERSION = 1.0.346;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1956,7 +2000,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 340;
+				CURRENT_PROJECT_VERSION = 346;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -1974,7 +2018,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.340;
+				MARKETING_VERSION = 1.0.346;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -1991,12 +2035,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 340;
+				CURRENT_PROJECT_VERSION = 346;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.340;
+				MARKETING_VERSION = 1.0.346;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -2011,12 +2055,12 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 340;
+				CURRENT_PROJECT_VERSION = 346;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.340;
+				MARKETING_VERSION = 1.0.346;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
@@ -2035,7 +2079,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 340;
+				CURRENT_PROJECT_VERSION = 346;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -2052,7 +2096,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.340;
+				MARKETING_VERSION = 1.0.346;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = ThoughtVault;
 				SUPPORTED_PLATFORMS = macosx;
@@ -2073,7 +2117,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 340;
+				CURRENT_PROJECT_VERSION = 346;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = XL9KN38ATX;
 				ENABLE_APP_SANDBOX = YES;
@@ -2090,7 +2134,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.2;
-				MARKETING_VERSION = 1.0.340;
+				MARKETING_VERSION = 1.0.346;
 				PRODUCT_BUNDLE_IDENTIFIER = com.buildmind.ThoughtVault;
 				PRODUCT_NAME = ThoughtVault;
 				SUPPORTED_PLATFORMS = macosx;

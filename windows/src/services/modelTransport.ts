@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logRetry, TIME_LIMIT_MESSAGE, type RequestTrace } from "./modelRequestLog";
 
-// Transport for every model request on Windows: the native proxy, time limits and one HTTP 429 retry.
+// Transport for every model request on Windows: the native proxy, time limits, one retry after a broken connection to a
+// remote provider and one HTTP 429 retry.
 
 /** Total time per model request, as on macOS. A cold local model plus a long non-streamed draft can need it. */
 const LLM_TIME_LIMIT_SECONDS = 900;
@@ -64,14 +65,40 @@ function retryWait(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/** Every model request goes through here: one total time limit, a timeout named as such, and one retry on HTTP 429
+/** Wait before sending a request again after its connection to a remote provider broke. */
+export const CONNECTION_RETRY_WAIT_MS = 2_000;
+
+/** A native connection failure (no HTTP answer) to a remote provider: sent once more after a short wait, within the
+ * same time limit (TV-000024: both notule requests to OpenRouter broke at the same moment). A local server that refuses
+ * the connection is not running, so retrying it only delays the message. Timeouts and cancellation are never retried. */
+async function proxyWithReconnect(request: { url: string; headers: Record<string, string>; body: string }, trace: RequestTrace,
+  limits: TimeLimits, started: number): Promise<ProxyResponse> {
+  try {
+    return await proxy(request, limits.total, limits.idle, trace.signal);
+  } catch (error) {
+    // Jitter, as for 429: requests that broke together (draft and source check) should not reconnect at the same moment.
+    const wait = CONNECTION_RETRY_WAIT_MS + Math.random() * 1000;
+    const remaining = () => Math.floor((limits.total * 1000 - (Date.now() - started)) / 1000);
+    // proxy() turns a timeout and a cancellation into Error objects; a native connection failure stays the plain string from http.rs.
+    if (typeof error !== "string" || !request.url.startsWith("https://") || remaining() - wait / 1000 < 1) throw error;
+    logRetry(trace, wait, "connection error");
+    await retryWait(wait, trace.signal);
+    // A sleeping laptop can delay the timer far past the wait; never start a request after the time limit.
+    const left = remaining();
+    if (left < 1) throw error;
+    return proxy(request, left, limits.idle, trace.signal);
+  }
+}
+
+/** Every model request goes through here: one total time limit, a timeout named as such, one retry after a broken
+ * connection to a remote provider, and one retry on HTTP 429
  * after the provider's Retry-After plus up to one second of jitter, so requests that were rate limited together do
  * not collide again. The wait and the retry count against the same time limit. A wait that is too long, and a
  * second 429, return the 429 to the caller, which reports it. Cancellation also stops the rate-limit wait and native HTTP connection. */
 export async function modelRequest(request: { url: string; headers: Record<string, string>; body: string }, trace: RequestTrace,
   limits: TimeLimits = { total: LLM_TIME_LIMIT_SECONDS }): Promise<ProxyResponse> {
   const started = Date.now();
-  const first = await proxy(request, limits.total, limits.idle, trace.signal);
+  const first = await proxyWithReconnect(request, trace, limits, started);
   trace.status = first.status;
   const header = Object.entries(first.headers ?? {}).find(([name]) => name.toLowerCase() === "retry-after")?.[1];
   const wait = first.status === 429 ? rateLimitWaitMs(header) : null;

@@ -1,0 +1,481 @@
+{
+  "comment": "Shared by the macOS and Windows MCP router tests. 'expect' is a deep subset of the response; null means no response. 'expectToolNames' is the exact ordered list from tools/list; 'expectDestructive' lists the tools whose annotations.destructiveHint is true. Tool calls here never reach a handler.",
+  "cases": [
+    {
+      "name": "initialize echoes a supported legacy version",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-06-18",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "t",
+            "version": "1"
+          }
+        }
+      },
+      "expect": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "protocolVersion": "2025-06-18",
+          "capabilities": {
+            "tools": {
+              "listChanged": false
+            }
+          },
+          "serverInfo": {
+            "name": "ThoughtVault"
+          }
+        }
+      }
+    },
+    {
+      "name": "initialize falls back to 2025-11-25 for an unknown version",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2024-01-01",
+          "capabilities": {}
+        }
+      },
+      "expect": {
+        "id": 2,
+        "result": {
+          "protocolVersion": "2025-11-25"
+        }
+      }
+    },
+    {
+      "name": "initialized notification gets no response",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+      },
+      "expect": null
+    },
+    {
+      "name": "server/discover lists supported versions",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": "d",
+        "method": "server/discover",
+        "params": {}
+      },
+      "expect": {
+        "id": "d",
+        "result": {
+          "resultType": "complete",
+          "supportedVersions": [
+            "2026-07-28",
+            "2025-11-25",
+            "2025-06-18",
+            "2025-03-26"
+          ],
+          "capabilities": {
+            "tools": {}
+          },
+          "_meta": {
+            "io.modelcontextprotocol/serverInfo": {
+              "name": "ThoughtVault"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "unsupported per-request version is rejected",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/list",
+        "params": {
+          "_meta": {
+            "io.modelcontextprotocol/protocolVersion": "1900-01-01"
+          }
+        }
+      },
+      "expect": {
+        "id": 3,
+        "error": {
+          "code": -32022,
+          "data": {
+            "requested": "1900-01-01"
+          }
+        }
+      }
+    },
+    {
+      "name": "ping",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "ping"
+      },
+      "expect": {
+        "id": 4,
+        "result": {}
+      }
+    },
+    {
+      "name": "unknown method",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "resources/list"
+      },
+      "expect": {
+        "id": 5,
+        "error": {
+          "code": -32601
+        }
+      }
+    },
+    {
+      "name": "tools/list without write hides write tools",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/list"
+      },
+      "expectToolNames": [
+        "list_notes",
+        "get_note",
+        "list_library",
+        "list_profiles",
+        "get_profile",
+        "list_people",
+        "list_recordings",
+        "get_glossary",
+        "get_processing_status"
+      ]
+    },
+    {
+      "name": "tools/list with write lists all tools with annotations",
+      "allowWrite": true,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "tools/list"
+      },
+      "expectToolNames": [
+        "list_notes",
+        "get_note",
+        "list_library",
+        "list_profiles",
+        "get_profile",
+        "list_people",
+        "list_recordings",
+        "get_glossary",
+        "get_processing_status",
+        "create_note",
+        "update_note",
+        "save_library_entry",
+        "save_person",
+        "add_glossary_term",
+        "regenerate_notule",
+        "transcribe_recording"
+      ],
+      "expect": {
+        "id": 7,
+        "result": {
+          "resultType": "complete",
+          "cacheScope": "private"
+        }
+      },
+      "expectDestructive": [
+        "update_note",
+        "save_library_entry",
+        "save_person",
+        "regenerate_notule"
+      ]
+    },
+    {
+      "name": "write tool is unknown while writing is off",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "tools/call",
+        "params": {
+          "name": "update_note",
+          "arguments": {
+            "id": "x",
+            "revision": "r"
+          }
+        }
+      },
+      "expect": {
+        "id": 8,
+        "error": {
+          "code": -32602
+        }
+      }
+    },
+    {
+      "name": "missing required argument is a tool error",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "tools/call",
+        "params": {
+          "name": "get_note",
+          "arguments": {}
+        }
+      },
+      "expect": {
+        "id": 9,
+        "result": {
+          "resultType": "complete",
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "unexpected argument is a tool error",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "tools/call",
+        "params": {
+          "name": "list_notes",
+          "arguments": {
+            "shell": "rm -rf /"
+          }
+        }
+      },
+      "expect": {
+        "id": 10,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "wrong argument type is a tool error",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "tools/call",
+        "params": {
+          "name": "list_notes",
+          "arguments": {
+            "limit": "ten"
+          }
+        }
+      },
+      "expect": {
+        "id": 11,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "value outside enum is a tool error",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "tools/call",
+        "params": {
+          "name": "get_note",
+          "arguments": {
+            "id": "x",
+            "format": "pdf"
+          }
+        }
+      },
+      "expect": {
+        "id": 12,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "request with id null is answered",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": null,
+        "method": "ping"
+      },
+      "expect": {
+        "id": null,
+        "result": {}
+      }
+    },
+    {
+      "name": "a client response is ignored",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 20,
+        "result": {}
+      },
+      "expect": null
+    },
+    {
+      "name": "a JSON array is an invalid request",
+      "allowWrite": false,
+      "request": [
+        {
+          "jsonrpc": "2.0",
+          "id": 21,
+          "method": "ping"
+        }
+      ],
+      "expect": {
+        "id": null,
+        "error": {
+          "code": -32600
+        }
+      }
+    },
+    {
+      "name": "non-object arguments are a tool error",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 22,
+        "method": "tools/call",
+        "params": {
+          "name": "list_notes",
+          "arguments": "x"
+        }
+      },
+      "expect": {
+        "id": 22,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "integer below minimum is a tool error",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 23,
+        "method": "tools/call",
+        "params": {
+          "name": "list_notes",
+          "arguments": {
+            "limit": 0
+          }
+        }
+      },
+      "expect": {
+        "id": 23,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "integer above maximum is a tool error",
+      "allowWrite": false,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 24,
+        "method": "tools/call",
+        "params": {
+          "name": "list_notes",
+          "arguments": {
+            "limit": 101
+          }
+        }
+      },
+      "expect": {
+        "id": 24,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "empty required string is a tool error",
+      "allowWrite": true,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 25,
+        "method": "tools/call",
+        "params": {
+          "name": "create_note",
+          "arguments": {
+            "title": ""
+          }
+        }
+      },
+      "expect": {
+        "id": 25,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "empty array below minItems is a tool error",
+      "allowWrite": true,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 26,
+        "method": "tools/call",
+        "params": {
+          "name": "add_glossary_term",
+          "arguments": {
+            "canonical": "Yinga",
+            "variants": []
+          }
+        }
+      },
+      "expect": {
+        "id": 26,
+        "result": {
+          "isError": true
+        }
+      }
+    },
+    {
+      "name": "text above maxLength is a tool error",
+      "allowWrite": true,
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 27,
+        "method": "tools/call",
+        "params": {
+          "name": "add_glossary_term",
+          "arguments": {
+            "canonical": "Yinga",
+            "variants": [
+              "Jinga"
+            ],
+            "note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        }
+      },
+      "expect": {
+        "id": 27,
+        "result": {
+          "isError": true
+        }
+      }
+    }
+  ]
+}

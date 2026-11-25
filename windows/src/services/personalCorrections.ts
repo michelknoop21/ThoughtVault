@@ -1,3 +1,4 @@
+import { similarity } from "./glossaryAutoMatch";
 export interface PersonalCorrection {
   id: string;
   canonical: string;
@@ -11,7 +12,23 @@ export interface PersonalCorrection {
   learned?: string[];
 }
 /** Variants plus learned spellings, trimmed and non-empty: what the minutes AI may have heard. */
-export const heardAs = (entry: PersonalCorrection): string[] => [...entry.variants, ...(entry.learned ?? [])].map(v => v.trim()).filter(Boolean);
+export const heardAs = (entry: PersonalCorrection): string[] =>
+  [...entry.variants, ...(entry.learned ?? []).filter(l => isMisspelling(l, entry.canonical))].map(v => v.trim()).filter(Boolean);
+/**
+ * Whether `heard` can be a misheard form of `canonical` (DEC-076). Not when it holds the term as a
+ * whole word ("de Prospectflow"), for an acronym not when the letter count differs ("API" for "AI"),
+ * and for a term of several words not when it keeps a word and swaps another for an unlike one
+ * ("de antwoorden" for "AI Antwoorden"; "Sanne Backer" for "Sanne Bakker" stays).
+ */
+export function isMisspelling(heard: string, canonical: string): boolean {
+  const words = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const term = canonical.trim();
+  if (` ${words(heard)} `.includes(` ${words(term)} `)) return false;
+  const heardWords = words(heard).split(" "), termWords = words(term).split(" ");
+  if (termWords.length > 1 && heardWords.length === termWords.length && heardWords.some((w, i) => w === termWords[i])
+    && heardWords.some((w, i) => w !== termWords[i] && similarity(w, termWords[i]) < 0.5)) return false;
+  return !/^[A-Z]{2,4}$/.test(term) || words(heard).replace(/ /g, "").length === term.length;
+}
 /** Dismissed key for a learned spelling, so automatic matching does not learn it again. Same as macOS. */
 export const learnedKey = (canonical: string, heard: string) => `learned:${canonical.trim().toLowerCase()}:${heard.trim().toLowerCase()}`;
 export interface CorrectionDocument {
@@ -62,8 +79,23 @@ export function upsertCorrection(entries: PersonalCorrection[], entry: PersonalC
   const { learned: _old, ...rest } = entry;
   return [...entries.filter(e => e.id !== entry.id && e.id !== previous?.id), {...rest, id:previous?.id ?? entry.id, variants:[...variants.values()], ...(learned.size ? { learned: [...learned.values()] } : {})}];
 }
+/**
+ * Enabled entries for `profileId`. Entries are appended on upsert, so on a contradiction the last
+ * one wins: an older variant that a newer entry names as the correct term is ignored, and an older
+ * entry that says the reverse of a newer one ("A-E" for "AI" after "AI" for "A-E") is left out.
+ */
 export function activeCorrections(entries: PersonalCorrection[], profileId?: string): PersonalCorrection[] {
-  return entries.filter(e => e.enabled && (e.scope === null || e.scope === profileId));
+  const key = (text: string) => spellingKey(text.trim());
+  const correct = new Set<string>(), wrong = new Set<string>(), kept: PersonalCorrection[] = [];
+  for (const entry of [...entries].reverse()) {
+    if (!entry.enabled || !(entry.scope === null || entry.scope === profileId)) continue;
+    const variants = entry.variants.filter(v => !correct.has(key(v)));
+    if (variants.length !== entry.variants.length && wrong.has(key(entry.canonical))) continue;
+    correct.add(key(entry.canonical));
+    variants.forEach(v => wrong.add(key(v)));
+    kept.push({ ...entry, variants });
+  }
+  return kept.reverse();
 }
 const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const escapeHTML = (text: string) => text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -71,15 +103,43 @@ const escapeHTML = (text: string) => text.replace(/&/g,"&amp;").replace(/</g,"&l
 const spellingKey = (text: string) => text.toLowerCase().replace(/[‐‑‒–—−]/g, "-");
 
 export function correctText(text: string, entries: PersonalCorrection[], profileId?: string, html = false): string {
-  const replacements = new Map(activeCorrections(entries, profileId).flatMap(e => e.variants.map(v => [spellingKey(v.trim()), e.canonical.trim()] as const)));
-  if (!replacements.size) return text;
-  const alternatives = [...replacements.keys()].sort((a,b) => b.length-a.length).map(v => escapeRegex(v).replace(/-/g, "[-‐‑‒–—−]")).join("|");
+  // Variants become their term; terms without a space are also known so addresses can be lowercased.
+  const replacements = new Map<string, string>(), terms = new Map<string, string>();
+  for (const entry of activeCorrections(entries, profileId)) {
+    const canonical = entry.canonical.trim();
+    entry.variants.forEach(v => replacements.set(spellingKey(v.trim()), canonical));
+    if (!/\s/.test(canonical)) terms.set(spellingKey(canonical), canonical);
+  }
+  if (!replacements.size && !terms.size) return text;
+  const word = (keys: string[]) => keys.length
+    ? `(?<![\\p{L}\\p{N}_])(?:${[...keys].sort((a,b) => b.length-a.length).map(v => escapeRegex(v).replace(/-/g, "[-‐‑‒–—−]")).join("|")})(?![\\p{L}\\p{N}_])` : null;
   // Protected tokens win before word alternatives, so replacements never cascade.
-  const pattern = new RegExp(`&(?:#\\d+|#x[\\da-f]+|[a-z]+);|(?:https?:\\/\\/|www\\.)[^\\s<>]+|[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}|\\x60[^\\x60]*\\x60|(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`,"giu");
+  const entity = "&(?:#\\d+|#x[\\da-f]+|[a-z]+);";
+  const url = "(?:https?:\\/\\/|www\\.)[^\\s<>]+";
+  const email = "[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}";
+  // A hyphen may follow ("secure.yinga.nl-fix"); it is not part of the host name.
+  const host = "(?<![\\p{L}\\p{N}_@./-])(?:[\\p{L}\\p{N}][\\p{L}\\p{N}-]*\\.)+[\\p{L}]{2,}(?![\\p{L}\\p{N}_@])";
+  const variants = word([...replacements.keys()]), all = word([...new Set([...replacements.keys(), ...terms.keys()])]);
+  const pattern = new RegExp([entity, url, email, host, "\\x60[^\\x60]*\\x60", variants].filter(Boolean).join("|"), "giu");
+  const innerVariants = new RegExp([entity, variants].filter(Boolean).join("|"), "giu");
+  const innerAll = new RegExp([entity, all].filter(Boolean).join("|"), "giu");
+  const output = (value: string) => html ? escapeHTML(value) : value;
+  const lower = (term?: string) => term === undefined || /\s/.test(term) ? undefined : term.toLowerCase();
+  const rewrite = (token: string, inner: RegExp, value: (part: string) => string | undefined) =>
+    token.replace(inner, part => { const next = value(part); return next === undefined ? part : output(next); });
   return text.replace(pattern, match => {
-    if (/^(?:https?:\/\/|www\.|&|`)/i.test(match) || match.includes("@")) return match;
+    if (/^[&`]/.test(match)) return match;
     const canonical = replacements.get(spellingKey(match));
-    return canonical === undefined ? match : html ? escapeHTML(canonical) : canonical;
+    if (canonical !== undefined) return output(canonical);
+    // A URL: only variants change, in lowercase; a path may be case-sensitive (DEC-075).
+    if (/^(?:https?:\/\/|www\.)/i.test(match)) return rewrite(match, innerVariants, part => lower(replacements.get(spellingKey(part))));
+    // An e-mail address or host name such as secure.yinga.nl: every term in lowercase (DEC-077).
+    const last = match.split(".").pop() ?? "";
+    if (match.includes("@") || last === last.toLowerCase()) {
+      return rewrite(match, innerAll, part => lower(replacements.get(spellingKey(part)) ?? terms.get(spellingKey(part))));
+    }
+    // Words joined by a dot ("Yinga.AI", "werkt.Jinga") are ordinary text.
+    return rewrite(match, innerVariants, part => replacements.get(spellingKey(part)));
   });
 }
 export function correctHTML(html: string, entries: PersonalCorrection[], profileId?: string): string {

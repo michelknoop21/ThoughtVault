@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { useRecordingStore } from "../../stores/recordingStore";
 import { useSupportStore } from "../../stores/supportStore";
-import { installClickPath, logRoute } from "../appLog";
+import { installClickPath, logRoute, mask } from "../appLog";
 import { fingerprint } from "../crashReporter";
 import { processLocally } from "../localPipeline";
 import { LLMService } from "../llm";
@@ -55,6 +55,12 @@ it("uploads the same safe explanation shown for known causes, separating causes 
   expect(sent[0].fingerprint).toBe(await fingerprint("notule", "notule_connection_failed"));
 });
 
+it("reports a lost connection to a remote provider with its own code instead of the fallback (TV-000024)", async () => {
+  const task = await fail('Kan openrouter.ai niet bereiken (model "mistralai/mistral-large-4-0"). Controleer je internetverbinding en probeer het opnieuw.');
+  expect(task.error_message).toBe("Kan de AI-aanbieder niet bereiken. Controleer je internetverbinding en probeer het opnieuw.");
+  expect(sent[0]).toMatchObject({ stage: "notule", shownMessage: task.error_message, errorText: "notule_provider_unreachable" });
+});
+
 it("never sends private prose from arbitrary provider bodies or from known-template parameters, logs or content clicks", async () => {
   installClickPath();
   document.body.innerHTML = `<div class="prose"><button aria-label="${canary}" data-log-label="${canary}">${canary}</button></div>`;
@@ -94,5 +100,7 @@ it.each([connection(canary), canary])("keeps local-pipeline console output and o
   expect(task.status).toBe("failed");
   expect(sent[0].shownMessage).toBe(error === canary ? "Verwerking mislukt" : task.error_message);
   expect(useLocalTranscriptsStore.getState().items[0]).toEqual(partial);
+  // One mask, so the hash can be matched against a known message.
+  expect(logs).toContain(`[LocalPipeline] Failed: ${mask(error)}`);
   expect(JSON.stringify({ sent, logs, console: consoleError.mock.calls, ipc: vi.mocked(invoke).mock.calls })).not.toMatch(/CANARY|private@example\.com|Private|meeting\.wav/);
 });

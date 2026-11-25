@@ -5,6 +5,7 @@ import { LLMService, MAX_OUTPUT_TOKENS, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, a
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 import { modelListFixture } from "./openRouterModelsFixture";
 import { OPENROUTER_MODELS_URL } from "../openRouterModels";
+import { processingDiagnostic } from "../crashReporter";
 
 const corrections = vi.hoisted(() => ({entries:[] as import("../personalCorrections").PersonalCorrection[]}));
 const { loadCredential } = vi.hoisted(() => ({ loadCredential: vi.fn() }));
@@ -238,6 +239,14 @@ describe("HTTP 429", () => {
   it("fails on a second 429 with the rate-limit message", async () => {
     invoke.mockResolvedValue({ status: 429, body: "{}" });
     const result = expect(LLMService.generateNotulen("Akkoord.", profile)).rejects.toThrow("OpenAI API-limiet bereikt (429), ook na een nieuwe poging");
+    await vi.advanceTimersByTimeAsync(2_000);
+    await result;
+    expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("names the unreachable OpenAI host after the reconnect fails too, with the code the support report uses (TV-000024)", async () => {
+    invoke.mockRejectedValue("error sending request for url (https://api.openai.com/v1/chat/completions)");
+    const result = expect(LLMService.generateNotulen("Akkoord.", profile)).rejects.toThrow(/^Kan api\.openai\.com niet bereiken \(model "[^"]+"\)\. Controleer je internetverbinding/);
     await vi.advanceTimersByTimeAsync(2_000);
     await result;
     expect(invoke).toHaveBeenCalledTimes(2);
@@ -558,4 +567,10 @@ it("logs OpenRouter as its own provider kind", () => {
 it("names the host for an unreachable https endpoint and Ollama/LM Studio only for a local one", () => {
   expect(unreachableMessage("https://user:key@openrouter.ai/api/v1?key=x", "m")).toBe('Kan openrouter.ai niet bereiken (model "m"). Controleer je internetverbinding en probeer het opnieuw.');
   expect(unreachableMessage("http://localhost:11434", "m")).toBe('Kan de notule-generator niet bereiken op http://localhost:11434 (model "m"). Draait Ollama/LM Studio en klopt de URL in Instellingen?');
+});
+
+// The classifier must recognize what the producer actually writes, so a reworded message fails here (TV-000024).
+it("classifies the real unreachable message for a remote provider", () => {
+  expect(processingDiagnostic(unreachableMessage("https://openrouter.ai/api/v1", "mistralai/mistral-large-4-0"))).toMatchObject({ code: "notule_provider_unreachable" });
+  expect(processingDiagnostic(unreachableMessage("http://localhost:11434", "hermes3:8b"))).toMatchObject({ code: "notule_connection_failed" });
 });

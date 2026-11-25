@@ -269,7 +269,8 @@ enum PersonalCorrections {
         let entity = #"&(?:#\d+|#x[\da-f]+|[a-z]+);"#
         let url = #"(?:https?://|www\.)[^\s<>]+"#
         let email = #"[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}"#
-        let host = #"(?<![\p{L}\p{N}_@./-])(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+[\p{L}]{2,}(?![\p{L}\p{N}_@-])"#
+        // A hyphen may follow ("secure.yinga.nl-fix"); it is not part of the host name.
+        let host = #"(?<![\p{L}\p{N}_@./-])(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+[\p{L}]{2,}(?![\p{L}\p{N}_@])"#
         let variants = word(Array(replacements.keys)), all = word(Array(Set(replacements.keys).union(terms.keys)))
         let pattern = ([entity, url, email, host, "`[^`]*`"] + [variants].compactMap { $0 }).joined(separator: "|")
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),

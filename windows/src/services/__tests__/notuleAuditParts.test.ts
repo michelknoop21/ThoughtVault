@@ -232,6 +232,14 @@ it("sends uncited notule sentences together without evidence: a heading passes, 
     .rejects.toThrow("De notule bevat een onbevestigde bewering: Joris betaalt de rekening.");
 });
 
+it("ignores evidence the model names for a source it does not call covered", async () => {
+  const request = model({ cover: id => id === "T401" ? ["N1"] : [], coverage: report => {
+    const first = report.source!.find(item => item.id === "T1");
+    if (first) { first.status = "missing"; first.evidence = ["N1"]; }
+  } });
+  await expect(auditNotule(longSource, sam, "", request)).rejects.toThrow("De notule mist broninformatie: Punt 1 is besproken.");
+});
+
 it("rejects support that cites only the context", async () => {
   const request = model({ cover: id => id === "T401" ? ["N1"] : [], note: report => { report.notes = [{ id: "N1", status: "supported", evidence: ["T400"] }]; } });
   await expect(auditNotule(longSource, sam, "", request)).rejects.toThrow("Ongeldig controlebewijs");

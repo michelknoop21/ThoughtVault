@@ -337,6 +337,15 @@ final class NotuleAuditPartsTests: XCTestCase {
         }
     }
 
+    // "ignores evidence the model names for a source it does not call covered"
+    func testEvidenceOnAMissingSourceIsIgnored() async {
+        let model = LongModel(cover: { $0 == "T401" ? ["N1"] : [] }, coverage: { firstId, report in
+            guard firstId == "T1" else { return }
+            editSource(&report) { $0[0]["status"] = "missing"; $0[0]["evidence"] = ["N1"] }
+        })
+        await assertRejects("De notule mist broninformatie: Punt 1 is besproken.") { try await audit(longSource, sam, LongRecorder(), model) }
+    }
+
     func testSupportFromContextOnlyIsRejected() async {
         let model = LongModel(cover: { $0 == "T401" ? ["N1"] : [] }, note: { _, report in report["notes"] = verdict("N1", "supported", ["T400"]) })
         await assertRejects("Ongeldig controlebewijs") { try await audit(longSource, sam, LongRecorder(), model) }

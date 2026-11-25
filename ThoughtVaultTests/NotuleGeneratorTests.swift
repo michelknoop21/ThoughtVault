@@ -166,14 +166,15 @@ final class NotuleGeneratorTests: XCTestCase {
     }
 
     // The T9 case: "covered" without any notule sentence pointing at it.
-    func testMissingEvidenceShowsGeneralWarningWithoutCode() async throws {
+    // DEC-081: a source the model calls covered while no notule sentence cites it is reported as missing.
+    func testUncitedCoveredSourceIsReportedAsMissing() async throws {
         let html = "<p>Sam neemt vrijdag contact op.</p>"
         let service = StubLLM(draft: html, audit: StubLLM.approve { report in
             report["source"] = (report["source"] as! [[String: Any]]).map { var item = $0; item["status"] = "covered"; return item }
             report["notes"] = (report["notes"] as! [[String: Any]]).map { var note = $0; note["evidence"] = ["T1"]; return note }
         })
         let result = try await generate(service, "Sam belt vrijdag. Iris mailt maandag.")
-        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedContentWarning, in: html))
+        XCTAssertEqual(result, warnings("Dit is gezegd, maar staat misschien niet in de notule: “Iris mailt maandag.”", in: html))
         XCTAssertFalse(result.contains("T2"))
     }
 
@@ -193,7 +194,11 @@ final class NotuleGeneratorTests: XCTestCase {
         let html = "<p>Een stellig verhaal over een pilot.</p>"
         let service = StubLLM(draft: html, audit: { user in
             if user.hasPrefix("Broncontrole") { return #"{"uncertain":true}"# }
-            return try StubLLM.approve { $0["uncertain"] = true }(user)
+            // DEC-081: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
+            return try StubLLM.approve { report in
+                report["uncertain"] = true
+                report["source"] = (report["source"] as! [[String: Any]]).map { var item = $0; item["status"] = "uncertain"; return item }
+            }(user)
         })
         let result = try await generate(service, "En mensen processen stok maken voorbij pilot zeker leeg.")
         XCTAssertEqual(result, warnings(NotuleAudit.unclearSourceWarning, NotuleAudit.uncheckedContentWarning, in: html))

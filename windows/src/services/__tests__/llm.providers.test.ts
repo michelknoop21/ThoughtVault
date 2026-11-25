@@ -318,11 +318,11 @@ it("reports a rejected Ollama Cloud key and never masks it as a local server fai
 it("uses the user's OpenAI API key for the selected profile and transcript", async () => {
   useSettingsStore.setState({ notulen_provider: "openai" as never });
   loadCredential.mockResolvedValue("openai-secret");
-  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<h1>Besluit</h1>" } }] }) });
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ choices: [{ message: { content: "<h1>Besluit</h1><p>De planning is goedgekeurd.</p>" } }] }) });
 
   const html = await LLMService.generateNotulen("De planning is goedgekeurd.", profile);
 
-  expect(html).toBe("<h1>Besluit</h1>");
+  expect(html).toBe("<h1>Besluit</h1><p>De planning is goedgekeurd.</p>");
   expect(loadCredential).toHaveBeenCalledWith("openai_api_key");
   const request = invoke.mock.calls[0][1].request;
   expect(request.url).toBe("https://api.openai.com/v1/chat/completions");

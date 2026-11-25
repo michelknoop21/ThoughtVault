@@ -106,7 +106,11 @@ it("keeps the notule with both warnings when the notule audit cannot understand 
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
     if (user.startsWith("Broncontrole")) return answer(JSON.stringify({ uncertain: true }));
-    if (user.startsWith("Inhoudsaudit")) return answer(JSON.stringify({ ...JSON.parse(auditFixture(user)), uncertain: true }));
+    if (user.startsWith("Inhoudsaudit")) {
+      // DEC-081: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
+      const report = JSON.parse(auditFixture(user)); report.source[0].status = "uncertain";
+      return answer(JSON.stringify({ ...report, uncertain: true }));
+    }
     return answer(html);
   });
   const progress = vi.fn();

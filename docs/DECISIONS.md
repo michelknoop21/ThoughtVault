@@ -8,6 +8,40 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-081: De inhoudscontrole beoordeelt de rest als de bron al onduidelijk is gemeld
+
+**Date:** 2026-11-25
+**Status:** Implemented on `feat/notule-wispr-vorm` (akkoord Michel, 25 november 2026)
+
+**Context:** In 22 van 22 gemeten runs (DEC-080) eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren of alles in de notule klopt" kreeg. De controle vraagt het model om één vlag `uncertain` voor de hele bron en gooide bij `true` alle oordelen per zin weg. De ruwe oordelen laten zien waarom dat bij spraakherkenning altijd gebeurt: in de klantdemo markeerde het model 151 van de 271 bronzinnen als onverstaanbaar, in stand-up A 26 van de 115. De broncontrole (DEC-062) had de gebruiker daar op dat moment al voor gewaarschuwd.
+
+**Decision:** Alleen wanneer de broncontrole al waarschuwde (`sourceUnclear`), in het korte pad en in de dekkingsstap van het lange pad:
+1. `uncertain: true` is geen einde meer. De vlag moet nog steeds een boolean zijn.
+2. Een transcriptiezin met status `uncertain` wordt overgeslagen, ook als die in de lijst met verplichte uitspraken staat. Een gebruikersnotitie (Q) wordt nooit overgeslagen.
+3. Een notulezin die de bron tegenspreekt of niet door de bron wordt gesteund, wordt als eerste gemeld. Een notulezin met status `uncertain` wordt niet gemeld: die volgt uit de bron waarvoor al is gewaarschuwd.
+4. Korte pad, ongeacht `sourceUnclear`: een bronzin die het model `covered` noemt terwijl geen gesteunde notulezin ernaar verwijst, gaf de technische fout "Ontbrekend controlebewijs". Op Volledig telt zo'n zin nu als `missing`, zoals het lange pad al deed (DEC-065). Op Kort en Normaal telt ze als `minor`, wat `conclude` weigert voor een verplichte uitspraak en voor een bedrag (DEC-073).
+
+5. De titel (`h1`) gaat niet meer als bewering naar de controle. Het is een etiket van vier tot tien woorden boven de zinnen die wel worden gecontroleerd; het lange pad meldde de titel in twee van twee runs als "misschien niet zo gezegd".
+6. Lange pad, alleen bij `sourceUnclear`: een notulezin waar geen bronzin naar verwijst, was per definitie `unsupported`. Met meer dan de helft van de bron op `uncertain` verwijst er weinig, en de samenvattende openingszin werd zo een vals alarm. Zo'n zin telt nu als niet beoordeeld. Ook stap 2 accepteert dan `uncertain: true`.
+
+7. Lange pad, dekkingsstap: een bronzin die het model `missing` of `uncertain` noemt en waar het toch een notulezin bij zet, gaf "Ongeldig controlebewijs" en beëindigde de hele controle. Dat bewijs wordt nu genegeerd; alleen een `covered` bronzin bewijst iets. In de run waarin de meeting van 56 minuten hierop strandde, ging het om 12 van de 248 bronzinnen in één deel, alle `uncertain`.
+
+8. Drempel (akkoord Michel, 25 november 2026): noemt het model meer dan de helft van de transcriptiezinnen `uncertain`, dan stopt de controle met een gewone fout en krijgt de notule de algemene regel "We konden niet automatisch controleren". Eén concrete regel over één zin wekt dan de indruk dat de rest is nagekeken. In het lange pad gebeurt dit na de dekkingsstap, zodat stap 2 niet meer draait. Gebruikersnotities tellen niet mee in de breuk.
+
+Zonder waarschuwing van de broncontrole zijn punt 1, 2, 3, 6 en 8 ongewijzigd. De prompts van de controle zijn niet aangepast.
+
+**Measurements:** dezelfde drie gesprekken, Sonnet 5.5, één run. Voor de wijziging: drie keer de algemene regel. Erna: drie keer één concrete regel, twee keer "Dit is gezegd, maar staat misschien niet in de notule" met een bronzin en één keer "Dit staat in de notule, maar is misschien niet zo gezegd" bij een actie waarin de notule een termijn en een taak had samengevoegd. De eerste regel over de verstaanbaarheid blijft staan. Lange pad: het schadebezoek (43.000 tekens) loopt nu tot het einde en geeft één concrete regel over de openingszin, waarin de notule de bezoeker "schade-expert en woninginspecteur" noemt. Een meeting van 56 minuten (57.000 tekens) strandde daarna nog op "Ongeldig controlebewijs"; na punt 7 loopt ook die tot het einde en geeft één concrete regel. In beide lange gesprekken is dat een zin uit de samenvatting bovenaan.
+
+**Consequences:**
+- De controle meldt één probleem per notule, het eerste. Stand-up A had in één run 11 bronzinnen `missing` en 1 notulezin `unsupported`; de gebruiker ziet er daarvan één.
+- Het model gebruikte in die run de status `minor` niet en noemde ook terloopse zinnen `missing`. De gemelde bronzin is daardoor soms een bijzaak. Dat ligt aan het oordeel van het model, niet aan deze wijziging, en is niet opgelost.
+- Een verplichte uitspraak die het model onverstaanbaar vindt, wordt niet meer bewaakt.
+- Een fout in de titel zelf wordt niet meer opgemerkt.
+- Op lange meetings is de gemelde regel waarschijnlijk vaak een vals alarm. In de laatste run noemde het model bij het schadebezoek 713 van de 932 bronzinnen `uncertain` en bij de meeting van 56 minuten 500 van de 862. Stap 2 beoordeelt een notulezin tegen alleen de bronzinnen die ernaar verwijzen (mediaan twee), en keurde bij het schadebezoek 19 van de 44 beoordeelde zinnen af tegen 8 goed. Een samenvattende zin komt daar slecht doorheen. Punt 8 vangt dat af boven de helft. Meting na punt 8 (zelfde model, één run): schadebezoek 663 van de 932 `uncertain` (71%), algemene regel, geen stap 2; de meeting van 56 minuten 355 van de 862 (41%), nog één concrete regel over een zin uit de notule. Dezelfde meeting stond een run eerder op 58%. Het aandeel schommelt dus per run rond de drempel, en onder de drempel blijft het voorbehoud over valse alarmen gelden.
+- `scripts/eval` bewaart de ruwe oordelen per run (`*.audit.json`, buiten de repo), zodat een volgende meting dit soort tellingen direct geeft.
+
+---
+
 ## DEC-080: Notule in korte regels, bronzinnen ingeperkt en niet meer geciteerd
 
 **Date:** 2026-11-25

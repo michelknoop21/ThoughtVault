@@ -127,6 +127,48 @@ final class NotuleAuditTests: XCTestCase {
                                           "<p>De controle ligt bij Lina. Over uitvoering bestaat nog geen besluit.</p>")
     }
 
+    // "does not send the title to the model as a claim"
+    func testTitleIsNotSentAsAClaim() async throws {
+        let log = CallLog()
+        try await NotuleAudit.auditNotule(source: "Sam controleert vrijdag. Joris belt maandag.",
+                                          html: "<h1>Controle en belafspraak</h1><p>Sam voert vrijdag de controle uit. Joris belt maandag.</p>",
+                                          quickNote: "", request: fixture(log))
+        let calls = await log.calls
+        XCTAssertFalse(calls[0].user.contains("Controle en belafspraak"))
+    }
+
+    // "judges the rest when the source check warned and a transcription sentence is unclear" (DEC-081)
+    func testUnclearSentenceIsSkippedWhenTheSourceCheckWarned() async throws {
+        let source = "Sam controleert vrijdag. Ja dat ook niet zeg maar. Joris belt maandag."
+        let html = "<p>Sam voert vrijdag de controle uit. Joris belt maandag.</p>"
+        func unclear(_ extra: @escaping @Sendable (inout AuditReport) -> Void = { _ in }) -> AuditRequest {
+            fixture(CallLog()) { report in
+                report.uncertain = true
+                report.source[1]["status"] = "uncertain"; report.source[1]["evidence"] = [String]()
+                for index in report.notes.indices {
+                    report.notes[index]["evidence"] = (report.notes[index]["evidence"] as? [String] ?? []).filter { $0 != "T2" }
+                }
+                extra(&report)
+            }
+        }
+        try await NotuleAudit.auditNotule(source: source, html: html, quickNote: "", request: unclear(), sourceUnclear: true)
+        await assertRejects("De inhoudscontrole is onzeker; beoordeel het concept") {
+            try await NotuleAudit.auditNotule(source: source, html: html, quickNote: "", request: unclear())
+        }
+        await assertRejects("De notule mist broninformatie: Joris belt maandag.") {
+            try await NotuleAudit.auditNotule(source: source, html: html, quickNote: "",
+                                              request: unclear { $0.source[2]["status"] = "missing"; $0.source[2]["evidence"] = [String]() },
+                                              sourceUnclear: true)
+        }
+        // More than half of the transcription unclear: no single concrete line, the general one.
+        await assertRejects("De inhoudscontrole kon het grootste deel van de bron niet volgen; beoordeel het concept") {
+            try await NotuleAudit.auditNotule(source: source, html: html, quickNote: "", request: unclear {
+                $0.source[0]["status"] = "uncertain"; $0.source[0]["evidence"] = [String]()
+                $0.notes[0]["status"] = "uncertain"; $0.notes[0]["evidence"] = [String]()
+            }, sourceUnclear: true)
+        }
+    }
+
     // "rejects a reported %s source action without a retry"
     private func assertRejectsSourceStatus(_ status: String, _ expected: String, line: UInt = #line) async {
         let log = CallLog()
@@ -348,7 +390,7 @@ final class NotuleAuditTests: XCTestCase {
     // "rejects a source fact without a supporting note in the canonical evidence relation"
     func testSourceWithoutSupportingNoteRejected() async {
         let response = #"{"uncertain":false,"source":[{"id":"T1","status":"covered"},{"id":"T2","status":"covered"}],"notes":[{"id":"N1","status":"supported","evidence":["T1"]}]}"#
-        await assertRejects("Ontbrekend controlebewijs bij T2") {
+        await assertRejects("De notule mist broninformatie: Bram belt maandag.") {
             try await NotuleAudit.auditNotule(source: "Noor controleert vrijdag. Bram belt maandag.",
                                               html: "<p>Vrijdag voert Noor de controle uit.</p>", quickNote: "", request: respond(CallLog(), response))
         }

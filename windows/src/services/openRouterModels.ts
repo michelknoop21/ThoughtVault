@@ -73,19 +73,25 @@ export function resetOpenRouterModels(): void {
   catalog = null;
 }
 
-/** Ids of the models the stored key may use, with their prices remembered for the cap; [] without a key or answer. */
-export async function openRouterKeyModels(): Promise<string[]> {
+/**
+ * Ids of the models the stored key may use; [] without a key or answer. Text models by default, with their
+ * prices remembered for the cap; `"transcription"` asks for the transcription models instead (DEC-080).
+ */
+export async function openRouterKeyModels(output?: "transcription"): Promise<string[]> {
   try {
     const key = await loadCredential("openrouter_api_key");
     if (!key) return [];
+    const url = output ? `${OPENROUTER_KEY_MODELS_URL}?output_modalities=${output}` : OPENROUTER_KEY_MODELS_URL;
     const response = await invoke<{ status: number; body: string }>("proxy_request", {
-      request: { url: OPENROUTER_KEY_MODELS_URL, method: "GET", headers: { Authorization: `Bearer ${key}` }, body: null, timeout_seconds: 30 },
+      request: { url, method: "GET", headers: { Authorization: `Bearer ${key}` }, body: null, timeout_seconds: 30 },
     });
     if (response.status !== 200) return [];
     const rows: unknown = JSON.parse(response.body).data;
     if (!Array.isArray(rows)) return [];
-    rememberReportedPrices(OPENROUTER_API_URL, rows);
-    return rows.map(row => (row as { id?: unknown })?.id).filter((id): id is string => typeof id === "string");
+    if (!output) rememberReportedPrices(OPENROUTER_API_URL, rows);
+    const outputs = (row: unknown) => (row as { architecture?: { output_modalities?: unknown } })?.architecture?.output_modalities;
+    return rows.filter(row => { const kinds = outputs(row); return !output || !Array.isArray(kinds) || kinds.includes(output); })
+      .map(row => (row as { id?: unknown })?.id).filter((id): id is string => typeof id === "string" && id.length > 0);
   } catch {
     return [];
   }

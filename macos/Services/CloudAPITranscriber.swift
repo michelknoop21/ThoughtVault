@@ -59,6 +59,45 @@ enum CloudSTTProvider: String, CaseIterable, Identifiable, Sendable {
     static let baseURLDefaultsKey = "cloudSTTBaseURL"
 }
 
+extension CloudSTTProvider {
+    /// Only the transcription models the key may use under the workspace's model access (DEC-080).
+    static let openRouterTranscriptionModelsURL = URL(string: "https://openrouter.ai/api/v1/models/user?output_modalities=transcription")!
+
+    /// Ids of the models in a model list that output transcriptions; empty when the list is unusable.
+    static func transcriptionModelIds(_ data: Data) -> [String] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let items = root["data"] as? [[String: Any]] else { return [] }
+        return items.compactMap { item in
+            let outputs = (item["architecture"] as? [String: Any])?["output_modalities"] as? [String]
+            guard let id = item["id"] as? String, !id.isEmpty, outputs?.contains("transcription") ?? true else { return nil }
+            return id
+        }
+    }
+
+    /// The transcription models the OpenRouter key may use; empty without a key or an answer.
+    static func openRouterTranscriptionModels(apiKey: String) async -> [String] {
+        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return [] }
+        var request = URLRequest(url: openRouterTranscriptionModelsURL)
+        request.timeoutInterval = 15
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200 else { return [] }
+        return transcriptionModelIds(data)
+    }
+
+    /// Picker choices: on OpenRouter the key's list once loaded (presets it contains first), otherwise the presets.
+    func choices(listed: [String]) -> [String] {
+        guard self == .openrouter, !listed.isEmpty else { return models }
+        return models.filter(listed.contains) + listed.filter { !models.contains($0) }.sorted()
+    }
+
+    /// Whether `model` can be kept before the key's list is known: OpenRouter ids are always `vendor/model`.
+    func keeps(_ model: String) -> Bool {
+        self == .openrouter ? model.contains("/") : models.isEmpty || models.contains(model)
+    }
+}
+
 // MARK: - Transcriber
 
 struct CloudAPITranscriber: LocalTranscriber {

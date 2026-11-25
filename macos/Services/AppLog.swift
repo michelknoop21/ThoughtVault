@@ -226,27 +226,76 @@ struct AppLog: Sendable {
 
     private static func marker(in directory: URL) -> URL { directory.appending(path: "session.open") }
 
-    static func beginSession(in directory: URL = AppLog.directory) -> SessionOutcome {
+    /// The build that owns the marker. Debug builds share the Release container and version, so they get their own
+    /// name: a debugger stop is then "another build" for the installed app.
+    static var sessionBuild: String {
+        #if DEBUG
+        DeviceInfo.appVersion + " debug"
+        #else
+        DeviceInfo.appVersion
+        #endif
+    }
+
+    /// Only the production app in a Release build reports crashes to support; Debug and the Dev channel keep them local.
+    static var reportsCrashes: Bool {
+        #if DEBUG
+        reportsCrashes(bundleID: Bundle.main.bundleIdentifier, debug: true)
+        #else
+        reportsCrashes(bundleID: Bundle.main.bundleIdentifier, debug: false)
+        #endif
+    }
+
+    static func reportsCrashes(bundleID: String?, debug: Bool) -> Bool { !debug && bundleID == "com.buildmind.ThoughtVault" }
+
+    /// The first line of the marker names the build that wrote it (`build=1.0.344 (344)`). A marker from another
+    /// build means the app was replaced (installer, update, another build started), not that it crashed, unless it was
+    /// stopped during a stage: an installer does not run in the middle of a recording or transcription. A debug owner is
+    /// never reported: stopping the debugger mid-recording is routine.
+    static func beginSession(in directory: URL = AppLog.directory, build: String = AppLog.sessionBuild) -> SessionOutcome {
         let url = marker(in: directory)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var outcome = SessionOutcome.clean
         if let data = try? Data(contentsOf: url) {
-            let stage = String(decoding: data, as: UTF8.self)
-            outcome = .crashed(stage: stage.isEmpty ? nil : stage)
+            let (owner, stage) = parseMarker(String(decoding: data, as: UTF8.self))
+            if owner == build {
+                session.warning("Previous session \(build) ended without a clean exit")
+                outcome = .crashed(stage: stage.isEmpty ? nil : stage)
+            } else if owner?.hasSuffix(" debug") != true, let active = SupportStage(rawValue: stage), active != .crash {
+                session.warning("Previous session \(owner ?? "older build") stopped during \(active.rawValue); replaced by \(build), reported as a crash")
+                outcome = .crashed(stage: active.rawValue)
+            } else {
+                session.info("Previous session \(owner ?? "older build") ended without a clean exit; replaced by \(build), not reported as a crash")
+            }
         }
-        try? Data().write(to: url)
+        try? markerData(build: build, stage: nil).write(to: url, options: .atomic)
         return outcome
     }
 
-    static func resumeSession(in directory: URL = AppLog.directory) {
+    static func resumeSession(in directory: URL = AppLog.directory, build: String = AppLog.sessionBuild) {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? Data().write(to: marker(in: directory))
+        try? markerData(build: build, stage: nil).write(to: marker(in: directory), options: .atomic)
     }
 
-    static func setSessionStage(_ stage: String?, in directory: URL = AppLog.directory) {
+    static func setSessionStage(_ stage: String?, in directory: URL = AppLog.directory, build: String = AppLog.sessionBuild) {
         let url = marker(in: directory)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
-        try? Data((stage ?? "").utf8).write(to: url)
+        let data = markerData(build: build, stage: stage)
+        // Progress callbacks call this many times a second; only a real change is written.
+        guard (try? Data(contentsOf: url)) != data else { return }
+        // Atomic: a stop halfway through the write must not leave a cut-off build line that reads as another build.
+        try? data.write(to: url, options: .atomic)
+    }
+
+    private static let session = AppLog(category: "Sessie")
+
+    private static func markerData(build: String, stage: String?) -> Data { Data("build=\(build)\n\(stage ?? "")".utf8) }
+
+    /// A marker without a build line comes from a build before this format.
+    private static func parseMarker(_ text: String) -> (owner: String?, stage: String) {
+        guard text.hasPrefix("build=") else { return (nil, text) }
+        let rest = text.dropFirst("build=".count)
+        guard let newline = rest.firstIndex(of: "\n") else { return (String(rest), "") }
+        return (String(rest[..<newline]), String(rest[rest.index(after: newline)...]))
     }
 
     static func endSession(in directory: URL = AppLog.directory) {

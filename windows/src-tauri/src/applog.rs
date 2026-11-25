@@ -160,17 +160,80 @@ pub fn prune(dir: &Path, now: SystemTime) {
     }
 }
 
-pub fn session_begin_at(dir: &Path) -> PreviousSession {
+/// The build that owns the marker; the first line of `session.open` is `build=<version>`.
+/// Debug builds (`tauri dev`) share the production identifier and data folder, so they get their own name.
+pub const BUILD: &str = if cfg!(debug_assertions) {
+    concat!(env!("CARGO_PKG_VERSION"), "-debug")
+} else {
+    env!("CARGO_PKG_VERSION")
+};
+const PRODUCTION_ID: &str = "nl.prezent.transcript-studio";
+/// Stages the frontend writes into the marker while work is running.
+const ACTIVE_STAGES: [&str; 3] = ["opnemen", "transcriberen", "notule"];
+
+fn marker_text(build: &str, stage: Option<&str>) -> String {
+    format!("build={build}\n{}", stage.unwrap_or(""))
+}
+
+/// Replace the marker atomically: a stop halfway through a write must not leave a
+/// cut-off build line that reads as another build.
+fn write_marker(dir: &Path, text: &str) -> std::io::Result<()> {
+    let temp = dir.join(format!("{MARKER}.tmp"));
+    fs::write(&temp, text)?;
+    fs::rename(temp, dir.join(MARKER))
+}
+
+/// A marker left by another build means the app was replaced (installer, update,
+/// another build started), not that it crashed: log it and report nothing, unless it
+/// stopped during a stage, because an installer does not run in the middle of one.
+pub fn session_begin_at(dir: &Path, build: &str) -> PreviousSession {
     let path = dir.join(MARKER);
-    let previous = match fs::read_to_string(&path) {
-        Ok(content) => {
-            let stage = content.trim();
-            PreviousSession { crashed: true, stage: (!stage.is_empty()).then(|| stage.to_string()) }
+    let previous = match fs::read(&path) {
+        Ok(bytes) => {
+            let content = String::from_utf8_lossy(&bytes);
+            match content.strip_prefix("build=") {
+                Some(rest) => {
+                    let (owner, stage) = rest.split_once('\n').unwrap_or((rest, ""));
+                    Some((Some(owner.to_string()), stage.trim().to_string()))
+                }
+                None => Some((None, content.trim().to_string())),
+            }
         }
-        Err(_) => PreviousSession { crashed: path.exists(), stage: None },
+        Err(_) => path.exists().then(|| (None, String::new())),
     };
     let _ = fs::create_dir_all(dir);
-    let _ = fs::write(path, "");
+    let _ = write_marker(dir, &marker_text(build, None));
+    match previous {
+        None => PreviousSession { crashed: false, stage: None },
+        Some((Some(owner), stage)) if owner == build => {
+            let _ = append(dir, "WARN", "Sessie", &format!("Previous session {build} ended without a clean exit"));
+            PreviousSession { crashed: true, stage: (!stage.is_empty()).then_some(stage) }
+        }
+        Some((owner, stage)) => {
+            let owner: String = owner.unwrap_or_else(|| "unknown build".into()).chars().take(64).collect();
+            // A debug owner is never reported: stopping the debugger mid-recording is routine.
+            if owner.ends_with("-debug") || !ACTIVE_STAGES.contains(&stage.as_str()) {
+                let _ = append(dir, "INFO", "Sessie", &format!("Previous session {owner} ended without a clean exit; replaced by {build}, not reported as a crash"));
+                PreviousSession { crashed: false, stage: None }
+            } else {
+                let _ = append(dir, "WARN", "Sessie", &format!("Previous session {owner} stopped during {stage}; replaced by {build}, reported as a crash"));
+                PreviousSession { crashed: true, stage: Some(stage) }
+            }
+        }
+    }
+}
+
+/// Only the production app in a release build reports crashes to support; Dev, QA and
+/// debug builds keep them in their own log.
+fn reports_crashes(identifier: &str, debug_build: bool) -> bool {
+    !debug_build && identifier == PRODUCTION_ID
+}
+
+fn gate(dir: &Path, previous: PreviousSession, reports: bool) -> PreviousSession {
+    if previous.crashed && !reports {
+        let _ = append(dir, "INFO", "Sessie", "Not a production build: crash kept in this log only");
+        return PreviousSession { crashed: false, stage: None };
+    }
     previous
 }
 
@@ -178,13 +241,13 @@ pub fn session_begin_once(dir: &Path, started: &AtomicBool) -> PreviousSession {
     if started.swap(true, Ordering::SeqCst) {
         PreviousSession { crashed: false, stage: None }
     } else {
-        session_begin_at(dir)
+        session_begin_at(dir, BUILD)
     }
 }
 
 pub fn session_stage_at(dir: &Path, stage: Option<&str>) -> std::io::Result<()> {
     fs::create_dir_all(dir)?;
-    fs::write(dir.join(MARKER), stage.unwrap_or(""))
+    write_marker(dir, &marker_text(BUILD, stage))
 }
 
 pub fn session_end_at(dir: &Path) {
@@ -275,7 +338,10 @@ pub fn log_scrub(text: String) -> String {
 #[tauri::command]
 pub fn session_begin() -> PreviousSession {
     match LOG_DIR.get() {
-        Some(dir) => session_begin_once(dir, &SESSION_STARTED),
+        Some(dir) => {
+            let reports = reports_crashes(env!("TV_APP_IDENTIFIER"), cfg!(debug_assertions));
+            gate(dir, session_begin_once(dir, &SESSION_STARTED), reports)
+        }
         None => PreviousSession { crashed: false, stage: None },
     }
 }

@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logRetry, TIME_LIMIT_MESSAGE, type RequestTrace } from "./modelRequestLog";
 
-// Transport for every model request on Windows: the native proxy, time limits and one HTTP 429 retry.
+// Transport for every model request on Windows: the native proxy, time limits, one retry after a broken connection to a
+// remote provider and one HTTP 429 retry.
 
 /** Total time per model request, as on macOS. A cold local model plus a long non-streamed draft can need it. */
 const LLM_TIME_LIMIT_SECONDS = 900;
@@ -75,12 +76,17 @@ async function proxyWithReconnect(request: { url: string; headers: Record<string
   try {
     return await proxy(request, limits.total, limits.idle, trace.signal);
   } catch (error) {
-    const remainingSeconds = Math.floor((limits.total * 1000 - (Date.now() - started) - CONNECTION_RETRY_WAIT_MS) / 1000);
+    // Jitter, as for 429: requests that broke together (draft and source check) should not reconnect at the same moment.
+    const wait = CONNECTION_RETRY_WAIT_MS + Math.random() * 1000;
+    const remaining = () => Math.floor((limits.total * 1000 - (Date.now() - started)) / 1000);
     // proxy() turns a timeout and a cancellation into Error objects; a native connection failure stays the plain string from http.rs.
-    if (typeof error !== "string" || !request.url.startsWith("https://") || remainingSeconds < 1) throw error;
-    logRetry(trace, CONNECTION_RETRY_WAIT_MS, "connection error");
-    await retryWait(CONNECTION_RETRY_WAIT_MS, trace.signal);
-    return proxy(request, remainingSeconds, limits.idle, trace.signal);
+    if (typeof error !== "string" || !request.url.startsWith("https://") || remaining() - wait / 1000 < 1) throw error;
+    logRetry(trace, wait, "connection error");
+    await retryWait(wait, trace.signal);
+    // A sleeping laptop can delay the timer far past the wait; never start a request after the time limit.
+    const left = remaining();
+    if (left < 1) throw error;
+    return proxy(request, left, limits.idle, trace.signal);
   }
 }
 

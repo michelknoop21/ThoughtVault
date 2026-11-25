@@ -45,7 +45,9 @@ it.each([
   expect(processingDiagnostic(`${message} PRIVATE_BODY`)).toBeNull();
 });
 
-it.each(["__proto__", "constructor", "toString", "PRIVATE_BODY", "", "OpenAI gaf HTTP 999."])("rejects unknown bodies and inherited property names: %s", message => {
+it.each(["__proto__", "constructor", "toString", "PRIVATE_BODY", "", "OpenAI gaf HTTP 999.",
+  `openrouter.ai brak het antwoord af (fout ${"x".repeat(65)}) voor model "private".`,
+  'openrouter.ai brak het antwoord af (fout a) voor model "b) voor model "c".'])("rejects unknown bodies and inherited property names: %s", message => {
   expect(processingDiagnostic(message)).toBeNull();
 });
 

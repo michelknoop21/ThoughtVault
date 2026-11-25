@@ -19,8 +19,8 @@ function replies(...answers:unknown[]){
   return answer;
  });
 }
-beforeEach(()=>{vi.clearAllMocks();vi.useFakeTimers();});
-afterEach(()=>vi.useRealTimers());
+beforeEach(()=>{vi.clearAllMocks();vi.useFakeTimers();vi.spyOn(Math,"random").mockReturnValue(0);});
+afterEach(()=>{vi.useRealTimers();vi.restoreAllMocks();});
 it("sends a remote request once more after its connection broke",async()=>{
  replies(lost,ok);
  const pending=modelRequest(remote,trace(),{total:3600,idle:300});
@@ -61,6 +61,16 @@ it("stops during the reconnect wait when cancelled",async()=>{
  const settled=expect(pending).rejects.toMatchObject({name:"AbortError"});
  await vi.waitFor(()=>expect(logRetry).toHaveBeenCalled());
  abort.abort();
+ await settled;
+ expect(sends()).toHaveLength(1);
+});
+it("does not start the retry when the wait outlasted the time limit",async()=>{
+ replies(lost,ok);
+ const pending=modelRequest(remote,trace(),{total:4});
+ const settled=expect(pending).rejects.toBe(lost);
+ // The timer fires late, as after a laptop sleep: the clock is past the limit when the wait ends.
+ vi.setSystemTime(Date.now()+10_000);
+ await vi.advanceTimersByTimeAsync(CONNECTION_RETRY_WAIT_MS);
  await settled;
  expect(sends()).toHaveLength(1);
 });

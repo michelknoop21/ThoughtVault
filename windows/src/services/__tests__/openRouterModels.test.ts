@@ -1,9 +1,10 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { OPENROUTER_MODELS_URL, REASONING_OUTPUT_TOKENS, openRouterModel, openRouterRequestFields, parseModelList, resetOpenRouterModels } from "../openRouterModels";
+import { OPENROUTER_KEY_MODELS_URL, OPENROUTER_MODELS_URL, REASONING_OUTPUT_TOKENS, openRouterKeyModels, openRouterModel, openRouterRequestFields, parseModelList, resetOpenRouterModels } from "../openRouterModels";
 import { modelListFixture } from "./openRouterModelsFixture";
 
-const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
+const { invoke, loadCredential } = vi.hoisted(() => ({ invoke: vi.fn(), loadCredential: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
+vi.mock("../tauriCommands", () => ({ loadCredential }));
 
 beforeEach(() => {
   invoke.mockReset();
@@ -65,4 +66,23 @@ it("keeps the catalog price for the request cap", async () => {
   const { modelRefusal } = await import("../suggestedModels");
   parseModelList(JSON.stringify({ data: [{ id: "openai/gpt-5.6-terra", pricing: { prompt: "0.000004", completion: "0.000020" } }] }));
   expect(modelRefusal("openai/gpt-5.6-terra", "https://openrouter.ai/api/v1")).toContain("prijsgrens");
+});
+
+it("lists only the models the stored key may use", async () => {
+  loadCredential.mockResolvedValue("fixture-key");
+  invoke.mockResolvedValue({ status: 200, body: JSON.stringify({ data: [
+    { id: "openai/gpt-6.1-terra", pricing: { prompt: "0.000001", completion: "0.000005" } },
+    { id: "mistralai/mistral-small-2603", pricing: { prompt: "0.00000015", completion: "0.0000006" } },
+  ] }) });
+  expect(await openRouterKeyModels()).toEqual(["openai/gpt-6.1-terra", "mistralai/mistral-small-2603"]);
+  expect(invoke).toHaveBeenCalledWith("proxy_request", { request: expect.objectContaining({
+    url: OPENROUTER_KEY_MODELS_URL, method: "GET", headers: { Authorization: "Bearer fixture-key" } }) });
+  invoke.mockResolvedValue({ status: 403, body: "{}" });
+  expect(await openRouterKeyModels()).toEqual([]);
+  loadCredential.mockResolvedValue(null);
+  invoke.mockClear();
+  expect(await openRouterKeyModels()).toEqual([]);
+  expect(invoke).not.toHaveBeenCalled();
+  loadCredential.mockRejectedValue(new Error("no store"));
+  expect(await openRouterKeyModels()).toEqual([]);
 });

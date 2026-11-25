@@ -54,14 +54,25 @@ final class SuggestedModelsTests: XCTestCase {
         let choices = SuggestedModels.choices(for: .openRouter, current: "", available: prices.keys.sorted(), prices: prices)
         XCTAssertTrue(choices.contains("vendor/cheap"))
         XCTAssertFalse(choices.contains("vendor/costly"))
-        XCTAssertEqual(choices.first, "mistralai/mistral-large-4-0")
+        // The loaded list holds no suggestion, so the key may use none of them.
+        XCTAssertEqual(choices, ["vendor/cheap"])
+    }
+
+    func testListedModelsOfAnOpenRouterKeyAreAllChoices() {
+        let allowed = ["anthropic/claude-haiku-5.5", "anthropic/claude-sonnet-5.5", "mistralai/mistral-large-4-0", "mistralai/mistral-medium-3-5",
+                       "mistralai/mistral-small-2603", "openai/gpt-6-luna", "openai/gpt-6-sol", "openai/gpt-6.1-sol", "openai/gpt-6.1-terra"]
+        let choices = SuggestedModels.choices(for: .openRouter, current: "", available: allowed)
+        XCTAssertEqual(Set(choices), Set(allowed))
+        XCTAssertEqual(Array(choices.prefix(3)), ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-6.1-terra"])
+        XCTAssertEqual(SuggestedModels.choices(for: .openRouter, current: "", available: ["mistralai/mistral-small-2603"]), ["mistralai/mistral-small-2603"])
+        for model in allowed { XCTAssertTrue(SuggestedModels.isAllowed(model, provider: .openRouter), model) }
     }
 
     /// Ids from the routed provider's public model list (November 2026), kept here so the test needs no network.
     private static let routedListFixture: Set<String> = [
         "mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "anthropic/claude-haiku-5.5",
         "anthropic/claude-opus-5.5", "anthropic/claude-fable-5.2", "openai/gpt-5.6-terra",
-        "openai/gpt-5.6-luna", "openai/gpt-5.6-sol",
+        "openai/gpt-5.6-luna", "openai/gpt-5.6-sol", "openai/gpt-6.1-terra",
     ]
 
     func testSuggestedRoutedIdsExistInTheProviderList() {

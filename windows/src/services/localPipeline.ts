@@ -14,7 +14,7 @@ import { extractTitle } from "./titleExtractor";
 import { getQuickNote, exportWithOwnNotes, getRecordingIdentity, linkRecordingIdentity } from "./quickNotes";
 import { hasUsableNotule, hasUsableTranscription } from "./notuleValidation";
 import { useTaskHistory } from "./taskHistory";
-import { mask } from "./appLog";
+import { log, mask } from "./appLog";
 import { runInBackground } from "./contextSuggestions";
 import { effectiveDetailLevel } from "./notuleDetailLevel";
 import { enrichProfile } from "./profileTemplates";
@@ -246,7 +246,9 @@ export async function processLocally(
         msg += ". Het concept kon niet worden bewaard. De transcriptie en opname zijn niet vervangen.";
       }
     }
-    console.error("[LocalPipeline] Failed:", mask(msg));
+    // Straight to the log with one mask: via console.error the forwarder masked the masked value again, which made
+    // the hash impossible to match against a known message (TV-000024). The message itself stays out of the console.
+    log.error("LocalPipeline", `Failed: ${mask(msg)}`);
     updateBackgroundTask(taskId, { status: "failed", error_message: msg });
   } finally {
     unregisterAbortController(taskId);

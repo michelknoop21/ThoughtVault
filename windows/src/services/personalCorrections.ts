@@ -117,7 +117,8 @@ export function correctText(text: string, entries: PersonalCorrection[], profile
   const entity = "&(?:#\\d+|#x[\\da-f]+|[a-z]+);";
   const url = "(?:https?:\\/\\/|www\\.)[^\\s<>]+";
   const email = "[\\p{L}\\p{N}._%+-]+@[\\p{L}\\p{N}.-]+\\.[\\p{L}]{2,}";
-  const host = "(?<![\\p{L}\\p{N}_@./-])(?:[\\p{L}\\p{N}][\\p{L}\\p{N}-]*\\.)+[\\p{L}]{2,}(?![\\p{L}\\p{N}_@-])";
+  // A hyphen may follow ("secure.yinga.nl-fix"); it is not part of the host name.
+  const host = "(?<![\\p{L}\\p{N}_@./-])(?:[\\p{L}\\p{N}][\\p{L}\\p{N}-]*\\.)+[\\p{L}]{2,}(?![\\p{L}\\p{N}_@])";
   const variants = word([...replacements.keys()]), all = word([...new Set([...replacements.keys(), ...terms.keys()])]);
   const pattern = new RegExp([entity, url, email, host, "\\x60[^\\x60]*\\x60", variants].filter(Boolean).join("|"), "giu");
   const innerVariants = new RegExp([entity, variants].filter(Boolean).join("|"), "giu");

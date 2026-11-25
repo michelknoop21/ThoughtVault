@@ -23,6 +23,12 @@ export const KNOWN_PRICES: Record<string, ModelPrice> = {
   "gpt-5.6-terra": { input: 2, output: 12 },
   "gpt-5.6-sol": { input: 4, output: 20 },
   "mistral-large-4-0": { input: 0.7, output: 2.1 },
+  "mistral-medium-3-5": { input: 1.5, output: 7.5 },
+  "mistral-small-2603": { input: 0.15, output: 0.6 },
+  "gpt-6-luna": { input: 0.1, output: 0.5 },
+  "gpt-6-sol": { input: 2, output: 10 },
+  "gpt-6.1-terra": { input: 1, output: 5 },
+  "gpt-6.1-sol": { input: 2, output: 10 },
 };
 
 /** Provider as the model choice sees it: the hosted flat-rate endpoint counts as its own provider. */
@@ -34,7 +40,7 @@ export function modelProvider(settings: Pick<AppSettings, "notulen_provider" | "
 }
 
 const SUGGESTED: Partial<Record<ModelProvider, string[]>> = {
-  openrouter: ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-5.6-terra"],
+  openrouter: ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-6.1-terra"],
   anthropic: ["claude-sonnet-5-5", "claude-haiku-5-5"],
   openai: ["gpt-5.6-terra", "gpt-5.6-luna"],
   "ollama-cloud": ["mistral-large-4", "gpt-oss:120b"],
@@ -65,7 +71,9 @@ export function isWithinCap(price: ModelPrice): boolean {
 /** Metered providers only allow a model with a known price within the cap; local and flat-rate ones are free. */
 export function isModelAllowed(model: string, provider: ModelProvider, reportedPrice?: ModelPrice): boolean {
   if (!isMetered(provider)) return true;
-  const prices = [reportedPrice, priceOf(model)].filter((price): price is ModelPrice => !!price);
+  // OpenRouter reports its prices with the model list; they count like macOS's remembered prices.
+  const listed = provider === "openrouter" ? rememberedPrice(model, OPENROUTER_API_URL) : undefined;
+  const prices = [reportedPrice, priceOf(model), listed].filter((price): price is ModelPrice => !!price);
   return prices.length > 0 && prices.every(isWithinCap);
 }
 
@@ -90,14 +98,18 @@ export function capNotice(model: string, provider: ModelProvider): string | unde
  * providers already replaced an unknown model with a suggestion (usableModel).
  */
 export function modelRefusal(model: string, baseURL?: string): string | undefined {
-  const prices = [priceOf(model), baseURL ? reportedPrice(model, baseURL) : undefined];
+  const prices = [priceOf(model), baseURL ? rememberedPrice(model, baseURL) : undefined];
   return prices.some(price => price && !isWithinCap(price))
     ? `${model} valt boven de prijsgrens en is niet gebruikt. Kies een goedkoper model bij Instellingen > Verwerking.` : undefined;
 }
 
-/** Picker choices: suggestions first, then the current and listed models that pass the cap. */
+/**
+ * Picker choices: suggestions first, then the current and listed models that pass the cap. OpenRouter lists
+ * only what the key may use, so once its list is loaded a suggestion it does not contain is left out.
+ */
 export function modelChoices(provider: ModelProvider, current: string, available: string[] = []): string[] {
-  return [...new Set([...suggestedModels(provider), current, ...available])]
+  const suggestions = provider === "openrouter" && available.length ? suggestedModels(provider).filter(model => available.includes(model)) : suggestedModels(provider);
+  return [...new Set([...suggestions, current, ...available])]
     .filter(model => model && isModelAllowed(model, provider));
 }
 
@@ -146,7 +158,10 @@ export function rememberReportedPrices(baseURL: string, rows: unknown[], now = D
   reportedPrices.set(priceScope(baseURL), { at: now, prices });
 }
 
-function reportedPrice(model: string, baseURL: string): ModelPrice | undefined {
+/** OpenRouter's API base; its reported prices are stored under this scope. */
+export const OPENROUTER_API_URL = "https://openrouter.ai/api/v1";
+
+function rememberedPrice(model: string, baseURL: string): ModelPrice | undefined {
   const entry = reportedPrices.get(priceScope(baseURL));
   return entry && Date.now() - entry.at < 7 * 86400_000 ? entry.prices.get(model) : undefined;
 }

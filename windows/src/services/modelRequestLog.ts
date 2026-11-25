@@ -83,7 +83,7 @@ export async function logModelRequest<T>(trace: RequestTrace, run: () => Promise
   }
 }
 
-/** The request got HTTP 429 and is sent again after `waitMs`. */
-export function logRetry(trace: RequestTrace, waitMs: number): void {
-  log.info("ModelRequest", `model request retry step=${logLabel(trace.step)} after HTTP 429 wait_ms=${Math.round(waitMs)}`);
+/** The request got HTTP 429, or lost its connection, and is sent again after `waitMs`. */
+export function logRetry(trace: RequestTrace, waitMs: number, reason = "HTTP 429"): void {
+  log.info("ModelRequest", `model request retry step=${logLabel(trace.step)} after ${reason} wait_ms=${Math.round(waitMs)}`);
 }

@@ -146,6 +146,8 @@ struct HostedProviderConfig: View {
             guard !loaded else { return }
             loaded = true
             apiKey = KeychainService.shared.load(for: keychainKey) ?? ""
+            // OpenRouter limits models per key; without the list only the suggestions would show.
+            if isOpenRouter && hasKey { Task { await test() } }
         }
     }
 

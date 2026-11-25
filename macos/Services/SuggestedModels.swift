@@ -33,12 +33,18 @@ enum SuggestedModels {
         "gpt-5.6-terra": ModelPrice(input: 2, output: 12),
         "gpt-5.6-sol": ModelPrice(input: 4, output: 20),
         "mistral-large-4-0": ModelPrice(input: 0.70, output: 2.10),
+        "mistral-medium-3-5": ModelPrice(input: 1.50, output: 7.50),
+        "mistral-small-2603": ModelPrice(input: 0.15, output: 0.60),
+        "gpt-6-luna": ModelPrice(input: 0.10, output: 0.50),
+        "gpt-6-sol": ModelPrice(input: 2, output: 10),
+        "gpt-6.1-terra": ModelPrice(input: 1, output: 5),
+        "gpt-6.1-sol": ModelPrice(input: 2, output: 10),
     ]
 
     /// The short list shown first in every model picker.
     static func suggested(for provider: NotulenProvider) -> [String] {
         switch provider {
-        case .openRouter: return ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-5.6-terra"]
+        case .openRouter: return ["mistralai/mistral-large-4-0", "anthropic/claude-sonnet-5.5", "openai/gpt-6.1-terra"]
         case .anthropic: return ["claude-sonnet-5-5", "claude-haiku-5-5"]
         case .openAI: return ["gpt-5.6-terra", "gpt-5.6-luna"]
         case .ollamaCloud: return ["mistral-large-4", "gpt-oss:120b"]
@@ -74,11 +80,13 @@ enum SuggestedModels {
     }
 
     /// Picker choices: suggestions first, then the current and listed models that pass the cap.
-    /// `prices` holds what the provider reported for its listed models.
+    /// `prices` holds what the provider reported for its listed models. OpenRouter lists only what the
+    /// key may use, so once its list is loaded a suggestion it does not contain is left out.
     static func choices(for provider: NotulenProvider, current: String, available: [String] = [],
                         prices: [String: ModelPrice] = [:]) -> [String] {
         var seen = Set<String>()
-        return (suggested(for: provider) + [current] + available).filter {
+        let suggestions = provider == .openRouter && !available.isEmpty ? suggested(for: provider).filter(available.contains) : suggested(for: provider)
+        return (suggestions + [current] + available).filter {
             !$0.isEmpty && isAllowed($0, provider: provider, reportedPrice: prices[$0]) && seen.insert($0).inserted
         }
     }
@@ -92,8 +100,9 @@ enum SuggestedModels {
     }
 
     /// The models a `/models` endpoint lists with the price it reports for each; nil when unreachable.
+    /// OpenRouter's `/models/user` lists only what the key may use under the workspace's model access.
     static func fetchReportedPrices(provider: NotulenProvider, baseURL: String, apiKey: String) async -> [String: ModelPrice]? {
-        guard let url = URL(string: baseURL + "/models") else { return nil }
+        guard let url = URL(string: baseURL + (provider == .openRouter ? "/models/user" : "/models")) else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")

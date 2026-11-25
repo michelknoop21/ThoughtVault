@@ -62,7 +62,7 @@ struct NotuleGenerator: Sendable {
                              onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> Run {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
         // Only the essential constraints are mandatory, for the draft and for the audit: a plain negation in
-        // spoken text is usually small talk, and listing it made the model quote it word for word (DEC-080).
+        // spoken text is usually small talk, and listing it made the model quote it word for word (DEC-082).
         let constraints = NotuleAudit.essentialConstraints(source)
 
         // NotuleAudit turns every request error into an audit message; remember cancellation separately.

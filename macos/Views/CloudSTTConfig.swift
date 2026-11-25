@@ -13,8 +13,11 @@ struct CloudSTTConfig: View {
     @AppStorage(CloudSTTProvider.baseURLDefaultsKey) private var baseURL = ""
     @State private var apiKey = ""
     @State private var saveTask: Task<Void, Never>?
+    /// Transcription models the OpenRouter key may use; empty until loaded.
+    @State private var listed: [String] = []
 
     private var provider: CloudSTTProvider { CloudSTTProvider(rawValue: providerRaw) ?? .openai }
+    private var choices: [String] { provider.choices(listed: listed) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: TS.Spacing.sm) {
@@ -43,7 +46,8 @@ struct CloudSTTConfig: View {
                         .autocorrectionDisabled()
                 } else {
                     Picker("Model", selection: $model) {
-                        ForEach(provider.models, id: \.self) { Text($0).tag($0) }
+                        if !choices.contains(model) { Text(model).tag(model) }
+                        ForEach(choices, id: \.self) { Text($0).tag($0) }
                     }
                     .labelsHidden()
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -67,13 +71,24 @@ struct CloudSTTConfig: View {
         }
         .onAppear(perform: syncProvider)
         .onChange(of: providerRaw) { _, _ in syncProvider() }
+        .task(id: providerRaw) { await loadList() }
     }
 
     /// Loads the provider's key and keeps the model valid for its preset list.
     private func syncProvider() {
         saveTask?.cancel()
+        listed = []
         apiKey = KeychainService.shared.load(for: provider.keychainKey) ?? ""
-        if !provider.models.isEmpty, !provider.models.contains(model) { model = provider.models[0] }
+        if !provider.keeps(model), let first = provider.models.first { model = first }
+    }
+
+    /// OpenRouter limits transcription models per key; once its list is known the model must be on it.
+    private func loadList() async {
+        guard provider == .openrouter else { return }
+        let list = await CloudSTTProvider.openRouterTranscriptionModels(apiKey: KeychainService.shared.load(for: provider.keychainKey) ?? "")
+        guard provider == .openrouter else { return }
+        listed = list
+        if !list.isEmpty, !list.contains(model), let first = choices.first { model = first }
     }
 
     /// Waits for a pause in typing so partial keys never reach the Keychain.
@@ -92,5 +107,6 @@ struct CloudSTTConfig: View {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed != (KeychainService.shared.load(for: key) ?? "") else { return }
         if trimmed.isEmpty { KeychainService.shared.delete(for: key) } else { try? KeychainService.shared.save(trimmed, for: key) }
+        Task { await loadList() }
     }
 }

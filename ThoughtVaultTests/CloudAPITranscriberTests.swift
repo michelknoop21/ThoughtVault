@@ -95,4 +95,21 @@ final class CloudAPITranscriberTests: XCTestCase {
         let reply = try await transcriber().upload(audio: Data("RIFF".utf8), prompt: nil)
         XCTAssertEqual(reply.pieces, [])
     }
+
+    func testOpenRouterTranscriptionListReplacesThePresets() {
+        let body = Data(#"{"data":[{"id":"mistralai/voxtral-small-transcribe-3-0","architecture":{"output_modalities":["transcription"]}},{"id":"openai/gpt-4o-transcribe","architecture":{"output_modalities":["transcription"]}},{"id":"openai/gpt-6.1-terra","architecture":{"output_modalities":["text"]}},{"id":"deepgram/nova-3"}]}"#.utf8)
+        let listed = CloudSTTProvider.transcriptionModelIds(body)
+        XCTAssertEqual(listed, ["mistralai/voxtral-small-transcribe-3-0", "openai/gpt-4o-transcribe", "deepgram/nova-3"])
+        XCTAssertTrue(CloudSTTProvider.transcriptionModelIds(Data("geen json".utf8)).isEmpty)
+        // Presets the key may use come first; a preset it may not use is left out.
+        XCTAssertEqual(CloudSTTProvider.openrouter.choices(listed: listed),
+                       ["openai/gpt-4o-transcribe", "deepgram/nova-3", "mistralai/voxtral-small-transcribe-3-0"])
+        XCTAssertEqual(CloudSTTProvider.openrouter.choices(listed: []), CloudSTTProvider.openrouter.models)
+        XCTAssertEqual(CloudSTTProvider.groq.choices(listed: listed), CloudSTTProvider.groq.models)
+        // A routed id is kept until the key's list is known; a bare OpenAI id is not.
+        XCTAssertTrue(CloudSTTProvider.openrouter.keeps("mistralai/voxtral-small-transcribe-3-0"))
+        XCTAssertFalse(CloudSTTProvider.openrouter.keeps("gpt-4o-transcribe"))
+        XCTAssertFalse(CloudSTTProvider.openai.keeps("openai/gpt-4o-transcribe"))
+        XCTAssertTrue(CloudSTTProvider.custom.keeps("whatever"))
+    }
 }

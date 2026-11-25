@@ -94,6 +94,11 @@ Bekende beperkingen:
 
 Een nieuwe tool komt eerst in `tools.json` en daarna op beide platforms; de contracttest faalt zolang een kant ontbreekt. Ondersteunde protocolversies: 2026-07-28 (via `server/discover`) en 2025-11-25, 2025-06-18, 2025-03-26 (via `initialize`).
 
+Getest:
+
+- macOS: unittests (`McpRouterTests`), het script hieronder met `--write` tegen een testbuild in een eigen container, en een echte vraag via Claude Code.
+- Windows: 1.0.346 (Dev-build) op een Parallels-VM, 25 november. De schakelaars in **Instellingen → AI-koppeling** zetten de koppeling aan en uit (`mcp.json` verschijnt en verdwijnt). Het script met `--write` slaagde via `ThoughtVault.exe --mcp`, en beide kopieerknoppen zetten het pad naar de exe met `--mcp` op het klembord. Details in [WINDOWS-PILOT.md](WINDOWS-PILOT.md#ai-koppeling-mcp).
+
 Controle na een wijziging, met ThoughtVault open en de koppeling aan in een testinstallatie:
 
 ```sh

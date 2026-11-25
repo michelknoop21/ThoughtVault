@@ -137,7 +137,7 @@ final class NotuleAuditTests: XCTestCase {
         XCTAssertFalse(calls[0].user.contains("Controle en belafspraak"))
     }
 
-    // "judges the rest when the source check warned and a transcription sentence is unclear" (DEC-081)
+    // "judges the rest when the source check warned and a transcription sentence is unclear" (DEC-083)
     func testUnclearSentenceIsSkippedWhenTheSourceCheckWarned() async throws {
         let source = "Sam controleert vrijdag. Ja dat ook niet zeg maar. Joris belt maandag."
         let html = "<p>Sam voert vrijdag de controle uit. Joris belt maandag.</p>"

@@ -1,5 +1,5 @@
 {
-  "note": "Draft request of LLMService.generateNotulen at detail level volledig. Re-recorded for DEC-080: only essential constraints are listed, under a heading that forbids quoting.",
+  "note": "Draft request of LLMService.generateNotulen at detail level volledig. Re-recorded for DEC-082: only essential constraints are listed, under a heading that forbids quoting.",
   "transcription": "Sam belt vrijdag de klant over de planning. We besluiten dat het budget 12.450 euro wordt. Er gaan geen klantgegevens naar leveranciers. Ik denk niet dat het morgen regent. De vorige afspraak vervalt.",
   "profile": {
     "id": "detail-fixture",

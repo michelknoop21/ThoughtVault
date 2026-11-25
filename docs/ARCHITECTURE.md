@@ -105,7 +105,7 @@ De macOS-app maakt notulen zelf; de server ziet de transcriptie niet. `LLMServic
 
 Boven de drempel wordt de transcriptie eerst per stuk samengevat en wordt de notule uit die samenvattingen gemaakt. Daarbij gaan datums en bedragen verloren, dus de drempel moet zo hoog als de context toelaat.
 
-Promptopbouw: systeemprompt = `commonRules` van het profiel. Usermessage = `buildNotuleUserContent()`, die `{{OUTPUT_TEMPLATE}}` en daarna `{{TRANSCRIPTION}}` in de profielprompt invult en een korte regel met inhoudsregels toevoegt. Daarna volgt een genummerd blok met uitspraken uit de transcriptie die een getal, besluit of voorwaarde bevatten (`NotuleAudit.essentialConstraints`); het model neemt de betekenis over en citeert ze niet (DEC-080). Windows doet hetzelfde in `buildUserContent()` (`windows/src/services/llm.ts`) en chunkt niet.
+Promptopbouw: systeemprompt = `commonRules` van het profiel. Usermessage = `buildNotuleUserContent()`, die `{{OUTPUT_TEMPLATE}}` en daarna `{{TRANSCRIPTION}}` in de profielprompt invult en een korte regel met inhoudsregels toevoegt. Daarna volgt een genummerd blok met uitspraken uit de transcriptie die een getal, besluit of voorwaarde bevatten (`NotuleAudit.essentialConstraints`); het model neemt de betekenis over en citeert ze niet (DEC-082). Windows doet hetzelfde in `buildUserContent()` (`windows/src/services/llm.ts`) en chunkt niet.
 
 Profielen hebben één bron: `data/profileBlueprints.json`. `scripts/generate_profile_templates.py` schrijft daaruit `macos/Resources/ProfileTemplates.json`, `windows/src/data/profileTemplates.json` en, als die checkout ernaast staat, de legacy backendkopie. Een profiel kan een eigen `template` meegeven; anders wordt er een uit `sections` gemaakt. Zie DEC-060.
 

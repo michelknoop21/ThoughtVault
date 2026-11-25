@@ -469,7 +469,7 @@ export class LLMService {
       throw new Error("Cloud provider moet via de server worden verwerkt");
     };
     // Only the essential constraints are mandatory, for the draft and for the audit: a plain negation in spoken
-    // text is usually small talk, and listing it made the model quote it word for word (DEC-080).
+    // text is usually small talk, and listing it made the model quote it word for word (DEC-082).
     const source = correctText(transcription, corrections, profile.id);
     const constraints = essentialConstraints(source);
     const constraintPrompt = constraints.length

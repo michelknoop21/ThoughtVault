@@ -8,12 +8,12 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
-## DEC-081: De inhoudscontrole beoordeelt de rest als de bron al onduidelijk is gemeld
+## DEC-083: De inhoudscontrole beoordeelt de rest als de bron al onduidelijk is gemeld
 
 **Date:** 2026-11-25
 **Status:** Implemented on `feat/notule-wispr-vorm` (akkoord Michel, 25 november 2026)
 
-**Context:** In 22 van 22 gemeten runs (DEC-080) eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren of alles in de notule klopt" kreeg. De controle vraagt het model om één vlag `uncertain` voor de hele bron en gooide bij `true` alle oordelen per zin weg. De ruwe oordelen laten zien waarom dat bij spraakherkenning altijd gebeurt: in de klantdemo markeerde het model 151 van de 271 bronzinnen als onverstaanbaar, in stand-up A 26 van de 115. De broncontrole (DEC-062) had de gebruiker daar op dat moment al voor gewaarschuwd.
+**Context:** In 22 van 22 gemeten runs (DEC-082) eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren of alles in de notule klopt" kreeg. De controle vraagt het model om één vlag `uncertain` voor de hele bron en gooide bij `true` alle oordelen per zin weg. De ruwe oordelen laten zien waarom dat bij spraakherkenning altijd gebeurt: in de klantdemo markeerde het model 151 van de 271 bronzinnen als onverstaanbaar, in stand-up A 26 van de 115. De broncontrole (DEC-062) had de gebruiker daar op dat moment al voor gewaarschuwd.
 
 **Decision:** Alleen wanneer de broncontrole al waarschuwde (`sourceUnclear`), in het korte pad en in de dekkingsstap van het lange pad:
 1. `uncertain: true` is geen einde meer. De vlag moet nog steeds een boolean zijn.
@@ -42,7 +42,7 @@ Zonder waarschuwing van de broncontrole zijn punt 1, 2, 3, 6 en 8 ongewijzigd. D
 
 ---
 
-## DEC-080: Notule in korte regels, bronzinnen ingeperkt en niet meer geciteerd
+## DEC-082: Notule in korte regels, bronzinnen ingeperkt en niet meer geciteerd
 
 **Date:** 2026-11-25
 **Status:** Implemented on `feat/notule-wispr-vorm`; macOS-testset nog niet gedraaid
@@ -70,8 +70,24 @@ Een letterlijke zin telt hier vanaf zes woorden. Van de 18 feiten van het schade
 - Een verbod zonder getal of besluitwoord ("Er gaan geen klantgegevens naar leveranciers") staat niet meer in de lijst. De algemene regel over ontkenningen en verboden blijft in de opdracht, en op Volledig meldt de controle een ontbrekende bronzin nog steeds.
 - Wie voor Standaard zelf Volledig koos, houdt dat niveau; alleen de standaard van het profiel verandert.
 - De andere profielen delen `commonRules` en het blok, maar zijn niet per profiel gemeten.
-- In alle 22 runs waarin de reden is vastgelegd, eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren" kreeg. De controle zet één vlag voor de hele bron zodra een bronzin onverstaanbaar is, en gooit dan alle oordelen weg. Bij tekst uit spraakherkenning is dat altijd het geval. DEC-081 pakt dat aan.
+- In alle 22 runs waarin de reden is vastgelegd, eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren" kreeg. De controle zet één vlag voor de hele bron zodra een bronzin onverstaanbaar is, en gooit dan alle oordelen weg. Bij tekst uit spraakherkenning is dat altijd het geval. DEC-083 pakt dat aan.
 - De cijfers zijn één run per gesprek; een verschil van één feit valt binnen de spreiding.
+
+---
+
+## DEC-080: OpenRouter-transcriptiemodellen per sleutel
+
+**Date:** 2026-11-25
+**Status:** Accepted
+
+**Context:** In de Thoughtvault-workspace op OpenRouter zijn meer transcriptiemodellen toegestaan, maar de cloud-transcriptie (DEC-074) toonde voor OpenRouter een vaste lijst van twee: `openai/gpt-4o-transcribe` en `openai/whisper-large-v3`. OpenRouter heeft 30 transcriptiemodellen (25 november 2026), allemaal op hetzelfde `/api/v1/audio/transcriptions`-endpoint dat de app al gebruikt.
+
+**Decision:**
+1. Bij OpenRouter met een sleutel vraagt de app `GET /api/v1/models/user?output_modalities=transcription`: alleen de transcriptiemodellen die de sleutel mag gebruiken. Zonder sleutel of antwoord blijft de vaste lijst staan. De notulekeuze (DEC-078) vraagt hetzelfde endpoint zonder die parameter en krijgt alleen tekstmodellen.
+2. De keuzelijst toont dan eerst de vaste modellen die op de lijst staan en daarna de rest op alfabet. Staat het gekozen model niet op de lijst van de sleutel, dan kiest de app het eerste model uit de lijst.
+3. Een gekozen OpenRouter-model (`vendor/model`) blijft staan zolang de lijst nog niet geladen is. Een model zonder `/`, bijvoorbeeld na overstappen van OpenAI, wordt het eerste vaste model.
+
+**Consequences:** Er geldt geen prijsgrens voor transcriptiemodellen, net als in DEC-074. Op Windows verschijnt de lijst van een nieuw ingevulde sleutel pas na opnieuw openen van de instelling; macOS laadt hem opnieuw na het opslaan van de sleutel.
 
 ---
 

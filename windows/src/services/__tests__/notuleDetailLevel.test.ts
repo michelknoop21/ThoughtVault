@@ -110,7 +110,7 @@ describe("audit with minor", () => {
 });
 
 describe("generateNotulen", () => {
-  // `fixture`: the volledig draft of this code (draft-volledig.json), re-recorded for DEC-080.
+  // `fixture`: the volledig draft of this code (draft-volledig.json), re-recorded for DEC-082.
   const html = "<p>Sam belt vrijdag de klant over de planning en het budget wordt 12.450 euro.</p>";
   const drafts: { system: string; user: string }[] = [];
 

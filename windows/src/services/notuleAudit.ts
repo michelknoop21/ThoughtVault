@@ -149,7 +149,7 @@ export async function auditNotule(
     throw new Error("De opmaak kan inhoud verbergen; beoordeel het concept");
   }
   // The title names the purpose or outcome in a few words (profile rule); it is a label for the sentences
-  // below, which are the ones checked. As a claim of its own the long path reported it as unsupported (DEC-081).
+  // below, which are the ones checked. As a claim of its own the long path reported it as unsupported (DEC-083).
   container.querySelectorAll("h1").forEach(title => title.remove());
   const noteText = htmlToPlainText(container.innerHTML);
   if (!normalize(source) || !normalize(noteText)) throw new Error("De bron of notule bevat geen controleerbare tekst");
@@ -187,7 +187,7 @@ Geef precies één item voor ELKE aangeleverde bron- en notule-ID. Bronstatus: c
     const evidence = noteChecks.filter(note => note.status === "supported" && note.evidence.includes(entry.id ?? "")).map(note => note.id);
     // A covered source that no supported notule sentence cites is not proven. At volledig it is missing, as in
     // the long path (DEC-065); below volledig it is a side issue, which `conclude` refuses for a required
-    // sentence or an amount (DEC-081).
+    // sentence or an amount (DEC-083).
     const unproven = detailLevel === "volledig" ? "missing" : "minor";
     return { ...entry, status: entry.status === "covered" && !evidence.length ? unproven : entry.status, evidence };
   }), sourceUnits, noteUnits, sourceStatuses(detailLevel));
@@ -195,7 +195,7 @@ Geef precies één item voor ELKE aangeleverde bron- en notule-ID. Bronstatus: c
 }
 
 /** Whether the reply is a verdict to work with: `uncertain` exactly false, or true when the source check
- * already warned the user (DEC-081). The sentences the model could not follow are then marked one by one. */
+ * already warned the user (DEC-083). The sentences the model could not follow are then marked one by one. */
 function decided(result: unknown, sourceUnclear: boolean): boolean {
   if (!result || typeof result !== "object") return false;
   const uncertain = (result as { uncertain?: unknown }).uncertain;
@@ -206,7 +206,7 @@ function decided(result: unknown, sourceUnclear: boolean): boolean {
  * minor only reaches here below volledig (verdicts refuses it otherwise) and only passes for a transcription
  * sentence that is not required and names no amount; any other minor counts as missing.
  * `sourceUnclear`: the source check already warned, so a transcription sentence the model could not follow is
- * skipped and the rest is still judged (DEC-081). A user note is never skipped. */
+ * skipped and the rest is still judged (DEC-083). A user note is never skipped. */
 function conclude(sourceChecks: Verdict[], noteChecks: Verdict[], sourceUnits: Unit[], noteUnits: Unit[], requiredSentences: string[],
   sourceUnclear = false): void {
   const skipped = (item: Verdict) => sourceUnclear && item.status === "uncertain" && item.id.startsWith("T");
@@ -239,7 +239,7 @@ function conclude(sourceChecks: Verdict[], noteChecks: Verdict[], sourceUnits: U
 }
 
 /** When the model could not follow more than half of the transcription, one concrete line about a single
- * sentence would suggest the rest was checked. The general line is the honest one then (DEC-081). */
+ * sentence would suggest the rest was checked. The general line is the honest one then (DEC-083). */
 function rejectMostlyUnclear(sourceChecks: Verdict[]): void {
   const transcript = sourceChecks.filter(item => item.id.startsWith("T"));
   if (transcript.filter(item => item.status === "uncertain").length * 2 > transcript.length) {
@@ -310,7 +310,7 @@ async function auditLong(sourceUnits: Unit[], noteUnits: Unit[], request: Reques
       { kind: "coverage", index: index + 1, total: parts.length }, sourceUnclear);
     // Only a covered source proves anything. A model that marks a sentence missing or uncertain and still
     // names a notule sentence is ignored on that point; rejecting the whole check for it left a 56-minute
-    // meeting without any verdict (DEC-081).
+    // meeting without any verdict (DEC-083).
     return verdicts(audit.source, units, noteUnits, sourceStatuses(detailLevel))
       .map(check => check.status === "covered" ? check : { ...check, evidence: [] });
   }, AUDIT_CONCURRENCY, done => onProgress({ kind: "coverage", index: done, total: parts.length }));
@@ -390,7 +390,7 @@ async function ask(request: Request, system: string, user: string, step: ModelSt
 }
 
 /** `sourceUnclear`: the source check already warned. A sentence no source cites then proves nothing, because
- * the sources the model could not follow cite nothing; it counts as not judged, like an uncertain one (DEC-081). */
+ * the sources the model could not follow cite nothing; it counts as not judged, like an uncertain one (DEC-083). */
 async function runCheck(check: NoteCheck, request: Request, step: ModelStep, sourceUnclear = false): Promise<Verdict[]> {
   let checked: Verdict[];
   if (!check.evidence.length) {

@@ -27,7 +27,7 @@ it("identifies a contradictory note claim for manual review without accepting th
   expect(request).toHaveBeenCalledTimes(1);
 });
 
-// DEC-081: the source check already warned, so a sentence the model could not follow is skipped, not fatal.
+// DEC-083: the source check already warned, so a sentence the model could not follow is skipped, not fatal.
 it("judges the rest when the source check warned and a transcription sentence is unclear", async () => {
   const source = "Sam controleert vrijdag. Ja dat ook niet zeg maar. Joris belt maandag.";
   const unclear = (extra?: (report: ReturnType<typeof complete>) => void) => fixture(report => {

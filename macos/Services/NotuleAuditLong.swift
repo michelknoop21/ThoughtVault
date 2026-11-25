@@ -69,7 +69,7 @@ extension NotuleAudit {
                                           statuses: detailLevel.sourceStatuses)
             // Only a covered source proves anything. A model that marks a sentence missing or uncertain and still
             // names a notule sentence is ignored on that point; rejecting the whole check for it left a 56-minute
-            // meeting without any verdict (DEC-081).
+            // meeting without any verdict (DEC-083).
             return partChecks.map { $0.status == "covered" ? $0 : Verdict(id: $0.id, status: $0.status, evidence: []) }
         }
         var coverage: [String: Verdict] = [:]
@@ -158,7 +158,7 @@ extension NotuleAudit {
     }
 
     /// `sourceUnclear`: the source check already warned. A sentence no source cites then proves nothing, because
-    /// the sources the model could not follow cite nothing; it counts as not judged, like an uncertain one (DEC-081).
+    /// the sources the model could not follow cite nothing; it counts as not judged, like an uncertain one (DEC-083).
     private static func run(_ check: NoteCheck, request: AuditRequest, sourceUnclear: Bool = false) async throws -> [Verdict] {
         var checked: [Verdict]
         if check.evidence.isEmpty {

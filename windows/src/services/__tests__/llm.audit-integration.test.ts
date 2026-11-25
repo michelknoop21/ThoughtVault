@@ -107,7 +107,7 @@ it("keeps the notule with both warnings when the notule audit cannot understand 
     const user = JSON.parse(args.request.body).messages.at(-1).content;
     if (user.startsWith("Broncontrole")) return answer(JSON.stringify({ uncertain: true }));
     if (user.startsWith("Inhoudsaudit")) {
-      // DEC-081: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
+      // DEC-083: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
       const report = JSON.parse(auditFixture(user)); report.source[0].status = "uncertain";
       return answer(JSON.stringify({ ...report, uncertain: true }));
     }

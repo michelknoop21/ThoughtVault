@@ -77,7 +77,7 @@ it("still reports a missing prohibition that is not listed for the draft", async
   });
   expect(await LLMService.generateNotulen(raw, profile)).toContain("<h2>Even nalopen</h2>");
   const prompt = JSON.parse(invoke.mock.calls[0][1].request.body).messages[1].content as string;
-  // DEC-080: the plain prohibition is no longer listed for the draft; the audit above still reports it as missing.
+  // DEC-082: the plain prohibition is no longer listed for the draft; the audit above still reports it as missing.
   expect(prompt).toContain("\n1. Niet 15.000 euro.");
   expect(prompt).not.toContain("2. Geen klantgegevens naar externe diensten.");
 });

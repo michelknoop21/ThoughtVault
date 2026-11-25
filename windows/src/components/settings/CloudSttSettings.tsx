@@ -1,5 +1,7 @@
-import { CLOUD_STT_PRESETS, type CloudSttProvider } from "../../types";
+import { useEffect, useState } from "react";
+import { CLOUD_STT_PRESETS, cloudSttChoices, cloudSttKeeps, type CloudSttProvider } from "../../types";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { openRouterKeyModels } from "../../services/openRouterModels";
 import { SettingsField, CredentialField } from "./SettingsFields";
 
 /** Provider, model, base URL and key for the opt-in cloud transcription engine (DEC-074). */
@@ -7,12 +9,27 @@ export function CloudSttSettings() {
   const settings = useSettingsStore();
   const provider = settings.cloud_stt_provider;
   const preset = CLOUD_STT_PRESETS[provider] ?? CLOUD_STT_PRESETS.openai;
+  // OpenRouter limits transcription models per key; without its list only the presets would show.
+  const [listed, setListed] = useState<string[]>([]);
+  const choices = cloudSttChoices(provider, listed);
+  useEffect(() => {
+    setListed([]);
+    if (provider !== "openrouter") return;
+    let current = true;
+    void openRouterKeyModels("transcription").then(models => {
+      if (!current) return;
+      setListed(models);
+      const model = useSettingsStore.getState().cloud_stt_model;
+      if (models.length && !models.includes(model)) settings.updateSettings({ cloud_stt_model: cloudSttChoices("openrouter", models)[0] });
+    });
+    return () => { current = false; };
+  }, [provider]);
 
   function selectProvider(id: CloudSttProvider) {
     const models = CLOUD_STT_PRESETS[id].models;
     settings.updateSettings({
       cloud_stt_provider: id,
-      cloud_stt_model: models.length && !models.includes(settings.cloud_stt_model) ? models[0] : settings.cloud_stt_model,
+      cloud_stt_model: cloudSttKeeps(id, settings.cloud_stt_model) ? settings.cloud_stt_model : models[0] ?? settings.cloud_stt_model,
     });
   }
 
@@ -27,10 +44,11 @@ export function CloudSttSettings() {
         onChange={e => settings.updateSettings({ cloud_stt_base_url: e.target.value })} />
     </SettingsField>}
     <SettingsField label="Model">
-      {preset.models.length
+      {choices.length
         ? <select className="select" aria-label="Transcriptiemodel cloud" style={{ width: "100%" }} value={settings.cloud_stt_model}
             onChange={e => settings.updateSettings({ cloud_stt_model: e.target.value })}>
-            {preset.models.map(m => <option key={m} value={m}>{m}</option>)}
+            {!choices.includes(settings.cloud_stt_model) && <option value={settings.cloud_stt_model}>{settings.cloud_stt_model}</option>}
+            {choices.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         : <input className="input" type="text" aria-label="Transcriptiemodel cloud" placeholder="whisper-1" value={settings.cloud_stt_model}
             onChange={e => settings.updateSettings({ cloud_stt_model: e.target.value })} />}

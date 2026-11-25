@@ -175,7 +175,7 @@ enum NotuleAudit {
             throw NotuleAuditError(message: "De opmaak kan inhoud verbergen; beoordeel het concept")
         }
         // The title names the purpose or outcome in a few words (profile rule); it is a label for the sentences
-        // below, which are the ones checked. As a claim of its own the long path reported it as unsupported (DEC-081).
+        // below, which are the ones checked. As a claim of its own the long path reported it as unsupported (DEC-083).
         let noteText = HTMLPlainText.from(regex(#"<h1(?![A-Za-z0-9_])[^>]*>[\s\S]*?</h1>"#, .caseInsensitive)
             .stringByReplacingMatches(in: markup.html, range: whole(markup.html), withTemplate: ""))
         guard !normalize(source).isEmpty, !normalize(noteText).isEmpty else {
@@ -226,7 +226,7 @@ enum NotuleAudit {
             entry["evidence"] = evidence
             // A covered source that no supported notule sentence cites is not proven. At volledig it is missing,
             // as in the long path (DEC-065); below volledig it is a side issue, which `conclude` refuses for a
-            // required sentence or an amount (DEC-081).
+            // required sentence or an amount (DEC-083).
             if evidence.isEmpty, (entry["status"] as? String).map({ same($0, "covered") }) == true {
                 entry["status"] = detailLevel == .volledig ? "missing" : "minor"
             }
@@ -239,7 +239,7 @@ enum NotuleAudit {
     }
 
     /// Whether the reply is a verdict to work with: `uncertain` exactly false, or true when the source check
-    /// already warned the user (DEC-081). The sentences the model could not follow are then marked one by one.
+    /// already warned the user (DEC-083). The sentences the model could not follow are then marked one by one.
     static func decided(_ audit: [String: Any], sourceUnclear: Bool) -> Bool {
         guard let value = audit["uncertain"], CFGetTypeID(value as CFTypeRef) == CFBooleanGetTypeID() else { return false }
         return (value as? Bool) == false || sourceUnclear
@@ -248,7 +248,7 @@ enum NotuleAudit {
     static let tooLargeMessage = "Deze inhoud is te groot of onvolledig voor betrouwbare controle; beoordeel het concept"
 
     /// When the model could not follow more than half of the transcription, one concrete line about a single
-    /// sentence would suggest the rest was checked. The general line is the honest one then (DEC-081).
+    /// sentence would suggest the rest was checked. The general line is the honest one then (DEC-083).
     static func rejectMostlyUnclear(_ sourceChecks: [Verdict]) throws {
         let transcript = sourceChecks.filter { $0.id.hasPrefix("T") }
         if transcript.filter({ $0.status == "uncertain" }).count * 2 > transcript.count {
@@ -260,7 +260,7 @@ enum NotuleAudit {
     /// `minor` only reaches here below volledig (`verdicts` refuses it otherwise) and only passes for a
     /// transcription sentence that is not required and names no amount; any other `minor` counts as missing.
     /// `sourceUnclear`: the source check already warned, so a transcription sentence the model could not follow
-    /// is skipped and the rest is still judged (DEC-081). A user note is never skipped.
+    /// is skipped and the rest is still judged (DEC-083). A user note is never skipped.
     private static func conclude(sourceChecks: [Verdict], noteChecks: [Verdict], sourceUnits: [Unit], noteUnits: [Unit],
                                  requiredSentences: [String], sourceUnclear: Bool = false) throws {
         func skipped(_ check: Verdict) -> Bool { sourceUnclear && check.status == "uncertain" && check.id.hasPrefix("T") }

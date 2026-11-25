@@ -166,7 +166,7 @@ final class NotuleGeneratorTests: XCTestCase {
     }
 
     // The T9 case: "covered" without any notule sentence pointing at it.
-    // DEC-081: a source the model calls covered while no notule sentence cites it is reported as missing.
+    // DEC-083: a source the model calls covered while no notule sentence cites it is reported as missing.
     func testUncitedCoveredSourceIsReportedAsMissing() async throws {
         let html = "<p>Sam neemt vrijdag contact op.</p>"
         let service = StubLLM(draft: html, audit: StubLLM.approve { report in
@@ -194,7 +194,7 @@ final class NotuleGeneratorTests: XCTestCase {
         let html = "<p>Een stellig verhaal over een pilot.</p>"
         let service = StubLLM(draft: html, audit: { user in
             if user.hasPrefix("Broncontrole") { return #"{"uncertain":true}"# }
-            // DEC-081: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
+            // DEC-083: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
             return try StubLLM.approve { report in
                 report["uncertain"] = true
                 report["source"] = (report["source"] as! [[String: Any]]).map { var item = $0; item["status"] = "uncertain"; return item }
@@ -238,7 +238,7 @@ final class NotuleGeneratorTests: XCTestCase {
         _ = try await generate(service, raw, quickNote: "Bel Sam", participants: [Participant(name: "Fatima")])
         let call = try XCTUnwrap(service.generations.first)
         XCTAssertEqual(call.systemPrompt, notuleSystemPrompt("Je bent notulist."))
-        // DEC-080: the plain negation about customer data is no longer listed; the decision sentence is.
+        // DEC-082: the plain negation about customer data is no longer listed; the decision sentence is.
         XCTAssertEqual(call.constraints, ["We besluiten dit niet vandaag."])
         XCTAssertTrue(call.notulePrompt.contains("Bel Sam"))
         XCTAssertTrue(call.notulePrompt.contains("- Fatima"))

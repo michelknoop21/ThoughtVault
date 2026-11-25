@@ -130,7 +130,8 @@ it("keeps a rejected draft separate, preserves transcript and never completes or
   expect(patch).not.toHaveProperty("notule_html");
   expect(patch).not.toHaveProperty("raw_transcription");
   expect(patch).not.toHaveProperty("has_notes");
-  expect(invoke).not.toHaveBeenCalled();
+  // Only the masked failure line goes to the log; no export or other native call.
+  expect(vi.mocked(invoke).mock.calls.filter(([command]) => command !== "log_write")).toEqual([]);
   expect(useRecordingStore.getState().backgroundTasks[0]).toMatchObject({ status: "failed", error_message: expect.stringContaining("apart bewaard") });
 });
 

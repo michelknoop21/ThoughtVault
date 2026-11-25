@@ -36,6 +36,8 @@ it.each([
   ["Anthropic gaf HTTP 429.", "notule_http_rate_limited"],
   ["Ollama Cloud gaf HTTP 404 voor model \"private\".", "notule_http_client_error"],
   ["Notule-generator op http://localhost:9 gaf HTTP 500 voor model \"private\".", "notule_http_server_error"],
+  ["Kan openrouter.ai niet bereiken (model \"private\"). Controleer je internetverbinding en probeer het opnieuw.", "notule_provider_unreachable"],
+  ["openrouter.ai brak het antwoord af (fout private) voor model \"private\".", "notule_stream_error"],
 ])("classifies the complete known message without dynamic parameters: %s", (message, code) => {
   expect(processingDiagnostic(message)).toMatchObject({ code });
   expect(processingDiagnostic(message)?.shown).not.toContain("private");

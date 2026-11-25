@@ -53,7 +53,7 @@ fn split_audio(path: &str, directory: &Path) -> Result<Vec<PathBuf>, String> {
         let part = directory.join(format!("{:05}.wav", files.len()));
         let mut writer = hound::WavWriter::create(&part, spec).map_err(|e| e.to_string())?;
         writer.write_sample(first.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
-        for sample in samples.by_ref().take(60 * 16_000 - 1) {
+        for sample in samples.by_ref().take(CHUNK_SECONDS * 16_000 - 1) {
             writer.write_sample(sample.map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
         }
         writer.finalize().map_err(|e| e.to_string())?;
@@ -63,7 +63,24 @@ fn split_audio(path: &str, directory: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(files)
 }
 
-pub(super) fn run(app: AppHandle, model_path: &Path, audio: &str, request_id: &str) -> Result<String, String> {
+/// Seconds of audio per file handed to the runtime; also the offset between their word times.
+const CHUNK_SECONDS: usize = 60;
+
+/// One `--format json` result file of nemo-speech 0.2.0: the same `text` as `--format text`, plus
+/// word times in seconds within that file (app/transcribe.cpp `render`).
+fn parse_result(json: &str) -> Result<super::segments::TimedTranscript, String> {
+    #[derive(serde::Deserialize)]
+    struct Word { word: String, start: f64, end: f64 }
+    #[derive(serde::Deserialize)]
+    struct File { text: String, #[serde(default)] words: Vec<Word> }
+    let file: File = serde_json::from_str(json).map_err(|e| format!("NVIDIA-resultaat onleesbaar: {e}"))?;
+    Ok(super::segments::TimedTranscript {
+        text: file.text.trim().to_string(),
+        pieces: file.words.into_iter().map(|w| super::segments::TimedPiece { start: w.start, end: w.end, text: w.word }).collect(),
+    })
+}
+
+pub(super) fn run(app: AppHandle, model_path: &Path, audio: &str, request_id: &str) -> Result<super::segments::TimedTranscript, String> {
     use std::process::{Command, Stdio};
     let runtime = app.path().resource_dir().map_err(|e| e.to_string())?
         .join("resources/nemo-speech-0.2.0/bin/nemo-speech.exe");
@@ -78,7 +95,7 @@ pub(super) fn run(app: AppHandle, model_path: &Path, audio: &str, request_id: &s
     let errors = work.path().join("errors.log");
     let mut command = Command::new(runtime);
     command.arg("--quiet").arg("transcribe").arg(&inputs)
-        .arg("--model").arg(model_path).args(["--device", "cpu", "--format", "text", "--concurrency", "1"])
+        .arg("--model").arg(model_path).args(["--device", "cpu", "--format", "json", "--concurrency", "1"])
         .arg("--output-dir").arg(&outputs)
         .stdin(Stdio::null()).stdout(Stdio::null())
         .stderr(std::fs::File::create(&errors).map_err(|e| e.to_string())?);
@@ -99,7 +116,7 @@ pub(super) fn run(app: AppHandle, model_path: &Path, audio: &str, request_id: &s
                 return Err(format!("NVIDIA-runtime controleren mislukt: {error}"));
             },
         }
-        let completed = files.iter().filter(|file| outputs.join(file.file_name().unwrap()).with_extension("txt").is_file()).count();
+        let completed = files.iter().filter(|file| outputs.join(file.file_name().unwrap()).with_extension("json").is_file()).count();
         if completed != last_completed {
             last_completed = completed;
             let _ = app.emit("transcribe-progress", serde_json::json!({ "request_id": request_id, "progress": completed * 100 / files.len() }));
@@ -113,17 +130,35 @@ pub(super) fn run(app: AppHandle, model_path: &Path, audio: &str, request_id: &s
         return Err(format!("NVIDIA-transcriptie mislukt ({status}): {error}"));
     }
     let mut text = String::new();
+    let mut pieces = Vec::new();
     for file in files {
-        let result = outputs.join(file.file_name().unwrap()).with_extension("txt");
-        text.push_str(&std::fs::read_to_string(result).map_err(|e| format!("NVIDIA-transcriptie lezen mislukt: {e}"))?);
+        let result = outputs.join(file.file_name().unwrap()).with_extension("json");
+        let part = parse_result(&std::fs::read_to_string(result).map_err(|e| format!("NVIDIA-transcriptie lezen mislukt: {e}"))?)?;
+        text.push_str(&part.text);
         text.push(' ');
+        pieces.push(part.pieces);
     }
     let _ = app.emit("transcribe-progress", serde_json::json!({ "request_id": request_id, "progress": 100 }));
-    Ok(text.trim().to_string())
+    Ok(super::segments::TimedTranscript { text: text.trim().to_string(), pieces: super::segments::offset(pieces, CHUNK_SECONDS as f64) })
 }
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn json_result_keeps_the_text_and_gives_word_times() {
+        // Shape written by nemo-speech 0.2.0 `--format json` (app/transcribe.cpp `render`).
+        let json = "{\n  \"file\": \"C:\\\\tmp\\\\00001.wav\",\n  \"text\": \"Ja, doe ik.\",\n  \"confidence\": 0.93,\n  \"duration\": 60,\n  \"languages\": [\"nl\"],\n  \"words\": [\n    {\"word\": \"Ja,\", \"start\": 0.48, \"end\": 0.72, \"confidence\": 0.98},\n    {\"word\": \"doe\", \"start\": 0.8, \"end\": 0.96, \"confidence\": 0.97, \"speaker\": 2}\n  ]\n}\n";
+        let result = super::parse_result(json).unwrap();
+        assert_eq!(result.text, "Ja, doe ik.");
+        assert_eq!(result.pieces, vec![
+            super::super::segments::TimedPiece { start: 0.48, end: 0.72, text: "Ja,".into() },
+            super::super::segments::TimedPiece { start: 0.8, end: 0.96, text: "doe".into() },
+        ]);
+        let silent = super::parse_result("{\n  \"file\": \"a.wav\",\n  \"text\": \"\",\n  \"confidence\": 0,\n  \"duration\": 60,\n  \"languages\": [],\n  \"words\": []\n}\n").unwrap();
+        assert!(silent.text.is_empty() && silent.pieces.is_empty());
+        assert!(super::parse_result("geen json").is_err());
+    }
+
     #[test]
     fn cached_model_rejects_truncated_and_corrupted_bytes() {
         let file = tempfile::NamedTempFile::new().unwrap();

@@ -9,12 +9,14 @@ def transcribe(model_path, audio_path, output_path):
     model = WhisperModel(str(model_path), device="cpu", compute_type="int8", cpu_threads=4, local_files_only=True)
     segments, info = model.transcribe(str(audio_path), language="nl", beam_size=5,
         vad_filter=True, condition_on_previous_text=False)  # no glossary prompt: it drops speech
-    text = []
+    pieces = []
     for segment in segments:
-        text.append(segment.text.strip())
+        pieces.append({"start": segment.start, "end": segment.end, "text": segment.text.strip()})
         progress = min(99, int(segment.end / max(info.duration, 0.001) * 100))
         print(json.dumps({"progress": progress}), flush=True)
-    Path(output_path).write_text(" ".join(text).strip(), encoding="utf-8")
+    text = " ".join(piece["text"] for piece in pieces).strip()
+    # Segment times for speaker labels; the text is the same as before.
+    Path(output_path).write_text(json.dumps({"text": text, "segments": pieces}, ensure_ascii=False), encoding="utf-8")
     print(json.dumps({"progress": 100}), flush=True)
 
 

@@ -8,6 +8,73 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-083: De inhoudscontrole beoordeelt de rest als de bron al onduidelijk is gemeld
+
+**Date:** 2026-11-25
+**Status:** Implemented on `feat/notule-wispr-vorm` (akkoord Michel, 25 november 2026)
+
+**Context:** In 22 van 22 gemeten runs (DEC-082) eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren of alles in de notule klopt" kreeg. De controle vraagt het model om één vlag `uncertain` voor de hele bron en gooide bij `true` alle oordelen per zin weg. De ruwe oordelen laten zien waarom dat bij spraakherkenning altijd gebeurt: in de klantdemo markeerde het model 151 van de 271 bronzinnen als onverstaanbaar, in stand-up A 26 van de 115. De broncontrole (DEC-062) had de gebruiker daar op dat moment al voor gewaarschuwd.
+
+**Decision:** Alleen wanneer de broncontrole de bron onduidelijk noemde (`sourceUnclear`), in het korte pad en in de dekkingsstap van het lange pad. Een broncontrole die zelf mislukte (time-out, onleesbaar antwoord) zet `sourceUnclear` niet aan: die heeft niets over de bron gezegd.
+1. `uncertain: true` is geen einde meer. De vlag moet nog steeds een boolean zijn.
+2. Een transcriptiezin met status `uncertain` wordt overgeslagen. Nooit overgeslagen worden een gebruikersnotitie (Q), een verplichte uitspraak en een zin met een bedrag: die krijgen de regel "Dit stuk van de opname was niet goed te volgen".
+3. Een notulezin die de bron tegenspreekt of niet door de bron wordt gesteund, wordt als eerste gemeld. Een notulezin met status `uncertain` wordt niet gemeld: die volgt uit de bron waarvoor al is gewaarschuwd.
+4. Korte pad, ongeacht `sourceUnclear`: een bronzin die het model `covered` noemt terwijl geen gesteunde notulezin ernaar verwijst, gaf de technische fout "Ontbrekend controlebewijs". Op Volledig telt zo'n zin nu als `missing`, zoals het lange pad al deed (DEC-065). Op Kort en Normaal telt ze als `minor`, wat `conclude` weigert voor een verplichte uitspraak en voor een bedrag (DEC-073).
+
+5. De titel gaat niet meer als bewering naar de controle: alleen de eerste `h1`, en alleen als die gesloten is en gewone tekst bevat. Het is een etiket van vier tot tien woorden boven de zinnen die wel worden gecontroleerd; het lange pad meldde de titel in twee van twee runs als "misschien niet zo gezegd". Elke andere kop wordt gecontroleerd.
+6. Lange pad, alleen bij `sourceUnclear`: stap 2 accepteert `uncertain: true`. Een notulezin waar geen bronzin naar verwijst en die het model `unsupported` noemt, blijft een melding, net als in het korte pad. Een eerdere versie telde zo'n zin als niet beoordeeld om een vals alarm over de openingszin te voorkomen; in de review bleek dat zo ook een verzonnen zin zonder bron ongemeld bleef.
+
+7. Lange pad, dekkingsstap: een bronzin die het model `missing` of `uncertain` noemt en waar het toch een notulezin bij zet, gaf "Ongeldig controlebewijs" en beëindigde de hele controle. Dat bewijs wordt nu genegeerd; alleen een `covered` bronzin bewijst iets. In de run waarin de meeting van 56 minuten hierop strandde, ging het om 12 van de 248 bronzinnen in één deel, alle `uncertain`.
+
+8. Drempel (akkoord Michel, 25 november 2026): noemt het model meer dan de helft van de transcriptiezinnen `uncertain`, dan stopt de controle met een gewone fout en krijgt de notule de algemene regel "We konden niet automatisch controleren". Eén concrete regel over één zin wekt dan de indruk dat de rest is nagekeken. In het lange pad gebeurt dit na de dekkingsstap, zodat stap 2 niet meer draait. Gebruikersnotities tellen niet mee in de breuk. Hetzelfde geldt als het model meer dan de helft van de notulezinnen `uncertain` noemt.
+
+Zonder waarschuwing van de broncontrole zijn punt 1, 2, 3, 6 en 8 ongewijzigd. De prompts van de controle zijn niet aangepast.
+
+**Measurements:** dezelfde drie gesprekken, Sonnet 5.5, één run. Voor de wijziging: drie keer de algemene regel. Erna: drie keer één concrete regel, twee keer "Dit is gezegd, maar staat misschien niet in de notule" met een bronzin en één keer "Dit staat in de notule, maar is misschien niet zo gezegd" bij een actie waarin de notule een termijn en een taak had samengevoegd. De eerste regel over de verstaanbaarheid blijft staan. Lange pad: het schadebezoek (43.000 tekens) loopt nu tot het einde en geeft één concrete regel over de openingszin, waarin de notule de bezoeker "schade-expert en woninginspecteur" noemt. Een meeting van 56 minuten (57.000 tekens) strandde daarna nog op "Ongeldig controlebewijs"; na punt 7 loopt ook die tot het einde en geeft één concrete regel. In beide lange gesprekken is dat een zin uit de samenvatting bovenaan.
+
+**Consequences:**
+- De controle meldt één probleem per notule, het eerste. Stand-up A had in één run 11 bronzinnen `missing` en 1 notulezin `unsupported`; de gebruiker ziet er daarvan één.
+- Het model gebruikte in die run de status `minor` niet en noemde ook terloopse zinnen `missing`. De gemelde bronzin is daardoor soms een bijzaak. Dat ligt aan het oordeel van het model, niet aan deze wijziging, en is niet opgelost.
+- Een verplichte uitspraak die het model onverstaanbaar vindt, wordt niet meer bewaakt.
+- Een fout in de titel zelf wordt niet meer opgemerkt.
+- Op lange meetings is de gemelde regel waarschijnlijk vaak een vals alarm. In de laatste run noemde het model bij het schadebezoek 713 van de 932 bronzinnen `uncertain` en bij de meeting van 56 minuten 500 van de 862. Stap 2 beoordeelt een notulezin tegen alleen de bronzinnen die ernaar verwijzen (mediaan twee), en keurde bij het schadebezoek 19 van de 44 beoordeelde zinnen af tegen 8 goed. Een samenvattende zin komt daar slecht doorheen. Punt 8 vangt dat af boven de helft. Meting na punt 8 (zelfde model, één run): schadebezoek 663 van de 932 `uncertain` (71%), algemene regel, geen stap 2; de meeting van 56 minuten 355 van de 862 (41%), nog één concrete regel over een zin uit de notule. Dezelfde meeting stond een run eerder op 58%. Het aandeel schommelt dus per run rond de drempel, en onder de drempel blijft het voorbehoud over valse alarmen gelden. Na de strengere punten 2, 5 en 6 (zelfde model, één run): schadebezoek 74% `uncertain`, algemene regel, 11/18 feiten; de meeting van 56 minuten 49%, één concrete regel "misschien niet zo gezegd" over de samenvattende openingszin.
+- `scripts/eval` bewaart de ruwe oordelen per run (`*.audit.json`, buiten de repo), zodat een volgende meting dit soort tellingen direct geeft.
+
+---
+
+## DEC-082: Notule in korte regels, bronzinnen ingeperkt en niet meer geciteerd
+
+**Date:** 2026-11-25
+**Status:** Implemented on `feat/notule-wispr-vorm`
+
+**Context:** Een collega nam op 24 november drie gesprekken op met ThoughtVault en met Wispr Flow. De ThoughtVault-notules bevatten letterlijke, verhaspelde zinnen uit de spraakherkenning, schreven "de spreker" en waren twee keer zo lang. De oorzaak zat in de schrijfopdracht: `constraintSentences` maakte van elke zin met niet, geen of zonder een "verplicht te behouden bronzin". Van de 68 bronzinnen die letterlijk in de drie notules stonden, kwamen er 56 uit dat blok. Het profiel Standaard stond op Volledig en kreeg dus de volle lijst.
+
+**Decision:**
+- De schrijfopdracht en de controle krijgen op elk detailniveau alleen nog `essentialConstraints`: zinnen met een getal, een besluit- of toestemmingswoord of een sterk trefwoord. Een kale ontkenning is geen verplichting meer.
+- De kop van het blok vraagt de betekenis in eigen woorden, verbiedt citeren en staat toe een onverstaanbare uitspraak over te slaan. In de systeemprompt is "behoud dat letterlijk als onbeslist" vervangen door "benoem dat als onbeslist".
+- `commonRules`: schrijf in eigen woorden en hele zinnen, schrijf niets over de transcriptie of de notule zelf, schrijf nooit "de spreker", herstel een verhaspeld woord als de context het duidelijk maakt en noteer een naam met twee lezingen als "Jansen (waarschijnlijk Janssen)". De sprekerregels van `feat/sprekersdetectie` zijn ongewijzigd.
+- Profiel Standaard: detailniveau Normaal; onder de titel één of twee zinnen met de uitkomst, per onderwerp regels van één feit, "Volgende stappen" met de uitvoerder tussen haakjes vooraan, en "Genomen besluiten" alleen bij een uitgesproken besluit. De actietabel en de sectie "Openstaande punten" zijn vervallen; een open vraag staat bij haar onderwerp.
+
+**Measurements:** `scripts/eval` met `anthropic/claude-sonnet-5.5` via OpenRouter, één run per gesprek, controlelijsten afgeleid uit de Wispr-notules. De gesprekken en uitkomsten staan buiten de repo.
+
+| Gesprek | Feiten oud | Feiten nieuw | Letterlijke zinnen oud | nieuw | "de spreker" oud | nieuw | Tekens oud | nieuw |
+|---|---|---|---|---|---|---|---|---|
+| Stand-up A | 18/20 | 18/20 | 1 | 0 | 12 | 1 | 5.669 | 4.192 |
+| Stand-up B | 29/30 | 29/30 | 5 | 0 | 14 | 0 | 8.566 | 5.169 |
+| Klantdemo | 20/20 | 19/20 | 8 | 0 | 0 | 0 | 6.795 | 4.252 |
+| Schadebezoek (DEC-060) | 12/18 | 12/18 | niet geteld | 0 | niet geteld | 0 | niet geteld | 6.444 |
+
+Een letterlijke zin telt hier vanaf zes woorden. Van de 18 feiten van het schadebezoek komen er 5 als zoekterm nergens in de transcriptie voor, dus 13 is daar het haalbare maximum. Een tussenversie met "Beknopt: één regel per feit" haalde op het schadebezoek 10/18; de regel dat elk genoemd jaartal, bedrag, datum en onderdeel terugkomt bracht dat terug naar 12. Met de Wispr-transcriptie als invoer (sprekerlabels) kwam elke actie op naam van een spreker te staan.
+
+**Consequences:**
+- Een verbod zonder getal of besluitwoord ("Er gaan geen klantgegevens naar leveranciers") staat niet meer in de lijst. De algemene regel over ontkenningen en verboden blijft in de opdracht, en op Volledig meldt de controle een ontbrekende bronzin nog steeds.
+- Wie voor Standaard zelf Volledig koos, houdt dat niveau; alleen de standaard van het profiel verandert.
+- De andere profielen delen `commonRules` en het blok, maar zijn niet per profiel gemeten.
+- In alle 22 runs waarin de reden is vastgelegd, eindigde de inhoudscontrole met "De inhoudscontrole is onzeker", waarna de notule de algemene regel "We konden niet automatisch controleren" kreeg. De controle zet één vlag voor de hele bron zodra een bronzin onverstaanbaar is, en gooit dan alle oordelen weg. Bij tekst uit spraakherkenning is dat altijd het geval. DEC-083 pakt dat aan.
+- De cijfers zijn één run per gesprek; een verschil van één feit valt binnen de spreiding.
+
+---
+
 ## DEC-080: OpenRouter-transcriptiemodellen per sleutel
 
 **Date:** 2026-11-25

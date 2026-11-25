@@ -130,6 +130,15 @@ struct CloudAPITranscriber: LocalTranscriber {
     }
 
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+        try await transcribeTimed(url: url, profileId: profileId, onProgress: onProgress).text
+    }
+
+    /// `verbose_json` carries segment times, but not every model accepts it: OpenAI's gpt-4o
+    /// transcription models refuse it with a 400. Whisper models accept it at OpenAI, Groq and OpenRouter.
+    // ponytail: model-name check; a per-model list once a custom endpoint needs otherwise.
+    var wantsSegments: Bool { model.lowercased().contains("whisper") }
+
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript {
         guard !apiKey.trimmingCharacters(in: .whitespaces).isEmpty else {
             throw LocalTranscriberError.cloudFailed("Geen API-sleutel ingesteld voor \(providerName).")
         }
@@ -143,19 +152,19 @@ struct CloudAPITranscriber: LocalTranscriber {
         onProgress(0.05)
 
         // No vocabulary prompt, as with local Whisper: names are corrected afterwards in LLMService.
-        var parts: [String] = []
+        var parts: [TimedTranscript] = []
         for (index, chunkURL) in chunks.enumerated() {
             parts.append(try await upload(audio: try Data(contentsOf: chunkURL), prompt: nil))
             onProgress(0.05 + 0.95 * Double(index + 1) / Double(chunks.count))
         }
 
-        let text = parts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = parts.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw LocalTranscriberError.emptyResult }
-        return text
+        return TimedTranscript(text: text, pieces: TimedPiece.offset(parts, chunkDuration: Self.chunkDuration))
     }
 
-    /// Uploads one WAV chunk and returns its `text`.
-    func upload(audio: Data, prompt: String?) async throws -> String {
+    /// Uploads one WAV chunk and returns its `text`, with segment times when the model gives them.
+    func upload(audio: Data, prompt: String?) async throws -> TimedTranscript {
         guard let endpoint else { throw LocalTranscriberError.cloudFailed("Ongeldig adres: \(baseURL)") }
         let boundary = "ThoughtVault-\(UUID().uuidString)"
         var request = URLRequest(url: endpoint)
@@ -164,7 +173,7 @@ struct CloudAPITranscriber: LocalTranscriber {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-        var fields = [("model", model), ("language", "nl"), ("response_format", "json")]
+        var fields = [("model", model), ("language", "nl"), ("response_format", wantsSegments ? "verbose_json" : "json")]
         if let prompt { fields.append(("prompt", prompt)) }
         let body = Self.multipartBody(boundary: boundary, fields: fields, audio: audio)
 
@@ -173,11 +182,11 @@ struct CloudAPITranscriber: LocalTranscriber {
         guard (200..<300).contains(status) else {
             throw LocalTranscriberError.cloudFailed(Self.errorMessage(status: status, body: data, provider: providerName))
         }
-        struct Reply: Decodable { let text: String }
+        struct Reply: Decodable { let text: String; let segments: [TimedPiece]? }
         guard let reply = try? JSONDecoder().decode(Reply.self, from: data) else {
             throw LocalTranscriberError.cloudFailed("Onverwacht antwoord van \(providerName).")
         }
-        return reply.text
+        return TimedTranscript(text: reply.text, pieces: reply.segments ?? [])
     }
 
     static func multipartBody(boundary: String, fields: [(String, String)], audio: Data) -> Data {

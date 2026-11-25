@@ -17,6 +17,10 @@ struct ParakeetTranscriber: LocalTranscriber {
     var isInstalled: @Sendable (String) -> Bool = { ParakeetModelStore.isInstalled($0) }
 
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+        try await transcribeTimed(url: url, profileId: profileId, onProgress: onProgress).text
+    }
+
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript {
         guard isInstalled(model) else { throw LocalTranscriberError.modelNotInstalled(model) }
         var stages = TranscriptionStageLog(engine: "Parakeet")
         do {
@@ -59,7 +63,11 @@ struct ParakeetTranscriber: LocalTranscriber {
             onProgress(1.0)
             stages.end()
             logger.info("Parakeet transcription complete: \(text.count) characters")
-            return text
+            // Word times from the model's own token timings; the text itself stays the engine's text.
+            let pieces = buildWordTimings(from: result.tokenTimings ?? []).map {
+                TimedPiece(start: $0.startTime, end: $0.endTime, text: $0.word)
+            }
+            return TimedTranscript(text: text, pieces: pieces)
         } catch let error as LocalTranscriberError {
             stages.failed(error)
             throw error

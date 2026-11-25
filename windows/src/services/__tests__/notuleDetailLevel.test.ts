@@ -53,7 +53,7 @@ describe("effective level", () => {
 
   it("gives the bundled profiles their default", () => {
     expect(Object.fromEntries(DEFAULT_PROFILES.map(p => [p.id, p.detail_level]))).toEqual({
-      standaard: "volledig", executive: "kort", projectoverleg: "volledig", klantgesprek: "normaal",
+      standaard: "normaal", executive: "kort", projectoverleg: "volledig", klantgesprek: "normaal",
       een_op_een: "kort", brainstorm: "normaal", promptnotitie: undefined,
     });
   });
@@ -110,7 +110,7 @@ describe("audit with minor", () => {
 });
 
 describe("generateNotulen", () => {
-  // `fixture`: recorded from this code before detail levels existed (draft-volledig.json).
+  // `fixture`: the volledig draft of this code (draft-volledig.json), re-recorded for DEC-082.
   const html = "<p>Sam belt vrijdag de klant over de planning en het budget wordt 12.450 euro.</p>";
   const drafts: { system: string; user: string }[] = [];
 
@@ -127,7 +127,7 @@ describe("generateNotulen", () => {
     });
   });
 
-  it("sends exactly the draft of before at the default and at volledig", async () => {
+  it("sends the recorded draft at the default and at volledig", async () => {
     const meter = new UsageMeter();
     await LLMService.generateNotulen(fixture.transcription, fixture.profile, undefined, [], "", undefined, meter);
     await LLMService.generateNotulen(fixture.transcription, fixture.profile, undefined, [], "", undefined, undefined, false, undefined, "volledig");
@@ -140,8 +140,8 @@ describe("generateNotulen", () => {
     await LLMService.generateNotulen(fixture.transcription, fixture.profile, undefined, [], "", undefined, meter, false, undefined, "kort");
     const block = draftBlock("kort", fixture.transcription.length);
     expect(block).toContain("ongeveer 1.500 tekens, hooguit 2.000.");
-    const base = fixture.user.slice(0, fixture.user.indexOf("\n\nVerplicht te behouden bronzinnen"));
-    expect(drafts[0].user).toBe(base + "\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n1. De vorige afspraak vervalt." + block);
+    const base = fixture.user.slice(0, fixture.user.indexOf("\n\nUitspraken uit de transcriptie"));
+    expect(drafts[0].user).toBe(base + "\n\nUitspraken uit de transcriptie met een getal, besluit of voorwaarde. Neem de betekenis van elke uitspraak op bij het passende onderwerp, in je eigen woorden, met de genoemde bedragen en voorwaarden. Citeer ze niet en spreek ze nergens tegen. Is een uitspraak onverstaanbaar, neem haar dan niet over:\n1. De vorige afspraak vervalt." + block);
     expect(meter.usageFor(fixture.transcription, html).detail_level).toBe("kort");
   });
 });

@@ -186,6 +186,8 @@ enum AudioPreConverter {
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
             throw LocalTranscriberError.transcriptionFailed("Audio-conversie niet mogelijk voor dit formaat.")
         }
+        // Without this the converter keeps only the first channel: the microphone of a stereo call.
+        converter.downmix = true
 
         let inputChunkSize = AVAudioFrameCount(max(4096, Int(sourceFormat.sampleRate)))
         let estimatedOutputChunkSize = AVAudioFrameCount(
@@ -275,7 +277,7 @@ enum AudioPreConverter {
     }
 
     /// Linear gain that lifts the file's mean RMS to `targetRMSdB`; 1 when it is
-    /// already loud enough. Never attenuates. Reads the first channel only.
+    /// already loud enough. Never attenuates. Averages over every channel.
     static func normalizationGain(for url: URL) throws -> Float {
         let file = try AVAudioFile(forReading: url)
         let chunk: AVAudioFrameCount = 1 << 16
@@ -285,11 +287,13 @@ enum AudioPreConverter {
         while file.framePosition < file.length {
             let toRead = AVAudioFrameCount(min(AVAudioFramePosition(chunk), file.length - file.framePosition))
             try file.read(into: buffer, frameCount: toRead)
-            guard let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 else { break }
-            var s: Float = 0
-            vDSP_svesq(samples, 1, &s, vDSP_Length(buffer.frameLength))
-            sumSquares += Double(s)
-            count += Double(buffer.frameLength)
+            guard let channels = buffer.floatChannelData, buffer.frameLength > 0 else { break }
+            for channel in 0..<Int(buffer.format.channelCount) {
+                var s: Float = 0
+                vDSP_svesq(channels[channel], 1, &s, vDSP_Length(buffer.frameLength))
+                sumSquares += Double(s)
+                count += Double(buffer.frameLength)
+            }
         }
         return gain(forMeanSquare: count > 0 ? sumSquares / count : 0)
     }
@@ -364,6 +368,16 @@ protocol LocalTranscriber: Sendable {
     /// Transcribes an audio file fully locally and returns the text.
     /// - Parameter onProgress: coarse 0.0...1.0 progress (model download / transcription).
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String
+
+    /// The same transcription with timed pieces, for speaker labels. An engine without timings
+    /// returns the text with no pieces, and the transcript then stays plain.
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript
+}
+
+extension LocalTranscriber {
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript {
+        TimedTranscript(text: try await transcribe(url: url, profileId: profileId, onProgress: onProgress))
+    }
 }
 
 // MARK: - Stage log
@@ -459,27 +473,28 @@ struct AppleSpeechTranscriber: LocalTranscriber {
     private static let maxSingleRequestDuration: TimeInterval = 55
 
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+        try await transcribeTimed(url: url, profileId: profileId, onProgress: onProgress).text
+    }
+
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript {
         onProgress(0.05)
 
-        let text: String
+        var parts: [TimedTranscript] = []
         if let duration = AudioChunker.duration(of: url), duration > Self.maxSingleRequestDuration {
             let chunks = try await AudioChunker.chunk(url: url, chunkDuration: Self.maxSingleRequestDuration)
             defer { chunks.forEach { try? FileManager.default.removeItem(at: $0) } }
-            var parts: [String] = []
             for (index, chunkURL) in chunks.enumerated() {
-                let part = try await OnDeviceTranscriber.shared.transcribe(url: chunkURL, profileId: profileId)
-                parts.append(part)
+                parts.append(try await OnDeviceTranscriber.shared.transcribeTimed(url: chunkURL, profileId: profileId))
                 onProgress(0.05 + 0.9 * (Double(index + 1) / Double(chunks.count)))
             }
-            text = parts.joined(separator: " ")
         } else {
-            text = try await OnDeviceTranscriber.shared.transcribe(url: url, profileId: profileId)
+            parts = [try await OnDeviceTranscriber.shared.transcribeTimed(url: url, profileId: profileId)]
         }
 
         onProgress(1.0)
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = parts.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LocalTranscriberError.emptyResult }
-        return trimmed
+        return TimedTranscript(text: trimmed, pieces: TimedPiece.offset(parts, chunkDuration: Self.maxSingleRequestDuration))
     }
 }
 
@@ -498,6 +513,20 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             .map { $0.split(whereSeparator: \.isWhitespace).filter { !$0.allSatisfy { $0 == "*" } }.joined(separator: " ") }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    /// Segment text carries Whisper's special tokens (`<|0.00|>`, `<|nl|>`); the result text does not.
+    /// Strips them and cleans the text the same way as the transcript.
+    static func pieces(_ segments: [(start: Float, end: Float, text: String)]) -> [TimedPiece] {
+        segments.compactMap { segment in
+            let plain = segment.text.replacingOccurrences(of: #"<\|[^|]*\|>"#, with: "", options: .regularExpression)
+            let text = cleanedTranscript([plain])
+            return text.isEmpty ? nil : TimedPiece(start: Double(segment.start), end: Double(segment.end), text: text)
+        }
+    }
+
+    private static func pieces(_ results: [TranscriptionResult]) -> [TimedPiece] {
+        pieces(results.flatMap(\.segments).map { (start: $0.start, end: $0.end, text: $0.text) })
     }
 
     private let model: String
@@ -544,6 +573,10 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
     }
 
     func transcribe(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> String {
+        try await transcribeTimed(url: url, profileId: profileId, onProgress: onProgress).text
+    }
+
+    func transcribeTimed(url: URL, profileId: String?, onProgress: @Sendable @escaping (Double) -> Void) async throws -> TimedTranscript {
         // Never download implicitly mid-transcription; the user downloads in Settings.
         guard isInstalled(model) else { throw LocalTranscriberError.modelNotInstalled(model) }
         var stages = TranscriptionStageLog(engine: "WhisperKit")
@@ -608,6 +641,9 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             let chunkLength: TimeInterval = 10 * 60
 
             var results: [TranscriptionResult] = []
+            // WhisperKit already places its own VAD windows on the file's timeline; only our
+            // 10-minute chunks still need their start added.
+            var chunkParts: [TimedTranscript] = []
             let duration = AudioChunker.duration(of: wavURL)
             stages.begin("transcribe", " chunked=\((duration ?? 0) > chunkThreshold)")
             if let duration, duration > chunkThreshold {
@@ -625,6 +661,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                         }
                     )
                     results.append(contentsOf: chunkResults)
+                    chunkParts.append(TimedTranscript(text: chunkResults.map(\.text).joined(separator: " "), pieces: Self.pieces(chunkResults)))
                 }
             } else {
                 results = try await pipe.transcribe(
@@ -635,6 +672,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
                         return nil
                     }
                 )
+                chunkParts = [TimedTranscript(text: results.map(\.text).joined(separator: " "), pieces: Self.pieces(results))]
             }
             onProgress(0.95)
 
@@ -644,7 +682,7 @@ final class WhisperKitTranscriber: LocalTranscriber, @unchecked Sendable {
             onProgress(1.0)
             stages.end()
             logger.info("WhisperKit transcription complete — \(text.count) characters")
-            return text
+            return TimedTranscript(text: text, pieces: TimedPiece.offset(chunkParts, chunkDuration: chunkLength))
         } catch let error as LocalTranscriberError {
             stages.failed(error)
             throw error

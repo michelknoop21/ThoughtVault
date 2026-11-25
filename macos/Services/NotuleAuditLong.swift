@@ -45,6 +45,7 @@ extension NotuleAudit {
 
     static func auditLong(sourceUnits: [Unit], noteUnits: [Unit], request: @escaping AuditRequest,
                           noteConcurrency: Int = auditConcurrency, detailLevel: NotuleDetailLevel = .volledig,
+                          sourceUnclear: Bool = false,
                           onProgress: @escaping @Sendable (ModelStep) -> Void = { _ in }) async throws
         -> (source: [Verdict], notes: [Verdict]) {
         let transcript = sourceUnits.filter { $0.id.hasPrefix("T") }
@@ -61,17 +62,19 @@ extension NotuleAudit {
             let units = parts[index] + quick
             let audit = try await ModelStep.$current.withValue(ModelStep(.coverage, index + 1, of: parts.count)) {
                 try await ask(request, coverageSystem + detailLevel.auditSuffix,
-                              "Inhoudsaudit deel \(index + 1) van \(parts.count) (geen generatie):\n{\"source\":\(json(units)),\"notes\":\(json(noteUnits))}")
+                              "Inhoudsaudit deel \(index + 1) van \(parts.count) (geen generatie):\n{\"source\":\(json(units)),\"notes\":\(json(noteUnits))}",
+                              sourceUnclear: sourceUnclear)
             }
             let partChecks = try verdicts(audit["source"], expected: units, references: noteUnits,
                                           statuses: detailLevel.sourceStatuses)
-            guard partChecks.allSatisfy({ $0.status == "covered" || $0.evidence.isEmpty }) else {
-                throw NotuleAuditError(message: "Ongeldig controlebewijs")
-            }
-            return partChecks
+            // Only a covered source proves anything. A model that marks a sentence missing or uncertain and still
+            // names a notule sentence is ignored on that point; rejecting the whole check for it left a 56-minute
+            // meeting without any verdict (DEC-083).
+            return partChecks.map { $0.status == "covered" ? $0 : Verdict(id: $0.id, status: $0.status, evidence: []) }
         }
         var coverage: [String: Verdict] = [:]
         for check in checkedParts.joined() { coverage[check.id] = coverage[check.id].map { stricter($0, check) } ?? check }
+        if sourceUnclear { try rejectMostlyUnclear(Array(coverage.values)) }
         // Step 2: the reverse graph. A cited notule sentence is checked alone, against its sources plus the
         // neighbouring transcription as context; the uncited sentences share one request without evidence.
         let citing = { (note: Unit) in sourceUnits.filter { coverage[$0.id]?.evidence.contains(note.id) == true } }
@@ -99,7 +102,7 @@ extension NotuleAudit {
         let checked = try await runInOrder(Array(checks.enumerated()), limit: noteConcurrency,
                                            onCompleted: { onProgress(ModelStep(.sentenceCheck, $0, of: total)) }) { item in
             try await ModelStep.$current.withValue(ModelStep(.sentenceCheck, item.offset + 1, of: total)) {
-                try await run(item.element, request: request)
+                try await run(item.element, request: request, sourceUnclear: sourceUnclear)
             }
         }.flatMap { $0 }
         let noteChecks = noteUnits.map { note in checked.first { $0.id == note.id }! }
@@ -137,8 +140,10 @@ extension NotuleAudit {
                        evidence: status == "covered" ? earlier.evidence + next.evidence.filter { !earlier.evidence.contains($0) } : [])
     }
 
-    /// One request whose reply must be a JSON object with `uncertain` exactly false. A cancellation passes through.
-    private static func ask(_ request: AuditRequest, _ system: String, _ user: String) async throws -> [String: Any] {
+    /// One request whose reply must be a JSON object with `uncertain` exactly false; every step also takes
+    /// true when the source check already warned (`decided`). A cancellation passes through.
+    private static func ask(_ request: AuditRequest, _ system: String, _ user: String,
+                            sourceUnclear: Bool = false) async throws -> [String: Any] {
         let result: Any
         do {
             result = try parseAuditResponse(try await request(system, user))
@@ -146,21 +151,23 @@ extension NotuleAudit {
             if error is CancellationError || Task.isCancelled { throw CancellationError() }
             throw NotuleAuditError(message: "De inhoudscontrole leverde geen bruikbaar controlebewijs; beoordeel het concept")
         }
-        guard let audit = result as? [String: Any], isFalse(audit["uncertain"]) else {
+        guard let audit = result as? [String: Any], decided(audit, sourceUnclear: sourceUnclear) else {
             throw NotuleAuditError(message: "De inhoudscontrole is onzeker; beoordeel het concept")
         }
         return audit
     }
 
-    private static func run(_ check: NoteCheck, request: AuditRequest) async throws -> [Verdict] {
+    private static func run(_ check: NoteCheck, request: AuditRequest, sourceUnclear: Bool = false) async throws -> [Verdict] {
         let checked: [Verdict]
         if check.evidence.isEmpty {
             let audit = try await ask(request, uncitedSystem,
-                                      "Notulezinnen zonder bronverwijzing (geen generatie):\n{\"notes\":\(json(check.notes))}")
+                                      "Notulezinnen zonder bronverwijzing (geen generatie):\n{\"notes\":\(json(check.notes))}",
+                                      sourceUnclear: sourceUnclear)
             checked = try verdicts(audit["notes"], expected: check.notes, references: [], statuses: ["non_factual", "unsupported"])
         } else {
             let audit = try await ask(request, noteSystem,
-                                      "Notulezin controleren (geen generatie):\n{\"notes\":\(json(check.notes)),\"evidence\":\(json(check.evidence)),\"context\":\(json(check.context))}")
+                                      "Notulezin controleren (geen generatie):\n{\"notes\":\(json(check.notes)),\"evidence\":\(json(check.evidence)),\"context\":\(json(check.context))}",
+                                      sourceUnclear: sourceUnclear)
             checked = try verdicts(audit["notes"], expected: check.notes, references: check.evidence + check.context,
                                    statuses: ["supported", "non_factual", "contradiction", "unsupported", "uncertain"])
             // Context may reveal a qualification but never supports a sentence.
@@ -169,7 +176,7 @@ extension NotuleAudit {
             }
             if supportedByContext { throw NotuleAuditError(message: "Ongeldig controlebewijs") }
         }
-        try rejectNoteProblem(checked, noteUnits: check.notes)
+        try rejectNoteProblem(sourceUnclear ? checked.filter { $0.status != "uncertain" } : checked, noteUnits: check.notes)
         return checked
     }
 

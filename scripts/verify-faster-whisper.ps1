@@ -18,10 +18,13 @@ $env:HF_HUB_OFFLINE = '1'
 $Probe = (& $Runtime --probe | ConvertFrom-Json)
 if ($LASTEXITCODE -ne 0 -or $Probe.engine -ne 'faster-whisper' -or $Probe.version -ne '1.2.1' -or $Probe.device -ne 'cpu') { throw 'Faster Whisper runtime identity mismatch' }
 $Clock = [Diagnostics.Stopwatch]::StartNew()
-& $Runtime --model $Model --audio (Join-Path $PSScriptRoot '../windows/src-tauri/tests/fixtures/dutch-qa.wav') --output "$Work/result.txt" | Out-File "$Work/progress.jsonl"
+& $Runtime --model $Model --audio (Join-Path $PSScriptRoot '../windows/src-tauri/tests/fixtures/dutch-qa.wav') --output "$Work/result.json" | Out-File "$Work/progress.jsonl"
 if ($LASTEXITCODE -ne 0) { throw 'Packaged Faster Whisper inference failed' }
 $Clock.Stop()
-$Text = (Get-Content -Raw "$Work/result.txt").ToLowerInvariant()
+# The worker writes {text, segments}; the markers are counted in the text only, as the app reads it.
+$Result = Get-Content -Raw -Encoding UTF8 "$Work/result.json" | ConvertFrom-Json
+if (@($Result.segments).Count -lt 1) { throw 'Faster Whisper segment times missing' }
+$Text = $Result.text.ToLowerInvariant()
 $Alex = [regex]::Matches($Text,'alex').Count
 $Monday = [regex]::Matches($Text,'maandag').Count
 if ($Alex -ne 1 -or $Monday -ne 1) { throw 'Faster Whisper own Dutch markers failed' }

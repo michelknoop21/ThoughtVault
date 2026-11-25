@@ -12,11 +12,13 @@ import { useSettingsStore } from "../../windows/src/stores/settingsStore";
 import { readChatCompletion } from "../../windows/src/services/chatCompletion";
 import { PRICE_CAP, usableModel } from "../../windows/src/services/suggestedModels";
 import { DEFAULT_PROFILES } from "../../windows/src/types";
-import { assertOutsideRepo, htmlToText, loadFacts, nalopenCount, scoreFacts, secureDir, secureWrite, summaryTable, SpendBudget, type RunResult } from "./lib";
+import { effectiveDetailLevel, type NotuleDetailLevel } from "../../windows/src/services/notuleDetailLevel";
+import { enrichProfile } from "../../windows/src/services/profileTemplates";
+import { assertOutsideRepo, copiedSentences, htmlToText, loadFacts, nalopenCount, scoreFacts, secureDir, secureWrite, summaryTable, SpendBudget, type RunResult } from "./lib";
 
 /** Commit the pipeline ran on, so results before and after a pipeline change stay comparable. */
 const COMMIT = (() => { try { return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim(); } catch { return "onbekend"; } })();
-const state = vi.hoisted(() => ({ dry: false, key: "", dryCost: 0.01, calls: 0, flaky: "", spendBudget: null as SpendBudget | null }));
+const state = vi.hoisted(() => ({ auditErrors: [] as string[], auditReplies: [] as string[], dry: false, key: "", dryCost: 0.01, calls: 0, flaky: "", spendBudget: null as SpendBudget | null }));
 
 const evalInvoke = async (command: string, args: { request?: { url: string; method?: string; headers?: Record<string, string>; body?: string | null; timeout_seconds: number; idle_timeout_seconds?: number } }) => {
   if (command !== "proxy_request" || !args.request) return undefined;
@@ -56,6 +58,8 @@ const evalInvoke = async (command: string, args: { request?: { url: string; meth
       text += decoder.decode();
     } else text = await res.text();
     if (settle) settle(parseUsage(readChatCompletion(text).usage)?.cost);
+    // The content check's raw verdicts, kept next to the notule to see why a check ended as it did.
+    if (body && /Inhoudsaudit|Notulezin/.test(body)) state.auditReplies.push(text);
     return { status: res.status, body: text, headers: Object.fromEntries(res.headers) };
   } catch (error) {
     if (controller.signal.aborted) throw `Tijdslimiet bereikt na ${timeout_seconds} s`;
@@ -126,6 +130,15 @@ vi.mock("../../windows/src/services/tauriCommands", async importOriginal => ({
   ...(await importOriginal<object>()),
   loadCredential: async (key: string) => (key === "openrouter_api_key" ? state.key : null),
 }));
+// The app turns a failed check into a warning line; the evaluation also records why it failed.
+vi.mock("../../windows/src/services/notuleAudit", async importOriginal => {
+  const real = await importOriginal<Record<string, (...args: unknown[]) => Promise<unknown>>>();
+  const recording = (name: string) => async (...args: unknown[]) => {
+    try { return await real[name](...args); }
+    catch (error) { state.auditErrors.push(`${name}: ${(error instanceof Error ? error.message : String(error)).split(":")[0]}`); throw error; }
+  };
+  return { ...real, auditSource: recording("auditSource"), auditNotule: recording("auditNotule") };
+});
 vi.mock("../../windows/src/stores/personalCorrectionsStore", () => ({
   usePersonalCorrectionsStore: { getState: () => ({ hydrate: async () => {}, entries: [] }) },
   loadCorrectionsOrEmpty: async () => [],
@@ -196,26 +209,29 @@ it("notule-eval", async () => {
     return [c, { transcript: readFileSync(join(dataDir, txt), "utf8"), facts: loadFacts(JSON.parse(readFileSync(join(dataDir, json), "utf8"))) }];
   }));
 
-  if (a.detail) console.log(`Detailniveau "${a.detail}" genegeerd: de pijplijn kent die optie nog niet (n.v.t.).`);
   const profile = DEFAULT_PROFILES.find(p => p.id === useSettingsStore.getState().default_profile_id) ?? DEFAULT_PROFILES[0];
+  // --detail overrides the profile's own level, as the user's choice does in the app.
+  const detail = (a.detail as NotuleDetailLevel | undefined) ?? effectiveDetailLevel(enrichProfile(profile));
   const runs: RunResult[] = [];
   let total = 0, stopped = "";
   outer: for (let rep = 1; rep <= reps; rep++) for (const conversation of conversations) for (const model of models) {
     if (total >= budget) { stopped = `Budget bereikt (USD ${total.toFixed(4)} van ${budget}); resterende runs overgeslagen.`; break outer; }
     useSettingsStore.setState({ notulen_provider: "openrouter", openrouter_model: model, notulen_fallback_provider: "", processing_mode: "local" });
     const meter = new UsageMeter();
+    state.auditErrors = []; state.auditReplies = [];
     const started = Date.now();
     let html = "", error: string | null = null;
-    try { html = await LLMService.generateNotulen(data[conversation].transcript, profile, undefined, [], "", undefined, meter); }
+    try { html = await LLMService.generateNotulen(data[conversation].transcript, profile, undefined, [], "", undefined, meter, false, undefined, detail); }
     catch (e) { error = e instanceof Error ? e.message : String(e); }
     if (state.spendBudget.stopReason) error = "Meetbudget: " + state.spendBudget.stopReason;
     const text = htmlToText(html), score = scoreFacts(text, data[conversation].facts);
-    const run: RunResult = { model, conversation, rep, detail: "n.v.t.", ...score, chars: text.length, words: text.split(" ").filter(Boolean).length,
-      nalopen: nalopenCount(html), durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, budgetLimited: state.spendBudget.waited || Boolean(state.spendBudget.stopReason), error, commit: COMMIT };
+    const run: RunResult = { model, conversation, rep, detail, ...score, ...copiedSentences(text, data[conversation].transcript), chars: text.length, words: text.split(" ").filter(Boolean).length,
+      nalopen: nalopenCount(html), auditErrors: state.auditErrors, durationMs: Date.now() - started, costUsd: meter.totalCost, costKnown: meter.costKnown, budgetLimited: state.spendBudget.waited || Boolean(state.spendBudget.stopReason), error, commit: COMMIT };
     runs.push(run); total += run.costUsd;
     secureWrite(join(resultsDir, `${model.replace(/\//g, "_")}__${conversation}__r${rep}.html`), html);
+    if (state.auditReplies.length) secureWrite(join(resultsDir, `${model.replace(/\//g, "_")}__${conversation}__r${rep}.audit.json`), JSON.stringify(state.auditReplies));
     secureWrite(join(resultsDir, "runs.jsonl"), JSON.stringify(run) + "\n", true);
-    console.log(`${model} ${conversation} r${rep}: ${error ? "FOUT" : `${run.found}/${run.total} feiten`}, USD ${run.costUsd.toFixed(4)}, ${(run.durationMs / 1000).toFixed(1)}s`);
+    console.log(`${model} ${conversation} r${rep}: ${error ? "FOUT" : `${run.found}/${run.total} feiten, ${run.copied} letterlijk, ${run.chars} tekens${run.auditErrors.length ? `, controle: ${run.auditErrors.join("; ")}` : ""}`}, USD ${run.costUsd.toFixed(4)}, ${(run.durationMs / 1000).toFixed(1)}s`);
     // A failed run counts as an error and the comparison goes on; only a successful run
     // without a reported cost stops it, because then the budget can no longer be tracked.
     if ((!meter.costKnown || state.spendBudget.stopReason) && !state.dry) { stopped = state.spendBudget.stopReason || "Kosten onbekend of boven de raming; gestopt om het budget te bewaken."; break outer; }
@@ -223,7 +239,7 @@ it("notule-eval", async () => {
   await state.spendBudget.drain();
   if (!state.dry) stopped += "\nBetaald of conservatief gereserveerd: maximaal USD " + state.spendBudget.exposure.toFixed(4) + " van " + budget + ".";
   if (state.spendBudget.waited) stopped += "\nParalleliteit tijdelijk begrensd door het kostenplafond; deze looptijden zijn niet de normale app-snelheid.";
-  const summary = summaryTable(runs, total) + (stopped ? `\n${stopped}\n` : "") + `\nDetailniveau: n.v.t. (pijplijn kent het niet)\n`;
+  const summary = summaryTable(runs, total) + (stopped ? `\n${stopped}\n` : "") + `\nDetailniveau: ${detail}\n`;
   secureWrite(join(resultsDir, "summary.md"), summary);
   console.log(`\n${summary}\nResultaten: ${resultsDir}`);
 });

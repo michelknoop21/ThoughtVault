@@ -49,6 +49,11 @@ final class TranscriptRecord {
     /// `NotuleDetailLevel` raw value the notule was (or will be) generated with; regenerate and retry start
     /// from it. Optional → lightweight-migration safe.
     var detailLevel: String?
+    /// JSON-encoded [TranscriptSegment] from speaker detection; nil when the transcript has no speakers.
+    /// `rawTranscription` is derived from it. Optional → lightweight-migration safe.
+    var segmentsJSON: String?
+    /// JSON-encoded [String: SpeakerName] per speaker id ("S1"). Optional → lightweight-migration safe.
+    var speakerNamesJSON: String?
 
     init(
         id: String = UUID().uuidString,
@@ -99,6 +104,18 @@ final class TranscriptRecord {
                 ? nil
                 : (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) }
         }
+    }
+
+    /// Typed accessor over segmentsJSON.
+    var segments: [TranscriptSegment] {
+        get { segmentsJSON.flatMap { try? JSONDecoder().decode([TranscriptSegment].self, from: Data($0.utf8)) } ?? [] }
+        set { segmentsJSON = newValue.isEmpty ? nil : (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) } }
+    }
+
+    /// Typed accessor over speakerNamesJSON.
+    var speakerNames: [String: SpeakerName] {
+        get { speakerNamesJSON.flatMap { try? JSONDecoder().decode([String: SpeakerName].self, from: Data($0.utf8)) } ?? [:] }
+        set { speakerNamesJSON = newValue.isEmpty ? nil : (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) } }
     }
 
     /// Typed accessor over notuleUsageJSON; nil for notules generated before usage was stored.

@@ -1,0 +1,89 @@
+<!doctype html><html lang=nl><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Mockup iOS: transcriptie als gesprek</title>
+<style>
+/* Colours measured from the iOS screenshot docs/handleiding/media/ios-notulen.webp. */
+:root{--surface:#12152b;--surface-2:#1c2040;--bubble:#191d38;--menu:#1a1d36;--border:#2c3157;--text:#f2f1f8;--text-2:#a9abc6;--text-3:#7c7f9e;
+--brand:#a06bff;--brand-dark:#7a4ff0;--tint:rgba(160,107,255,.24);--s2:#5cb8e6;--s3:#e6a65c;--ok:#5cce8f}
+*{box-sizing:border-box}body{margin:0;color:var(--text)}button{font:inherit;color:inherit;background:none;border:0}
+svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-size:12px;border:1px solid var(--border);border-radius:99px;color:var(--text);background:var(--surface-2)}
+.btn.primary{background:var(--brand-dark);border-color:#bf96ff47}.check{color:var(--ok);font-size:12px;display:inline-flex;align-items:center;gap:4px}
+.sp{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface);min-width:0}.sp-top{display:flex;align-items:center;gap:8px}
+.sp-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sp-time{margin-left:auto;color:var(--text-3);font-size:12px;white-space:nowrap}
+.sp-note{color:var(--text-2);font-size:12px;margin:6px 0 8px}.sp-note q{color:var(--text)}.sp-act{display:flex;flex-wrap:wrap;gap:6px}
+.chat{display:flex;flex-direction:column;gap:14px}.turn{max-width:min(78%,620px);display:flex;flex-direction:column;gap:4px}
+.turn.me{align-self:flex-end;align-items:flex-end}.who{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600}.who time{color:var(--text-3);font-weight:400}
+.bubble{padding:9px 13px;border-radius:14px;border-top-left-radius:4px;background:var(--bubble);border:1px solid var(--border)}
+.me .bubble{background:var(--tint);border-color:#bf96ff47;border-radius:14px;border-top-right-radius:4px}.bubble+.bubble{border-radius:14px}
+.bubble mark{background:#f5c54233;color:inherit;border-bottom:1px solid #f5c542;padding:0 1px}
+.unknown .bubble{border-style:dashed;background:transparent;color:var(--text-2)}.unknown .who{color:var(--text-2)}
+.actions{display:flex;gap:2px;margin-top:2px;padding:3px;border:1px solid var(--border);border-radius:9px;background:var(--menu);align-self:flex-start}
+.actions span{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;font-size:11.5px;color:var(--text-2);border-radius:6px;white-space:nowrap}.actions span:first-child{color:#c8a8ff}
+.task{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#c8a8ff;background:var(--tint);border-radius:99px;padding:2px 9px}
+.divider{align-self:center;color:var(--text-3);font-size:12px;text-align:center}
+body{font:15px/1.45 -apple-system,"SF Pro Text",system-ui,sans-serif;background:#05060f;display:grid;place-items:start center;padding:24px 0}
+.phone{width:min(402px,100vw);min-height:874px;background:linear-gradient(170deg,#1f1548 0,#0b0e21 34%,#090c1c 100%);border-radius:44px;overflow:hidden;position:relative;padding-bottom:110px}
+.status{display:flex;justify-content:space-between;padding:18px 34px 6px;font-weight:600;font-size:16px}
+.navb{display:flex;align-items:center;gap:10px;padding:8px 16px}.navb span{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:#0e1126;display:grid;place-items:center}
+.navb .grow{flex:1}h1{margin:6px 20px 2px;font-size:24px;font-weight:700;letter-spacing:-.3px}.meta{margin:0 20px 12px;color:var(--text-2);font-size:13px}
+.segc{display:flex;margin:0 20px 12px;padding:4px;border:1px solid var(--border);border-radius:14px;background:#0e1126}
+.segc span{flex:1;text-align:center;padding:8px;border-radius:10px;color:var(--text-2);font-size:14px}.segc .on{background:linear-gradient(110deg,#a06bff,#7a4ff0);color:#fff;font-weight:600;box-shadow:0 0 14px #8c54ff60}
+.chips{display:flex;gap:8px;padding:0 20px 10px;overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--border);border-radius:99px;background:var(--surface);font-size:13px;white-space:nowrap}
+.sp{margin:0 20px 12px;border-radius:16px;padding:12px 14px}.sp-note{font-size:13px}.btn{font-size:13px;padding:7px 13px}
+.mode{display:flex;justify-content:space-between;align-items:center;margin:0 20px 6px;color:var(--text-2);font-size:13px}.mode b{color:#c8a8ff;font-weight:600}
+.chat{padding:8px 20px 20px}.turn{max-width:86%}.bubble{border-radius:18px;border-top-left-radius:6px;padding:10px 14px}.me .bubble{border-radius:18px;border-top-right-radius:6px}.bubble+.bubble{border-radius:18px}
+.task{font-size:12px}
+.menu{align-self:flex-start;display:grid;min-width:210px;border:1px solid var(--border);border-radius:14px;background:#22264a;box-shadow:0 10px 30px #0009;overflow:hidden}
+.menu span{display:flex;align-items:center;gap:9px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:15px}.menu span:last-child{border:0}.menu span:first-child{color:#c8a8ff}
+.tabbar{position:absolute;left:20px;right:20px;bottom:22px;display:flex;justify-content:space-around;padding:8px 6px;border-radius:32px;background:#1c2136ee;border:1px solid #333a57}
+.tabbar div{display:grid;justify-items:center;gap:2px;font-size:10.5px;padding:5px 9px;border-radius:22px}.tabbar svg{width:23px;height:23px}.tabbar .on{background:#0d1022;color:#b98bff}
+@media(max-width:402px){body{padding:0}.phone{border-radius:0}.status{padding-inline:22px}h1{font-size:21px}.tabbar div{padding-inline:4px}}
+</style>
+<div class=phone><div class=status><span>09:41</span><span>100%</span></div>
+<div class=navb><span><svg viewBox="0 0 16 16"><path d="M10 3 5 8l5 5"/></svg></span><div class=grow></div><span><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></svg></span><span><svg viewBox="0 0 16 16"><path d="M8 10V2M5 5l3-3 3 3M3 9v4.5h10V9"/></svg></span></div>
+<h1>Schadebezoek Keizersgracht</h1><div class=meta>13 november 2026 · 42 min · 3 sprekers</div>
+<div class=segc><span>Notule</span><span class=on>Transcriptie</span></div>
+<div class=chips><span class=chip><i class=dot style="background:var(--brand)"></i>Jan de Vries <svg viewBox="0 0 16 16"><path d="m3 8.5 3.5 3.5L13 5"/></svg></span><span class=chip><i class=dot style="background:var(--s2)"></i>Spreker 2 · Jan Smit?</span><span class=chip><i class=dot style="background:var(--s3)"></i>Spreker 3</span></div>
+<div class=sp><div class=sp-top><i class=dot style="background:var(--s2)"></i><span class=sp-name>Spreker 2 · Jan Smit?</span><span class=sp-time>17 min</span></div>
+<div class=sp-note>Voorstel, omdat iemand zegt: <q>Jan, kun jij de contra-expertise inplannen?</q> en deze stem antwoordt.</div>
+<div class=sp-act><button class=btn><svg viewBox="0 0 16 16"><path d="M5 3v10l8-5z"/></svg>Luister</button><button class="btn primary">Bevestig Jan Smit</button><button class=btn>Andere naam</button></div></div>
+<div class=mode><span><b>Gesprek</b> · Tekst</span><span>Kopieer</span></div>
+<section class="chat" aria-label="Transcriptie als gesprek">
+        <div class="turn">
+          <div class="who" style="color:var(--s2)"><i class="dot" style="background:var(--s2)"></i>Spreker 2 · Jan Smit? <time>12:04</time></div>
+          <div class="bubble">De vloer in de keuken is over ongeveer twaalf vierkante meter aangetast. Dat is meer dan we vorige week dachten.</div>
+          <div class="bubble">De bewoner heeft foto's van voor en na de lekkage aangeleverd.</div>
+        </div>
+
+        <div class="turn me">
+          <div class="who" style="color:#c8a8ff"><time>12:31</time>Jan de Vries<i class="dot" style="background:var(--brand)"></i></div>
+          <div class="bubble">Dan wil ik eerst een contra-expertise voordat het herstel start. Jan, kun jij de contra-expertise inplannen?</div>
+        </div>
+
+        <div class="turn">
+          <div class="who" style="color:var(--s2)"><i class="dot" style="background:var(--s2)"></i>Spreker 2 · Jan Smit? <time>12:38</time></div>
+          <div class="bubble"><mark>Ja, doe ik. Volgende week.</mark></div>
+          <span class="task"><svg viewBox="0 0 16 16"><path d="m3 8.5 3.5 3.5L13 5"/></svg>Actiepunt in de notule: Contra-expertise inplannen</span>
+          <div class="menu"><span><svg viewBox="0 0 16 16"><path d="M5 3v10l8-5z"/></svg>Speel af vanaf hier</span><span>Andere spreker</span><span>Corrigeer tekst</span><span>Kopieer</span></div>
+        </div>
+
+        <div class="turn unknown">
+          <div class="who"><i class="dot" style="background:var(--text-3)"></i>Onbekend <time>12:41</time></div>
+          <div class="bubble">Ja, precies. Dat lijkt me goed.</div>
+        </div>
+
+        <div class="turn">
+          <div class="who" style="color:var(--s3)"><i class="dot" style="background:var(--s3)"></i>Spreker 3 <time>12:44</time></div>
+          <div class="bubble">Ik vraag de offerte voor het vloerherstel op, dan ligt die er dinsdag.</div>
+        </div>
+
+        <div class="divider">Opname gepauzeerd om 12:52, hervat om 12:55</div>
+
+        <div class="turn me">
+          <div class="who" style="color:#c8a8ff"><time>12:55</time>Jan de Vries<i class="dot" style="background:var(--brand)"></i></div>
+          <div class="bubble">Het rapport gaat uiterlijk vrijdag naar de verzekeraar. Dat pak ik zelf op.</div>
+        </div>
+      </section>
+<div class=tabbar><div><svg viewBox="0 0 16 16"><path d="M2 7.5 8 2l6 5.5V14H2z"/></svg>Home</div><div><svg viewBox="0 0 16 16"><rect x="6" y="1.5" width="4" height="8" rx="2"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.5"/></svg>Opnemen</div><div class=on><svg viewBox="0 0 16 16"><path d="M4 1.5h5l3 3v10H4z"/><path d="M6.5 8h3M6.5 11h3"/></svg>Notulen</div><div><svg viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M6 6h4M6 9h4"/></svg>Taken</div><div><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8l4.5 3M8 8l-4.5 3"/></svg>Instellingen</div></div>
+</div></html>

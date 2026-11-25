@@ -105,6 +105,8 @@ enum AudioChunker {
         guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
             throw LocalTranscriberError.transcriptionFailed("Audio-conversie niet mogelijk voor dit formaat.")
         }
+        // Without this the converter keeps only the first channel: the microphone of a stereo call.
+        converter.downmix = true
 
         let inputChunkSize = AVAudioFrameCount(max(4096, Int(sourceFormat.sampleRate)))
         let estimatedOutputChunkSize = AVAudioFrameCount(

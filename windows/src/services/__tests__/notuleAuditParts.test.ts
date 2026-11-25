@@ -232,6 +232,32 @@ it("sends uncited notule sentences together without evidence: a heading passes, 
     .rejects.toThrow("De notule bevat een onbevestigde bewering: Joris betaalt de rekening.");
 });
 
+// DEC-083: with an unclear source the long path still reports an invented sentence that no source cites.
+it("long path: judges unclear parts, still reports an invented uncited sentence, and gives the general line when most is unclear", async () => {
+  const unclearPart = (report: Report) => { report.uncertain = true; report.source!.forEach(item => { if (item.id === "T1") { item.status = "uncertain"; item.evidence = []; } }); };
+  const judged = model({ cover: id => id === "T401" ? ["N1"] : [], coverage: unclearPart });
+  await expect(auditNotule(longSource, sam, "", judged)).rejects.toThrow("De inhoudscontrole is onzeker; beoordeel het concept");
+  await auditNotule(longSource, sam, "", judged, [], true);
+  const invented = model({ cover: id => id === "T401" ? ["N2"] : [], coverage: unclearPart,
+    uncited: report => { report.notes = [{ id: "N1", status: "unsupported", evidence: [] }]; } });
+  await expect(auditNotule(longSource, "<p>Joris betaalt de rekening.</p><p>Sam belt vrijdag de klant.</p>", "", invented, [], true))
+    .rejects.toThrow("De notule bevat een onbevestigde bewering: Joris betaalt de rekening.");
+  const mostly = model({ cover: id => id === "T401" ? ["N1"] : [], coverage: report => {
+    report.uncertain = true; report.source!.forEach(item => { if (item.id !== "T401") { item.status = "uncertain"; item.evidence = []; } });
+  } });
+  await expect(auditNotule(longSource, sam, "", mostly, [], true))
+    .rejects.toThrow("De inhoudscontrole kon het grootste deel van de bron niet volgen; beoordeel het concept");
+  expect(calls(mostly, "note")).toHaveLength(0);
+});
+
+it("ignores evidence the model names for a source it does not call covered", async () => {
+  const request = model({ cover: id => id === "T401" ? ["N1"] : [], coverage: report => {
+    const first = report.source!.find(item => item.id === "T1");
+    if (first) { first.status = "missing"; first.evidence = ["N1"]; }
+  } });
+  await expect(auditNotule(longSource, sam, "", request)).rejects.toThrow("De notule mist broninformatie: Punt 1 is besproken.");
+});
+
 it("rejects support that cites only the context", async () => {
   const request = model({ cover: id => id === "T401" ? ["N1"] : [], note: report => { report.notes = [{ id: "N1", status: "supported", evidence: ["T400"] }]; } });
   await expect(auditNotule(longSource, sam, "", request)).rejects.toThrow("Ongeldig controlebewijs");

@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { LLMService } from "../llm";
-import { appendWarnings, UNCHECKED_CONTENT_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
+import { appendWarnings, UNCHECKED_CONTENT_WARNING, UNCHECKED_SOURCE_WARNING, UNCLEAR_SOURCE_WARNING } from "../notuleAudit";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { auditFixture, sourceFixture } from "./notuleAuditFixtures";
 const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
@@ -106,13 +106,29 @@ it("keeps the notule with both warnings when the notule audit cannot understand 
   invoke.mockImplementation(async (_command, args) => {
     const user = JSON.parse(args.request.body).messages.at(-1).content;
     if (user.startsWith("Broncontrole")) return answer(JSON.stringify({ uncertain: true }));
-    if (user.startsWith("Inhoudsaudit")) return answer(JSON.stringify({ ...JSON.parse(auditFixture(user)), uncertain: true }));
+    if (user.startsWith("Inhoudsaudit")) {
+      // DEC-083: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
+      const report = JSON.parse(auditFixture(user)); report.source[0].status = "uncertain";
+      return answer(JSON.stringify({ ...report, uncertain: true }));
+    }
     return answer(html);
   });
   const progress = vi.fn();
   const expected = appendWarnings([UNCLEAR_SOURCE_WARNING, UNCHECKED_CONTENT_WARNING], html);
   expect(await LLMService.generateNotulen("En mensen processen stok maken voorbij pilot zeker leeg.", profile, progress)).toBe(expected);
   expect(progress).toHaveBeenCalledExactlyOnceWith(expected);
+});
+
+// DEC-083: a source check that failed did not find the source unclear, so the content check stays strict.
+it("keeps the content check strict when the source check itself failed", async () => {
+  const html = "<p>Sam neemt vrijdag telefonisch contact op.</p>";
+  invoke.mockImplementation(async (_command, args) => {
+    const user = JSON.parse(args.request.body).messages.at(-1).content;
+    if (user.startsWith("Broncontrole")) return answer("geen json");
+    if (user.startsWith("Inhoudsaudit")) return answer(JSON.stringify({ ...JSON.parse(auditFixture(user)), uncertain: true }));
+    return answer(html);
+  });
+  expect(await LLMService.generateNotulen("Sam belt vrijdag.", profile)).toBe(appendWarnings([UNCHECKED_SOURCE_WARNING, UNCHECKED_CONTENT_WARNING], html));
 });
 
 it("keeps a valid first draft instead of losing its actions in an unnecessary rewrite", async () => {

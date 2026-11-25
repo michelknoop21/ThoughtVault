@@ -47,7 +47,7 @@ final class CloudAPITranscriberTests: XCTestCase {
     func testUploadReturnsTextAndSendsAuth() async throws {
         StubProtocol.status = 200
         StubProtocol.body = Data(#"{"text":"Hallo Michel"}"#.utf8)
-        let text = try await transcriber().upload(audio: Data("RIFF".utf8), prompt: "Namen en termen: Michel.")
+        let text = try await transcriber().upload(audio: Data("RIFF".utf8), prompt: "Namen en termen: Michel.").text
         XCTAssertEqual(text, "Hallo Michel")
         XCTAssertEqual(StubProtocol.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test")
         XCTAssertTrue(StubProtocol.lastRequest?.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("multipart/form-data; boundary=") == true)
@@ -73,6 +73,27 @@ final class CloudAPITranscriberTests: XCTestCase {
         } catch {
             XCTAssertEqual(error.localizedDescription, "Cloud-transcriptie mislukt: Groq gaf fout 429: Rate limit reached")
         }
+    }
+
+    func testWhisperModelsAskForSegmentsAndGpt4oModelsDoNot() {
+        XCTAssertTrue(transcriber().wantsSegments)
+        XCTAssertTrue(CloudAPITranscriber(providerName: "OpenRouter", baseURL: "", model: "openai/whisper-large-v3", apiKey: "k").wantsSegments)
+        XCTAssertFalse(CloudAPITranscriber(providerName: "OpenAI", baseURL: "", model: "gpt-4o-transcribe", apiKey: "k").wantsSegments)
+    }
+
+    func testVerboseReplyGivesSegmentPieces() async throws {
+        StubProtocol.status = 200
+        StubProtocol.body = Data(#"{"text":"Ja. Doe ik.","language":"dutch","segments":[{"id":0,"seek":0,"start":0.0,"end":1.2,"text":" Ja.","tokens":[1]},{"id":1,"seek":0,"start":1.4,"end":2.6,"text":" Doe ik.","tokens":[2]}]}"#.utf8)
+        let reply = try await transcriber().upload(audio: Data("RIFF".utf8), prompt: nil)
+        XCTAssertEqual(reply.text, "Ja. Doe ik.")
+        XCTAssertEqual(reply.pieces, [TimedPiece(start: 0, end: 1.2, text: " Ja."), TimedPiece(start: 1.4, end: 2.6, text: " Doe ik.")])
+    }
+
+    func testPlainReplyGivesNoPieces() async throws {
+        StubProtocol.status = 200
+        StubProtocol.body = Data(#"{"text":"Hallo"}"#.utf8)
+        let reply = try await transcriber().upload(audio: Data("RIFF".utf8), prompt: nil)
+        XCTAssertEqual(reply.pieces, [])
     }
 
     func testOpenRouterTranscriptionListReplacesThePresets() {

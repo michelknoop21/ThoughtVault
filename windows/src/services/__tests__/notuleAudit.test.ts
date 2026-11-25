@@ -27,6 +27,64 @@ it("identifies a contradictory note claim for manual review without accepting th
   expect(request).toHaveBeenCalledTimes(1);
 });
 
+// DEC-083: the source check already warned, so a sentence the model could not follow is skipped, not fatal.
+it("judges the rest when the source check warned and a transcription sentence is unclear", async () => {
+  const source = "Sam controleert vrijdag. Ja dat ook niet zeg maar. Joris belt maandag.";
+  const unclear = (extra?: (report: ReturnType<typeof complete>) => void) => fixture(report => {
+    report.uncertain = true as never; report.source[1].status = "uncertain"; report.source[1].evidence = [];
+    report.notes.forEach(note => { note.evidence = note.evidence.filter(id => id !== "T2"); });
+    extra?.(report);
+  });
+  const html = "<p>Sam voert vrijdag de controle uit. Joris belt maandag.</p>";
+  await auditNotule(source, html, "", unclear(), [], true);
+  await expect(auditNotule(source, html, "", unclear())).rejects.toThrow("De inhoudscontrole is onzeker; beoordeel het concept");
+  await expect(auditNotule(source, html, "", unclear(report => { report.source[2].status = "missing"; report.source[2].evidence = []; }), [], true))
+    .rejects.toThrow("De notule mist broninformatie: Joris belt maandag.");
+  await expect(auditNotule(source, html, "", unclear(report => { report.notes[1].status = "unsupported"; report.notes[1].evidence = []; }), [], true))
+    .rejects.toThrow("De notule bevat een onbevestigde bewering: Joris belt maandag.");
+  // More than half of the transcription unclear: no single concrete line, the general one.
+  await expect(auditNotule(source, html, "", unclear(report => {
+    report.source[0].status = "uncertain"; report.source[0].evidence = [];
+    report.notes[0].status = "uncertain"; report.notes[0].evidence = [];
+  }), [], true)).rejects.toThrow("De inhoudscontrole kon het grootste deel van de bron niet volgen; beoordeel het concept");
+});
+
+// DEC-083: what the reader must not miss is never skipped, and a mostly unjudged notule gets the general line.
+it("keeps required sentences and amounts, and gives the general line when most of the notule is unjudged", async () => {
+  const source = "Sam controleert vrijdag. Ja dat kost 500 euro zeg maar. Joris belt maandag.";
+  const html = "<p>Sam voert vrijdag de controle uit. Joris belt maandag.</p>";
+  const unclear = (extra: (report: ReturnType<typeof complete>) => void) => fixture(report => {
+    report.uncertain = true as never; report.source[1].status = "uncertain"; report.source[1].evidence = [];
+    report.notes.forEach(note => { note.evidence = note.evidence.filter(id => id !== "T2"); });
+    extra(report);
+  });
+  await expect(auditNotule(source, html, "", unclear(() => {}), [], true))
+    .rejects.toThrow("De bron is onvoldoende duidelijk: Ja dat kost 500 euro zeg maar.");
+  const plain = "Sam controleert vrijdag. Ja dat ook niet zeg maar. Joris belt maandag.";
+  await expect(auditNotule(plain, html, "", unclear(() => {}), ["Ja dat ook niet zeg maar."], true))
+    .rejects.toThrow("De bron is onvoldoende duidelijk: Ja dat ook niet zeg maar.");
+  const longer = "<p>Sam voert vrijdag de controle uit. Joris belt maandag. Iris mailt dinsdag.</p>";
+  await expect(auditNotule(`${plain} Iris mailt dinsdag.`, longer, "", unclear(report => {
+    report.notes[1].status = "uncertain"; report.notes[2].status = "uncertain";
+  }), [], true)).rejects.toThrow("De inhoudscontrole kon het grootste deel van de bron niet volgen; beoordeel het concept");
+});
+
+it("skips only the first plain title and checks any other heading", async () => {
+  const request = fixture();
+  await auditNotule("Sam controleert vrijdag. Joris belt maandag.", "<h1>Controle</h1><p>Sam voert vrijdag de controle uit.</p><h1>Akkoord over 50.000 euro</h1><p>Joris belt maandag.</p>", "", request);
+  expect(request.mock.calls[0][1]).not.toContain("Controle\"");
+  expect(request.mock.calls[0][1]).toContain("Akkoord over 50.000 euro");
+  const nested = fixture();
+  await auditNotule("Sam controleert vrijdag.", "<h1>Controle <strong>vrijdag</strong></h1><p>Sam voert vrijdag de controle uit.</p>", "", nested);
+  expect(nested.mock.calls[0][1]).toContain("Controle vrijdag");
+});
+
+it("does not send the title to the model as a claim", async () => {
+  const request = fixture();
+  await auditNotule("Sam controleert vrijdag. Joris belt maandag.", "<h1>Controle en belafspraak</h1><p>Sam voert vrijdag de controle uit. Joris belt maandag.</p>", "", request);
+  expect(request.mock.calls[0][1]).not.toContain("Controle en belafspraak");
+});
+
 it("needs no model verdict only for the exact complete visible source", async () => {
   const request = fixture();
   await auditNotule("Noor controleert donderdag.", "<p>Noor controleert donderdag.</p>", "", request);

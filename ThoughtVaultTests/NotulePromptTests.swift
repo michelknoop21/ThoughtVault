@@ -7,7 +7,7 @@ final class NotulePromptTests: XCTestCase {
     func testSystemPromptStartsWithSourceFidelity() {
         XCTAssertEqual(
             notuleSystemPrompt("P"),
-            "P\n\nBrongetrouwheid gaat vóór beknoptheid en de template. " + rules + " Vermeld ieder expliciet vervallen tijdstip en iedere expliciete afwezigheid, ook als dat geen actie is. Als ergens geen besluit over uitvoering is genomen, behoud dat letterlijk als onbeslist; vraag niet hoe het uitgevoerd moet worden."
+            "P\n\nBrongetrouwheid gaat vóór beknoptheid en de template. " + rules + " Vermeld ieder expliciet vervallen tijdstip en iedere expliciete afwezigheid, ook als dat geen actie is. Als ergens geen besluit over uitvoering is genomen, benoem dat als onbeslist; vraag niet hoe het uitgevoerd moet worden."
         )
     }
 
@@ -20,9 +20,9 @@ final class NotulePromptTests: XCTestCase {
 
     func testConstraintBlockAppendedOnlyWhenPresent() {
         let without = buildNotuleUserContent(notulePrompt: "P", transcription: "t", outputTemplate: nil)
-        XCTAssertFalse(without.contains("Verplicht te behouden bronzinnen"))
+        XCTAssertFalse(without.contains("Uitspraken uit de transcriptie"))
         let with = buildNotuleUserContent(notulePrompt: "P", transcription: "t", outputTemplate: nil, constraints: ["Budget is 12.450 euro.", "Geen klantgegevens extern."])
-        XCTAssertTrue(with.hasSuffix("\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n1. Budget is 12.450 euro.\n2. Geen klantgegevens extern."))
+        XCTAssertTrue(with.hasSuffix("\n\nUitspraken uit de transcriptie met een getal, besluit of voorwaarde. Neem de betekenis van elke uitspraak op bij het passende onderwerp, in je eigen woorden, met de genoemde bedragen en voorwaarden. Citeer ze niet en spreek ze nergens tegen. Is een uitspraak onverstaanbaar, neem haar dan niet over:\n1. Budget is 12.450 euro.\n2. Geen klantgegevens extern."))
     }
 
     func testUserContentKeepsFullTranscriptAndTemplate() {

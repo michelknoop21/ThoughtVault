@@ -16,7 +16,7 @@ struct NotuleGenerator: Sendable {
     /// `onStep` reports the running step for the task label (`ModelStep.displayLabel`).
     /// `onUsage` gets length, requests, tokens, cost and duration of a successful run. Every run, also a
     /// failed one, is added to the monthly `UsageLedger`.
-    /// `detailLevel` shortens the notule below volledig; volledig sends exactly the prompts of before.
+    /// `detailLevel` shortens the notule below volledig; volledig adds no length block.
     func generate(transcription: String, profile: Profile, participants: [Participant], quickNote: String?,
                   createdAt: Date, corrections: [PersonalCorrection], context: String = "",
                   detailLevel: NotuleDetailLevel = .volledig,
@@ -61,8 +61,9 @@ struct NotuleGenerator: Sendable {
                              detailLevel: NotuleDetailLevel,
                              onStep: @escaping @Sendable (ModelStep) -> Void) async throws -> Run {
         let source = PersonalCorrections.text(transcription, entries: corrections, profileId: profile.id)
-        // Below volledig only the essential constraints stay mandatory, for the draft and for the audit.
-        let constraints = detailLevel == .volledig ? NotuleAudit.constraintSentences(source) : NotuleAudit.essentialConstraints(source)
+        // Only the essential constraints are mandatory, for the draft and for the audit: a plain negation in
+        // spoken text is usually small talk, and listing it made the model quote it word for word (DEC-082).
+        let constraints = NotuleAudit.essentialConstraints(source)
 
         // NotuleAudit turns every request error into an audit message; remember cancellation separately.
         let cancelled = OSAllocatedUnfairLock(initialState: false)
@@ -84,7 +85,8 @@ struct NotuleGenerator: Sendable {
                 transcription: source,
                 systemPrompt: notuleSystemPrompt(profile.systemPrompt ?? "") + (merging ? "\n\n" + NotuleMerge.instructions : ""),
                 notulePrompt: QuickNoteStore.promptBlock(quickNote)
-                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants)
+                    + Self.injectParticipants(into: profile.notulePrompt ?? "", participants: participants,
+                                               speakerLabels: SpeakerTranscript.hasLabels(source))
                     + context,
                 outputTemplate: profile.template,
                 constraints: constraints,
@@ -112,7 +114,9 @@ struct NotuleGenerator: Sendable {
             warning = try await sourceWarning
             if Task.isCancelled || cancelled.withLock({ $0 }) { throw CancellationError() }
             try await NotuleAudit.auditNotule(source: source, html: candidate, quickNote: quickNote ?? "",
-                                              request: request, requiredSentences: constraints, sourceUnclear: warning != nil,
+                                              request: request, requiredSentences: constraints,
+                                              // Only a source the check called unclear relaxes the content check; a failed source check does not (DEC-083).
+                                              sourceUnclear: warning == NotuleAudit.unclearSourceWarning,
                                               noteConcurrency: noteConcurrency, detailLevel: detailLevel, onProgress: onStep)
             log.info("Notule audit ran outcome=ok source_warning=\(warning != nil)")
             return Run(html: NotuleAudit.appendingWarnings([warning].compactMap { $0 }, to: candidate), checkedHtml: candidate, skipReason: nil)
@@ -166,8 +170,8 @@ struct NotuleGenerator: Sendable {
     /// Substitutes a {{PARTICIPANTS}} placeholder when present, otherwise prepends
     /// the block. Mirrors what the cloud backend does server-side so both paths
     /// produce an attendee list + name attribution.
-    static func injectParticipants(into notulePrompt: String, participants: [Participant]) -> String {
-        let block = participants.notulePromptBlock
+    static func injectParticipants(into notulePrompt: String, participants: [Participant], speakerLabels: Bool = false) -> String {
+        let block = participants.notulePromptBlock(speakerLabels: speakerLabels)
         if notulePrompt.contains("{{PARTICIPANTS}}") {
             return notulePrompt.replacingOccurrences(of: "{{PARTICIPANTS}}", with: block)
         }

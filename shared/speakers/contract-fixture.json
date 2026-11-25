@@ -1,0 +1,74 @@
+{
+  "comment": "Contract for speaker-labelled transcripts. Both the Swift and the Rust implementation must turn `pieces` and `turns` into exactly `segments` and `text`.",
+  "cases": [
+    {
+      "name": "words split at the speaker change, speakers numbered by first appearance",
+      "pieces": [
+        {"start": 0.0, "end": 0.3, "text": "Ja"}, {"start": 0.3, "end": 0.5, "text": "dat"}, {"start": 0.5, "end": 0.9, "text": "klopt."},
+        {"start": 1.2, "end": 1.5, "text": "Mooi,"}, {"start": 1.5, "end": 1.7, "text": "dan"}, {"start": 1.7, "end": 2.0, "text": "doen"},
+        {"start": 2.0, "end": 2.1, "text": "we"}, {"start": 2.1, "end": 2.4, "text": "dat."}
+      ],
+      "turns": [{"start": 1.1, "end": 2.5, "speaker": "2"}, {"start": 0.0, "end": 1.0, "speaker": "7"}],
+      "segments": [
+        {"start": 0.0, "end": 0.9, "text": "Ja dat klopt.", "speakerId": "S1"},
+        {"start": 1.2, "end": 2.4, "text": "Mooi, dan doen we dat.", "speakerId": "S2"}
+      ],
+      "text": "Spreker 1: Ja dat klopt.\nSpreker 2: Mooi, dan doen we dat."
+    },
+    {
+      "name": "a segment with a speaker change in the middle gets no speaker",
+      "pieces": [
+        {"start": 0.0, "end": 4.0, "text": "Eerste stuk."},
+        {"start": 4.0, "end": 8.0, "text": "Vraag en antwoord door elkaar."},
+        {"start": 8.0, "end": 12.0, "text": "Laatste stuk."}
+      ],
+      "turns": [{"start": 0.0, "end": 6.0, "speaker": "a"}, {"start": 6.0, "end": 12.0, "speaker": "b"}],
+      "segments": [
+        {"start": 0.0, "end": 4.0, "text": "Eerste stuk.", "speakerId": "S1"},
+        {"start": 4.0, "end": 8.0, "text": "Vraag en antwoord door elkaar.", "speakerId": null},
+        {"start": 8.0, "end": 12.0, "text": "Laatste stuk.", "speakerId": "S2"}
+      ],
+      "text": "Spreker 1: Eerste stuk.\nOnbekende spreker: Vraag en antwoord door elkaar.\nSpreker 2: Laatste stuk."
+    },
+    {
+      "name": "a word spoken while two people talk gets no speaker",
+      "pieces": [
+        {"start": 0.2, "end": 0.5, "text": "Ja,"}, {"start": 1.0, "end": 1.4, "text": "precies,"}, {"start": 1.6, "end": 1.9, "text": "goed."}
+      ],
+      "turns": [{"start": 0.0, "end": 2.0, "speaker": "a"}, {"start": 0.9, "end": 1.5, "speaker": "b"}],
+      "segments": [
+        {"start": 0.2, "end": 0.5, "text": "Ja,", "speakerId": "S1"},
+        {"start": 1.0, "end": 1.4, "text": "precies,", "speakerId": null},
+        {"start": 1.6, "end": 1.9, "text": "goed.", "speakerId": "S1"}
+      ],
+      "text": "Spreker 1: Ja,\nOnbekende spreker: precies,\nSpreker 1: goed."
+    },
+    {
+      "name": "a word in a short gap takes the nearest turn, a word far from any turn gets no speaker",
+      "pieces": [
+        {"start": 0.0, "end": 0.2, "text": "We"}, {"start": 1.05, "end": 1.25, "text": "gaan"}, {"start": 1.3, "end": 1.6, "text": "door."},
+        {"start": 5.0, "end": 5.3, "text": "Hallo?"}
+      ],
+      "turns": [{"start": 0.0, "end": 1.0, "speaker": "a"}, {"start": 1.3, "end": 2.0, "speaker": "a"}],
+      "segments": [
+        {"start": 0.0, "end": 1.6, "text": "We gaan door.", "speakerId": "S1"},
+        {"start": 5.0, "end": 5.3, "text": "Hallo?", "speakerId": null}
+      ],
+      "text": "Spreker 1: We gaan door.\nOnbekende spreker: Hallo?"
+    },
+    {
+      "name": "without speaker turns the text stays plain, as before",
+      "pieces": [{"start": 0.0, "end": 2.0, "text": "Eerste stuk."}, {"start": 2.0, "end": 4.0, "text": " Tweede stuk. "}],
+      "turns": [],
+      "segments": [{"start": 0.0, "end": 4.0, "text": "Eerste stuk. Tweede stuk.", "speakerId": null}],
+      "text": "Eerste stuk. Tweede stuk."
+    },
+    {
+      "name": "an equal minor overlap goes to the lowest speaker name",
+      "pieces": [{"start": 0.0, "end": 1.0, "text": "ja"}, {"start": 1.0, "end": 2.0, "text": "nee"}],
+      "turns": [{"start": 0.875, "end": 1.0, "speaker": "b"}, {"start": 0.0, "end": 0.125, "speaker": "a"}, {"start": 1.0, "end": 2.0, "speaker": "a"}],
+      "segments": [{"start": 0.0, "end": 2.0, "text": "ja nee", "speakerId": "S1"}],
+      "text": "Spreker 1: ja nee"
+    }
+  ]
+}

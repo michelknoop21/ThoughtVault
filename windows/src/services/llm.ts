@@ -11,7 +11,7 @@ import { modelRefusal, usableModel } from "./suggestedModels";
 import { loadCorrectionsOrEmpty, usePersonalCorrectionsStore } from "../stores/personalCorrectionsStore";
 import { usePeopleDirectoryStore } from "../stores/peopleDirectoryStore";
 import { correctText, correctHTML, contextBlock, CONTEXT_BUDGET, type PersonalCorrection } from "./personalCorrections";
-import { auditSource, auditNotule, appendWarnings, AuditFinding, constraintSentences, essentialConstraints, UNCHECKED_CONTENT_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
+import { auditSource, auditNotule, appendWarnings, AuditFinding, essentialConstraints, UNCHECKED_CONTENT_WARNING, UNCLEAR_SOURCE_WARNING, AUDIT_CONCURRENCY, HOSTED_AUDIT_CONCURRENCY } from "./notuleAudit";
 import { draftBlock } from "./notuleDetailLevel";
 import { UsageMeter, parseUsage, addToLedger } from "./usageMeter";
 import { logModelRequest, TIME_LIMIT_MESSAGE, TRUNCATED_MESSAGE, type ModelStep, type RequestTrace } from "./modelRequestLog";
@@ -137,7 +137,8 @@ function buildUserContent(
   content = content.split("{{DATE}}").join(merging ? "Zie bronnotulen" : todayNL());
   content = content.split("{{PARTICIPANTS}}").join(names);
   if (names && !notulePrompt.includes("{{PARTICIPANTS}}")) {
-    content += `\n\nDeelnemers aan dit gesprek: ${names}`;
+    // With speaker labels the app links names to speakers after the user confirms them.
+    content += `\n\nDeelnemers aan dit gesprek: ${names}` + (/^Spreker [0-9]+: /m.test(transcription) ? ". De transcriptie heeft sprekerlabels: koppel zelf geen naam uit deze lijst aan een sprekerlabel." : "");
   }
   return content + `\n\nLaatste inhoudsregels: volg de gekozen template en laat lege secties weg. Begin met één h1 die in 4 tot 10 woorden het doel of de uitkomst van het gesprek noemt; nooit alleen een genre-woord als Verslag, Notulen, Meeting, Gesprek of Overleg. Verzin geen feiten, besluiten, eigenaren of termijnen. ${FACTUALITY_RULES} Schrijf eenvoudige HTML zonder CSS, style-blok of code fences.`;
 }
@@ -342,7 +343,7 @@ export class LLMService {
     meter?: UsageMeter,
     merging = false,
     signal?: AbortSignal,
-    /** Shortens the notule below volledig; volledig sends exactly the prompts of before. */
+    /** Shortens the notule below volledig; volledig adds no length block. */
     detailLevel: NotuleDetailLevel = "volledig",
   ): Promise<string> {
     let succeeded = false;
@@ -368,7 +369,7 @@ export class LLMService {
     meter?: UsageMeter,
     merging = false,
     signal?: AbortSignal,
-    /** Shortens the notule below volledig; volledig sends exactly the prompts of before. */
+    /** Shortens the notule below volledig; volledig adds no length block. */
     detailLevel: NotuleDetailLevel = "volledig",
   ): Promise<string> {
     try {
@@ -407,7 +408,7 @@ export class LLMService {
     const finish = (html: string) => correctHTML(ensureNotesSection(stripCodeFences(html), quickNote), corrections, profile.id);
     const config = getConfig(providerOverride);
     const enriched = enrichProfile(profile);
-    const systemPrompt = `${enriched.system_prompt ?? ""}\n\nBrongetrouwheid gaat vóór beknoptheid en de template. ${FACTUALITY_RULES} Vermeld ieder expliciet vervallen tijdstip en iedere expliciete afwezigheid, ook als dat geen actie is. Als ergens geen besluit over uitvoering is genomen, behoud dat letterlijk als onbeslist; vraag niet hoe het uitgevoerd moet worden.`;
+    const systemPrompt = `${enriched.system_prompt ?? ""}\n\nBrongetrouwheid gaat vóór beknoptheid en de template. ${FACTUALITY_RULES} Vermeld ieder expliciet vervallen tijdstip en iedere expliciete afwezigheid, ook als dat geen actie is. Als ergens geen besluit over uitvoering is genomen, benoem dat als onbeslist; vraag niet hoe het uitgevoerd moet worden.`;
     const mergeRules = merging ? "\n\n" + MERGE_INSTRUCTIONS : "";
     let processed = correctText(transcription, corrections, profile.id);
     const compatible = config.provider === "ollama" || config.provider === "lm-studio";
@@ -467,12 +468,12 @@ export class LLMService {
       }
       throw new Error("Cloud provider moet via de server worden verwerkt");
     };
-    // Explicit constraints remain mandatory audit obligations (rules in constraintSentences). Below volledig only
-    // the essential ones stay mandatory, for the draft and for the audit.
+    // Only the essential constraints are mandatory, for the draft and for the audit: a plain negation in spoken
+    // text is usually small talk, and listing it made the model quote it word for word (DEC-082).
     const source = correctText(transcription, corrections, profile.id);
-    const constraints = detailLevel === "volledig" ? constraintSentences(source) : essentialConstraints(source);
+    const constraints = essentialConstraints(source);
     const constraintPrompt = constraints.length
-      ? `\n\nVerplicht te behouden bronzinnen (behoud de volledige betekenis, bedragen en voorwaarden bij het passende onderwerp, besluit of open punt; correcte parafrases mogen, tegenspraken nergens):\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
+      ? `\n\nUitspraken uit de transcriptie met een getal, besluit of voorwaarde. Neem de betekenis van elke uitspraak op bij het passende onderwerp, in je eigen woorden, met de genoemde bedragen en voorwaarden. Citeer ze niet en spreek ze nergens tegen. Is een uitspraak onverstaanbaar, neem haar dan niet over:\n${constraints.map((sentence, index) => `${index + 1}. ${sentence}`).join("\n")}` : "";
     // Keep the unverified draft out of progress updates and saved notes.
     onStep?.({ kind: "draft" });
     const draftRequest = generate(systemPrompt + mergeRules, userPrompt + constraintPrompt + mergeRules + draftBlock(detailLevel, source.length), { kind: "draft" });
@@ -496,7 +497,9 @@ export class LLMService {
       const source = await sourceCheck;
       if ("error" in source) throw source.error;
       warning = source.warning;
-      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints, warning !== null,
+      await auditNotule(correctText(transcription, corrections, profile.id), candidate, quickNote, generate, constraints,
+        // Only a source the check called unclear relaxes the content check; a failed source check does not (DEC-083).
+        warning === UNCLEAR_SOURCE_WARNING,
         auditNoteConcurrency(config.provider, baseURL), onStep, detailLevel);
       checkModelCancellation(signal);
       const approved = appendWarnings(warning ? [warning] : [], candidate);

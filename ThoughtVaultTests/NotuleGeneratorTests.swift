@@ -166,14 +166,15 @@ final class NotuleGeneratorTests: XCTestCase {
     }
 
     // The T9 case: "covered" without any notule sentence pointing at it.
-    func testMissingEvidenceShowsGeneralWarningWithoutCode() async throws {
+    // DEC-083: a source the model calls covered while no notule sentence cites it is reported as missing.
+    func testUncitedCoveredSourceIsReportedAsMissing() async throws {
         let html = "<p>Sam neemt vrijdag contact op.</p>"
         let service = StubLLM(draft: html, audit: StubLLM.approve { report in
             report["source"] = (report["source"] as! [[String: Any]]).map { var item = $0; item["status"] = "covered"; return item }
             report["notes"] = (report["notes"] as! [[String: Any]]).map { var note = $0; note["evidence"] = ["T1"]; return note }
         })
         let result = try await generate(service, "Sam belt vrijdag. Iris mailt maandag.")
-        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedContentWarning, in: html))
+        XCTAssertEqual(result, warnings("Dit is gezegd, maar staat misschien niet in de notule: “Iris mailt maandag.”", in: html))
         XCTAssertFalse(result.contains("T2"))
     }
 
@@ -193,10 +194,25 @@ final class NotuleGeneratorTests: XCTestCase {
         let html = "<p>Een stellig verhaal over een pilot.</p>"
         let service = StubLLM(draft: html, audit: { user in
             if user.hasPrefix("Broncontrole") { return #"{"uncertain":true}"# }
-            return try StubLLM.approve { $0["uncertain"] = true }(user)
+            // DEC-083: the unclear sentence is skipped, and with nothing else covered the check proves nothing.
+            return try StubLLM.approve { report in
+                report["uncertain"] = true
+                report["source"] = (report["source"] as! [[String: Any]]).map { var item = $0; item["status"] = "uncertain"; return item }
+            }(user)
         })
         let result = try await generate(service, "En mensen processen stok maken voorbij pilot zeker leeg.")
         XCTAssertEqual(result, warnings(NotuleAudit.unclearSourceWarning, NotuleAudit.uncheckedContentWarning, in: html))
+    }
+
+    // DEC-083: a source check that failed did not find the source unclear, so the content check stays strict.
+    func testFailedSourceCheckKeepsTheContentCheckStrict() async throws {
+        let html = "<p>Sam neemt vrijdag telefonisch contact op.</p>"
+        let service = StubLLM(draft: html, audit: { user in
+            if user.hasPrefix("Broncontrole") { return "geen json" }
+            return try StubLLM.approve { $0["uncertain"] = true }(user)
+        })
+        let result = try await generate(service, "Sam belt vrijdag.")
+        XCTAssertEqual(result, warnings(NotuleAudit.uncheckedSourceWarning, NotuleAudit.uncheckedContentWarning, in: html))
     }
 
     // An unsupported notule sentence is quoted; one generation, two audit calls, no retry.
@@ -233,12 +249,13 @@ final class NotuleGeneratorTests: XCTestCase {
         _ = try await generate(service, raw, quickNote: "Bel Sam", participants: [Participant(name: "Fatima")])
         let call = try XCTUnwrap(service.generations.first)
         XCTAssertEqual(call.systemPrompt, notuleSystemPrompt("Je bent notulist."))
-        XCTAssertEqual(call.constraints, ["Er gaan geen klantgegevens naar leveranciers.", "We besluiten dit niet vandaag."])
+        // DEC-082: the plain negation about customer data is no longer listed; the decision sentence is.
+        XCTAssertEqual(call.constraints, ["We besluiten dit niet vandaag."])
         XCTAssertTrue(call.notulePrompt.contains("Bel Sam"))
         XCTAssertTrue(call.notulePrompt.contains("- Fatima"))
         let content = buildNotuleUserContent(notulePrompt: call.notulePrompt, transcription: call.transcription,
                                              outputTemplate: nil, constraints: call.constraints)
-        XCTAssertTrue(content.hasSuffix("\n2. We besluiten dit niet vandaag."))
+        XCTAssertTrue(content.hasSuffix("\n1. We besluiten dit niet vandaag."))
     }
 
     func testEmptyDraftIsRejectedBeforeTheAudit() async {
@@ -746,10 +763,10 @@ final class NotuleGeneratorDetailLevelTests: XCTestCase {
         SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    func testDefaultIsVolledigWithTheDraftOfBefore() async throws {
+    func testDefaultIsVolledigWithTheRecordedDraft() async throws {
         let (call, usage) = try await run(nil)
         XCTAssertEqual(call.detailBlock, "")
-        XCTAssertEqual(call.constraints, NotuleAudit.constraintSentences(transcription))
+        XCTAssertEqual(call.constraints, ["De vorige afspraak vervalt."])
         XCTAssertEqual(sha256(notuleSystemPrompt("Je bent notulist.")), Self.fixtureSystemSha256)
         XCTAssertEqual(sha256(userMessage(call)), Self.fixtureUserSha256)
         XCTAssertEqual(usage?.detailLevel, "volledig")
@@ -774,6 +791,6 @@ final class NotuleGeneratorDetailLevelTests: XCTestCase {
     }
 
     // SHA-256 of `system` and `user` in tests/fixtures/notule-detail/draft-volledig.json.
-    static let fixtureSystemSha256 = "37bd9bf3f46b319cb8dc0c83d5e7a411cfb1da3c597b47e665b64084ecbc80b8"
-    static let fixtureUserSha256 = "be9c1c4a735a98388848eaeda37b3312ce178a34af34b2ede3bba68c7c143539"
+    static let fixtureSystemSha256 = "20cf96ddfd3427535f0b3097f3019fd23f7b81cb2c71d5fe53c32cc607a8193f"
+    static let fixtureUserSha256 = "b66b11aeaabcbbc3dacd329d6ca808f93399984c94003816bb0419bde5aea175"
 }

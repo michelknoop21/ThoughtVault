@@ -31,7 +31,11 @@ extension Array where Element == Participant {
     /// Renders a Dutch "DEELNEMERS:" block (+ attribution instruction) for
     /// notule-prompt injection. Returns "" when empty so callers can no-op cleanly.
     /// Kept in sync with the backend's participants.build_participants_block.
-    var notulePromptBlock: String {
+    var notulePromptBlock: String { notulePromptBlock(speakerLabels: false) }
+
+    /// With speaker labels in the transcript the app links names to speakers after the user
+    /// confirms them, so the model must not attach a name from this list to a label itself.
+    func notulePromptBlock(speakerLabels: Bool) -> String {
         guard !isEmpty else { return "" }
         let lines = map { p -> String in
             let extras = [p.role, p.organization]
@@ -39,7 +43,11 @@ extension Array where Element == Participant {
                 .joined(separator: ", ")
             return extras.isEmpty ? "- \(p.name)" : "- \(p.name) (\(extras))"
         }
-        let instruction = "Gebruik bovenstaande deelnemers in de notule: noem ze in een "
+        let instruction = speakerLabels
+            ? "Gebruik bovenstaande deelnemers in de notule: noem ze in een deelnemerssectie. "
+                + "Verzin geen deelnemers buiten deze lijst. De transcriptie heeft sprekerlabels: "
+                + "koppel zelf geen naam uit deze lijst aan een sprekerlabel."
+            : "Gebruik bovenstaande deelnemers in de notule: noem ze in een "
             + "deelnemerssectie en koppel actiepunten waar mogelijk aan de juiste persoon "
             + "op naam. Verzin geen deelnemers buiten deze lijst en wijs losse uitspraken "
             + "niet aan individuele sprekers toe."

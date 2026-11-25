@@ -247,6 +247,13 @@ extension SettingsView {
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: localTranscriber)
+
+        Divider().overlay(HomeColor.divider)
+
+        VStack(alignment: .leading, spacing: 4) {
+            iosLabel(String(localized: "Sprekers"))
+            SpeakerModelRow()
+        }
     }
 
     // MARK: Gebruik

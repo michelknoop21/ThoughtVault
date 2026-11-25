@@ -1,8 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import { rememberReportedPrices } from "./suggestedModels";
+import { OPENROUTER_API_URL, rememberReportedPrices } from "./suggestedModels";
+import { loadCredential } from "./tauriCommands";
 
 /** the provider's public model list; no key needed. Same source as the routed providerModels.swift on macOS. */
 export const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
+/** Only the models the key may use, under the workspace's model access; needs the key. */
+export const OPENROUTER_KEY_MODELS_URL = "https://openrouter.ai/api/v1/models/user";
 /** Output cap for a model that thinks by default. Thinking and the reply share max_tokens, and the provider's notes
  * for adaptive-thinking models name 64k as the size that worked for long turns; at 32k a 43k-character meeting ended
  * truncated. Only generated tokens are billed, so the higher cap costs only when a model needs it. */
@@ -26,7 +29,7 @@ type ListEntry = {
 export function parseModelList(body: string): Map<string, OpenRouterModel> {
   const models = new Map<string, OpenRouterModel>();
   const entries = JSON.parse(body).data ?? [];
-  rememberReportedPrices("https://openrouter.ai/api/v1", entries);
+  rememberReportedPrices(OPENROUTER_API_URL, entries);
   for (const entry of entries as ListEntry[]) {
     if (!entry.id) continue;
     const r = entry.reasoning;
@@ -68,4 +71,22 @@ export async function openRouterModel(id: string): Promise<OpenRouterModel | und
 /** Test seam: forget the fetched list. */
 export function resetOpenRouterModels(): void {
   catalog = null;
+}
+
+/** Ids of the models the stored key may use, with their prices remembered for the cap; [] without a key or answer. */
+export async function openRouterKeyModels(): Promise<string[]> {
+  try {
+    const key = await loadCredential("openrouter_api_key");
+    if (!key) return [];
+    const response = await invoke<{ status: number; body: string }>("proxy_request", {
+      request: { url: OPENROUTER_KEY_MODELS_URL, method: "GET", headers: { Authorization: `Bearer ${key}` }, body: null, timeout_seconds: 30 },
+    });
+    if (response.status !== 200) return [];
+    const rows: unknown = JSON.parse(response.body).data;
+    if (!Array.isArray(rows)) return [];
+    rememberReportedPrices(OPENROUTER_API_URL, rows);
+    return rows.map(row => (row as { id?: unknown })?.id).filter((id): id is string => typeof id === "string");
+  } catch {
+    return [];
+  }
 }

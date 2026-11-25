@@ -8,6 +8,23 @@ _Decisions DEC-039 through DEC-053 archived to [archive/DECISIONS-DEC-039-to-DEC
 
 ---
 
+## DEC-078: OpenRouter-modellen per sleutel
+
+**Date:** 2026-11-25
+**Status:** Accepted
+
+**Context:** De Thoughtvault-workspace op OpenRouter staat 9 modellen toe ("Model & provider access", alleen de selectie). De app toonde er 3: op Windows haalde de modelkeuze geen lijst op, op macOS alleen na "Beschikbare modellen laden" en dan de openbare catalogus. Een van de drie voorstellen, `openai/gpt-5.6-terra`, staat niet op de toegestane lijst. Windows verving bij een verzoek bovendien elk model zonder bekende prijs door mistral-large, ook als de gebruiker dat model zelf had gekozen.
+
+**Decision:**
+1. De app vraagt de modellen op met de sleutel via `GET /api/v1/models/user`. Dat endpoint geeft alleen wat de sleutel mag gebruiken, met prijzen; een gewone sleutel volstaat (gecontroleerd op 25 november 2026: status 200, de 9 toegestane modellen).
+2. macOS laadt die lijst bij het openen van de OpenRouter-instelling als er een sleutel is; Windows laadt hem in de modelkeuze.
+3. Bij OpenRouter valt een voorstel weg dat niet op de lijst van de sleutel staat. Bij OpenAI en Anthropic blijven de voorstellen staan. Het derde voorstel is nu `openai/gpt-6.1-terra`.
+4. De prijzen van gpt-6-luna, gpt-6-sol, gpt-6.1-terra, gpt-6.1-sol, mistral-medium-3-5 en mistral-small-2603 staan in de vaste prijslijst (prijzen van 25 november 2026). Windows telt daarnaast de door OpenRouter gemelde prijs mee, zodat een gekozen model bij het verzoek niet wordt vervangen.
+
+**Consequences:** Een sleutel zonder beperking krijgt alle modellen onder de prijsgrens te zien. Op Windows verschijnt de lijst van een nieuw ingevulde sleutel pas na opnieuw openen van de instelling.
+
+---
+
 ## DEC-077: Termen in e-mailadressen en hostnamen in kleine letters
 
 **Date:** 2026-11-24

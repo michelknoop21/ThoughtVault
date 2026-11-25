@@ -1,10 +1,20 @@
+import { useEffect, useState } from "react";
+import { openRouterKeyModels } from "../../services/openRouterModels";
 import { modelChoices, modelLabel, type ModelProvider } from "../../services/suggestedModels";
 
 /** Model picker for providers billed per token: only suggested models within the price cap. */
 export function CappedModelSelect({ provider, value, label, onChange }: {
   provider: ModelProvider; value: string; label: string; onChange: (model: string) => void;
 }) {
-  const choices = modelChoices(provider, value);
+  // OpenRouter limits models per key; without its list only the suggestions would show.
+  const [available, setAvailable] = useState<string[]>([]);
+  useEffect(() => {
+    if (provider !== "openrouter") { setAvailable([]); return; }
+    let current = true;
+    void openRouterKeyModels().then(models => { if (current) setAvailable(models); });
+    return () => { current = false; };
+  }, [provider]);
+  const choices = modelChoices(provider, value, available);
   return <>
     <select className="select" aria-label={label} style={{ width: "100%" }} value={choices.includes(value) ? value : ""}
       onChange={(e) => onChange(e.target.value)}>

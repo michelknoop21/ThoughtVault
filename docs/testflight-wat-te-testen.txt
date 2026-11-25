@@ -6,19 +6,3 @@ OpenRouter-modellen (eerst testen): open Instellingen > Verwerking met OpenRoute
 Adressen in notulen (eerst testen): zet in de woordenlijst Yinga met de verkeerde spelling Jinga en maak een notule van een gesprek waarin je secure.yinga.nl en analytics@yinga.nl noemt. Hostnamen en e-mailadressen horen in kleine letters te staan, ook als de spraakherkenning Yinga met een hoofdletter of als Jinga schreef. Gewone tekst zoals "Yinga.AI" hoort ongewijzigd te blijven.
 
 Woordenlijst (eerst testen): zet in de woordenlijst Yinga met de verkeerde spelling Jinga en maak een notule van een gesprek waarin je "AI" zegt en het e-mailadres analytics@jinga.nl noemt. AI hoort overal AI te blijven en het adres hoort analytics@yinga.nl te worden. Kijk daarna in de woordenlijst bij de geleerde spellingen: daar horen geen woordgroepen bij te komen waar de term zelf al in staat, zoals "de Prospectflow", en bij AI geen "API".
-
-Opgeslagen opnames (iPhone, eerst testen): maak een opname van een paar minuten, stop hem en zet de app tijdens het verwerken op de achtergrond. Veeg de melding "ThoughtVault verwerkt" weg, zodat de verwerking stopt. Open de app weer: de opname hoort meteen onder Opnemen > Opgeslagen opnames te staan, zonder dat je de app eerst helemaal afsluit. Verwerk hem daar opnieuw en controleer dat er een notule komt.
-
-Onderbreking tijdens opnemen (iPhone, eerst testen): start een opname en laat je bellen. Neem op, zeg iets en hang op. De opname hoort op pauze te gaan zonder foutmelding en na het gesprek vanzelf verder te lopen. Tik bij een tweede gesprek tijdens het bellen op Hervat: de opname moet dan op pauze blijven en na het ophangen verdergaan. Stop daarna en controleer dat er één opname is met geluid van voor en na het gesprek, en dat de opnameduur de belpauze niet meetelt. Probeer het ook met Siri of een wekker.
-
-Mappen: maak in Notulen een map, verplaats er twee notulen naartoe (ook via slepen op de Mac) en hernoem en verwijder de map. Bij verwijderen blijven de notulen bestaan. Maak een slimme map op basis van een label en controleer welke notulen erin verschijnen. Werk eerst Mac en iPhone allebei bij voordat je mappen gebruikt; controleer daarna of de mappen via iCloud op het andere apparaat verschijnen.
-
-Automatisch labelen: geef een label een omschrijving, zet Automatisch toekennen aan en maak een nieuwe notule. Probeer ook bestaande notulen te labelen en annuleer halverwege. Handmatig toegevoegde labels moeten blijven staan.
-
-Detailniveau: kies per notuleprofiel Kort, Normaal of Volledig en genereer een notule opnieuw met een ander niveau. Kort moet merkbaar korter zijn zonder besluiten of acties te verliezen.
-
-Cloud-transcriptie (nieuw, optioneel): kies onder Verwerking de engine Cloud-API met een eigen sleutel van OpenAI, Groq of OpenRouter. De audio gaat dan naar die aanbieder; controleer dat de app dat duidelijk meldt. Test een opname van meer dan tien minuten en een ongeldige sleutel.
-
-Prospect Flow: maak vanuit een notule een conceptofferte. Controleer de voorgestelde opdrachtgever en de bron die erbij staat, en dat je de notule eerst moet accorderen.
-
-Mac: losse sterretjes aan het begin van een transcript (bij stilte) horen niet meer voor te komen.

@@ -1,4 +1,6 @@
-versie: 1.0.344
+versie: 1.0.345
+Notule bij een haperende verbinding (Windows, eerst testen): kies een AI-aanbieder op internet, zoals OpenRouter, start een notule en zet het netwerk tijdens het verwerken een paar seconden uit en weer aan. De notule hoort gewoon klaar te komen. Laat het netwerk daarna eens langer uit tijdens een notule: dan hoort de melding "Kan de AI-aanbieder niet bereiken. Controleer je internetverbinding en probeer het opnieuw." te verschijnen, en het supportrapport hoort notule_provider_unreachable te noemen in plaats van background_task_failed.
+
 Hostnamen met koppelteken (eerst testen): noem in een gesprek "de secure.yinga.nl-fix" of "de yinga.nl-pagina". In de notule hoort de hostnaam in kleine letters te staan, ook als de spraakherkenning Yinga met een hoofdletter schreef. "Yinga.AI-tools" hoort ongewijzigd te blijven.
 
 OpenRouter-modellen (eerst testen): open Instellingen > Verwerking met OpenRouter en een opgeslagen sleutel. De keuzelijst hoort zonder extra klik alle modellen te tonen die jullie OpenRouter-sleutel mag gebruiken (nu negen), en geen model dat de sleutel niet mag gebruiken. Kies een GPT-6- of Mistral Small-model, maak een notule en controleer in de taakdetails dat precies dat model is gebruikt.
